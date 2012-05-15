@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+"""analyze the accuracy"""
+# interpret the result
+# each line correponds to the number of recovered positives with one k value
+# line 1 correponds to k = 1, etc.
+# the values must be normalized by dividing it by num_queries_to_consider
+import sys
+
+# if you want to use only the top few result lines in evaluation, set this
+# number
+num_queries_to_consider = 1000
+# maximum k in k-nearest-neighbor search, i.e. maximum number of neighbors to
+# consider
+max_k = 1000
+
+if len(sys.argv) != 4:
+	sys.stderr.write("Usage: %s reference-result real-result output-prefix\n" %
+		sys.argv[0])
+	sys.exit(1)
+
+prefix = sys.argv[3]
+
+# relax ratios
+rs = [1, 2, 5, 10, 20, 30, 40, 50]
+# search extension range
+#r_plus = [10, 50, 100, 200, 500]
+
+def get_ranking(x):
+	return [int(i.split(':')[0]) for i in x.split()]
+def get_score(x):
+	return [float(i.split(':')[1]) for i in x.split()]
+
+def update_counter(counter, r, use_plus=False):
+	"""update counter by running extended search with ratio <r>. <counter> is
+	a list, each entry corresponds to retrieval rate for one k-nearest-neighbor
+	search with one k value. For example, position 10 of <counter> is a number
+	that describes how 11-nearest-neighbor search is effective in retrieving the
+	true 11 nearest neighbors"""
+	# <captured> is the mapping from differnt <cut> to number of neighbors
+	# retrieved by search. For example, position 0 is how many neighbors are
+	# retrieved by 1-nearest-neighbor search
+	captured = []
+	for cut in range(max_k):
+		# <cut2> is the position of last entry returned in extended search
+		cut2 = (cut + 1) * r - 1
+		if use_plus: cut2 = cut + r
+		if cut2 >= len(x_ref):
+			# we are reaching the boundary condition. this search will retrieve
+			# all results in database and get 100% accuracy. so stop here
+			break
+
+		# <contrib> is the number of new results returned by search after
+		# we increase <cut> by 1
+		contrib = 0
+		if cut == 0:
+			if x_ref[cut] in d_target and d_target[x_ref[cut]] <= cut2:
+				contrib += 1
+			captured.append(contrib)
+		else:
+			# one more compound in reference
+			if x_ref[cut] in d_target and d_target[x_ref[cut]] <= cut2:
+				contrib += 1
+			if use_plus:
+				# one more in target
+				if x_target[cut2] in d_ref and d_ref[x_target[cut2]] < cut:
+					contrib += 1
+			else:
+				# r more compounds in target
+				for i in range(r):
+					if x_target[cut2 - i] in d_ref and d_ref[x_target[cut2 - i]] < cut:
+						contrib += 1
+			captured.append(captured[cut - 1] + contrib)
+
+	# update <counter> by this call to this function
+	for i in range(len(captured)):
+		counter[i] = counter[i] + captured[i]
+
+from gzip import GzipFile as zfile
+ref = zfile(sys.argv[1])
+target = zfile(sys.argv[2])
+
+
+# <counters> is a list, each entry being a list that describes the effectiveness
+# of k-nearest-neighbor search using one extension ratio
+#
+# each entry of <counters> is also a list, each entry of which corresponds to
+# retrieval rate for one k-nearest-neighbor search with one k value. For
+# example, position 10 of <counter> is a number that describes how
+# 11-nearest-neighbor search is effective in retrieving the true 11 nearest
+# neighbors
+counters = []
+for i in range(len(rs)): #+ len(r_plus)):
+	counters.append([0] * max_k)
+
+# loop for each query in the result file. One query corresponds to one line
+for ii in range(num_queries_to_consider):
+	sys.stderr.write("processing query #%d\r" % (ii+1))
+	x_ref = get_ranking(ref.readline())
+	d_ref = dict()
+	for i in range(len(x_ref)): d_ref[x_ref[i]] = i
+	x_target = get_ranking(target.readline())
+	d_target = dict()
+	for i in range(len(x_target)): d_target[x_target[i]] = i
+	
+	# try different extension ratios
+	for i in range(len(rs)):
+		update_counter(counters[i], rs[i])
+	# try different extensions
+	#for i in range(len(r_plus)):
+	#	update_counter(counters[len(rs) + i], r_plus[i], True)
+
+# generate evaluation outputs
+for i, r in enumerate(rs):
+	f = file('%s.ratio-%d' % (prefix, r,), 'w')
+	for j, c in enumerate(counters[i]):
+		f.write( '%f\n' % (c * 1.0 / (j + 1) / num_queries_to_consider) )
+	f.close()
+
+#for i, r in enumerate(r_plus):
+#	f = file('%s.r=+%d' % (prefix, r,), 'w')
+#	for j, c in enumerate(counters[len(rs) + i]):
+#		f.write( '%f\n' % (c * 1.0 / (j + 1) / num_queries_to_consider) )
+#	f.close()
+
+import csv
+ks = [1, 10, 20, 50, 100, 200, 500, 1000]
+w = csv.writer(file(prefix+'.csv', 'w'))
+w.writerow([''] + ks)
+for i, r in enumerate(rs):
+	row = [r]
+	for j in ks: 
+		row.append(counters[i][j-1] * 1.0 / j /num_queries_to_consider)
+	w.writerow(row)
+#for i, r in enumerate(r_plus):
+#	row = ['+%d' % r]
+#	for j in ks: 
+#		row.append(counters[len(rs) + i][j-1] * 1.0 / j /num_queries_to_consider)
+#	w.writerow(row)
+del w

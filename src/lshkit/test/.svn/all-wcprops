@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 26
+/svn/!svn/ver/1/trunk/test
+END
+mplsh.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/1/trunk/test/mplsh.cpp
+END
+scan.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/1/trunk/test/scan.cpp
+END
+test-probe.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1/trunk/test/test-probe.cpp
+END
+runmplsh.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/1/trunk/test/runmplsh.cpp
+END
+mplsh-predict.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1/trunk/test/mplsh-predict.cpp
+END
+mkmplsh.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/1/trunk/test/mkmplsh.cpp
+END
+flat-index.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1/trunk/test/flat-index.cpp
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/1/trunk/test/Makefile
+END
+fitdata.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/1/trunk/test/fitdata.cpp
+END
+mplsh-tune.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1/trunk/test/mplsh-tune.cpp
+END

@@ -1,0 +1,11 @@
+PKG_CXXFLAGS = -O3 #-I/usr/include/gc -std=c99
+#PKG_LIBS = -lgc 
+
+all : before $(SHLIB) after
+
+before :
+
+after : 
+
+clean : 
+	rm -f *.o *.so

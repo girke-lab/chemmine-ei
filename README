@@ -1,0 +1,324 @@
+REQUIREMENT
+    
+    - Python (2.5 or newer)
+    - R
+
+HOW TO USE
+
+    Before you start, please be aware that since this software package trades
+    simplicity for more flexibility, you may be overwhelmed by the number of
+    steps involved here. But if you stay with the default - use atom pair
+    similarity and provided components - it should be straightforward (though
+    still quite tedious). 
+
+    1 Make sure your system has Python and R
+
+    2 If you need to recompile some binaries, enter the 'src' directory and
+      run 'make' from there. We provide pre-built binary for x86-64 with
+      static linking. However, for LSH code, we cannot provide static linked
+      code, and if you want to use LSH-assisted search, you will have to
+      install boost, and then change the following two Makefile's:
+      
+        src/lshkit/src/Makefile
+        src/lshkit/test/Makefile
+
+      and replace 
+        
+        -I/home/ycao/opt/src/boost -I/home/ycao/opt/src/threadpool/boost
+
+      with include paths for boost and boost-threadpool; also repalce
+
+        -L/home/ycao/opt64/lib/
+
+      with your library path of boost on your system.
+
+      You can still use EI code without these hassle. However, you won't be
+      able to use LSH-assisted search (the "I" part in EI) if you cannot have
+      lshkit built on your system.
+
+      If your system is not x86-64, rebuild the library:
+
+        $ cd src
+        $ make clean
+        $ make
+
+      Again, if you want to use LSH-assisted search, make sure you have boost
+      installed and have the above two Makefiles updated to point to your
+      boost include directories and library path. If you don't want to build
+      lshkit or you cannot build it, you may disable it by editing the Makefile
+      under src
+
+    3 You will need to have your compound database ready to run EI. Copy your
+      compound database to the 'data' folder. You may also just create a
+      symbolic link to your compound database in the data folder instead. Make
+      sure the name is chem.db. If you are using atom-pair similarity, you can
+      create it using the following command (assuming EIROOT has been set to
+      the root of the EI folder):
+
+        $ cd $EIROOT/data
+        $ ../bin/db_build my.sdf chem.db
+
+      db_build might complain if your SDF does not follow the SDF
+      specification. If this happens, try use OpenBabel to convert it to SMILES
+      and back to SDF.
+
+    4 Create the <iddb> named main.iddb in the data folder. If your compound
+      database has 1,000 compounds, this file is a 1,000-line text file, each
+      line contains a number, from 1 up to 1,000. You may create it using the
+      following command:
+        
+        $ cd $EIROOT/data
+        $ seq 1000 > main.iddb
+    
+    5 Check config.py and make appropriate changes. One important setting is
+      whether to use qsub. If you do not have access to qsub-style job queue,
+      set the 'processor' value to 'bash' to run the job locally.
+
+    6 Invoke ei.py with two required arguments, the number of reference
+      compounds and the number of dimensions. For example:
+
+        $ cd $EIROOT
+        $ python ei.py -r 300 -d 100 
+        No test queries exists. Will create one with 1000 queries
+        checking database size...
+        !!!!! PLEASE GENERATE THE CHEMICAL SEARCH RESULT !!!!!
+        !!!!! EXAMPLE:                                   !!!!!
+              db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz
+        
+      As you can see, ei.py creates 1000 random queries that will later be
+      used to evaluate embedding results in similarity search tests. It
+      reminds you to create the reference search results. In this case, create
+      reference search results if you have not done it. This only needs to be
+      done once for each new test_query.iddb. We provided binary tool to
+      perform similarity search for atom-pair-based similarity. For example,
+      in case of atom-pair similarity, create the reference:
+
+        $ ../bin/db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz
+
+      If you use custom similarity measures other than atom pair, then you
+      must write a tool to perform similarity search. It will work as long as
+      your similarity search is presented in the same format: each line lists
+      search result for one query; each line lists the sequence number and the
+      distance for most similar compounds. See
+      example-data/chemical-search.results.gz for an example.
+
+      When you are done making the the reference search result, press any key
+      to let ei.py continue its work. It will be verbose and keep updating you
+      with what it is currently busy with. For example, you might see
+
+        checking database size...
+        processing query 300
+        processing query 22906
+        150128.girkelab-59-200.ucr.edu
+        150129.girkelab-59-200.ucr.edu
+        qsub jobs still running. --Tue Aug 24 22:47:34 2010  
+
+      Upon this, your job has been submitted to the cluster for actual
+      embedding. ei.py will watch the cluster for the progress using qstat, and
+      will continue its next step when it identifies that the cluster has
+      finished its job.
+
+      ei.py does its job in a job folder, named after the number of reference
+      compounds and the number of embedding dimensions. For example, using 300
+      reference compounds to generate 300-dimensional embedding (-r 300 -d
+      100) will result in a job folder run-300-100. 
+
+      If you are eager to know the status, simply see how many lines have been
+      generated by the embedder. Each line corresponds to one compound that
+      has been processed successfully. For example:
+
+        $ cd run-300-100
+        $ wc -l 300-100-*.out
+            7962 300-100-1.out
+            2906 300-100-2.out
+           10868 total
+
+      You can compare this number to the number of lines in main.iddb to have
+      an idea of the progress.
+
+      When the embedding is finished, ei.py will merge the results generated
+      by different cluster jobs and convert the data to binary format. The
+      screen may look like
+      
+        merging coordinate results
+        total time in solving puzzle: 4574.019
+        making binary version of coordinate files...
+        4220730 lines processed in 1.4071 seconds
+        4198824 lines processed in 0.063864 seconds
+      
+      ei.py will then perform automatic performance evaluation by testing the
+      embedding results in similarity search. The way this works is by
+      approximating 1,000 random similarity searches (determined by
+      data/test_queries.iddb) by nearest neighbor search using the coordinates
+      from the embedding results. The search results are then compared to the
+      reference search results (chemical-search.results.gz). 
+
+      The comparison results are summarized in two type of files. The first
+      type lists the recall for different k value, k being the number of
+      numbers to retrieve. For example, if the recall is 70% for top-100
+      compound search - 70 of the 100 results are among the real top-100
+      compounds - then the value at line 100 is 0.7. Several relaxation ration
+      is used, each generating a file in this form. For instance,
+      recall.ratio-10 is the file listing the recalls when relaxation
+      ratio is 10. The other file, recall.csv, lists recalls of different
+      relaxation ratios in one file by limiting to selected k value. In this
+      CSV file, the rows correspond to different relaxation ratios, and the
+      columns are different k values. You will be able to pick an appropriate
+      relaxation ratio for the k values you are interested in.
+
+    6 If ei.py crashes or gets terminated for any reason and you need to rerun
+      it, it will try to reuse data only if you invoke the existing-input
+      mode. The existing-input mode is started by adding the *.cdb file in the
+      run-*-* folder. For example:
+	  	
+	$ python ei.py -r 300 -d 100 run-300-100/b0780f55853624ec274713648531e003.cdb
+	
+      This will allow ei.py to find intermediate files and pick up from where
+      it stopped. If you to not specify the *.cdb and run
+
+        $ python ei.py -r 300 -d 100
+
+      again after crash, then it will generate a new set of compounds as
+      reference compounds and restart the embedding process. This is useful
+      when you need to try a new set of reference compounds.
+
+    7 The embedding result is the file matrix.<R>.<D>, where <R> is the number
+      of references and <D> is the number of dimensions. In the above example,
+      the output would be run-300-100/matrix.300.100.
+
+    8 (Only available if you have lshkit built on your system) 
+      ei.py will not automatically test the LSH-assisted search. To
+      automatically test the performance of LSH-assisted search, run
+
+        $ python ei.py -r 300 -d 100 indexed
+
+      The result will be in run-300-100/indexed.performance. It's a 1,000-line
+      recall values. Each line corresponds to one test query.
+
+      LSH search performance is highly sensitive to your LSH parameter. The
+      default parameter is listed in cofig.py
+
+        lsh_param = " -W 1.39564 -M 19 -L 30 -K 600 -S 30 -T 30 "
+
+      When you have your embedding result in a matrix file, you should
+      follow instruction on
+
+        http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html
+
+      To find the best values for these parameters
+        
+
+FILE ORGANIZATION
+
+    There are two files under the ei-dist's root folder:
+
+    - config.py : basic configurations
+    - ei.py : the main script that users use to invoke the workflow
+
+    There are three folders at the root folder:
+
+    - data : data folder. This folder is where user should store data
+      including compound database, sample query information, reference search
+      results, etc.
+    - bin : binary folder. This folder contains programs that EI will use to
+      perform embedding, search, quality check, etc. User can place their own
+      version of similarity comparision binaries to apply EI to more similarity
+      measures.
+    - src : C/C++ programs that does the actual heavy lifting. Binaries in bin
+      folder link to programs in this folder
+    - eutils : this folder contains depended Python module. The user should
+      not touch this folder
+
+
+CONCEPTS
+
+    COMPOUND DATABASE
+    
+    EI works on compound databases. A compound database consists of two files.
+    One is the actual database data file in some format. This database, known
+    as the <bindb>, typically consists of actual compound data. For example,
+    an atom-pair database would use a <bindb> to store atom pair descriptors.
+    The other file is an ID database or <iddb>. This database is just a text
+    file, each line of which is a sequence ID used to subset the <bindb>. For
+    example, if the <bindb> contains 1,000 compounds, then the <iddb> can
+    contain at most 1,000 lines of sequential numbers from 1 to 1000. Using
+    this <bindb> and <iddb>, then we have a compound database for 1,000
+    compounds. If, for example, the <iddb> contains 500 lines of odd numbers
+    from 1 up to 999, then the combination of the <bindb> and the <iddb>
+    describes a compound database of 500 compounds. Note that <iddb> uses
+    1-based numbering, not 0-based. 
+
+    You may see these files under the /data folder:
+
+    - main.iddb : this is the main iddb. Compounds referenced in this iddb
+      will be embedded.
+    - test_query.iddb : this file is auto-generated. It is a subset of
+      main.iddb used to perform automatic search tests in order to evaluate
+      the embedding quality.
+    
+    Note that there is no requirement on what format <bindb> uses. EI does not
+    utilize <bindb> directly. Instead, it passes the path to <bindb> to
+    the program bin/db2db_distance. If you use your own custom similarity
+    measure (see CUSTOMIZATION below), as long as your custom
+    bin/db2db_distance program can understand <bindb>, then it is fine. If you
+    hardcode the path to your own compound database in your custom
+    bin/db2db_distance, you might not create a <bindb> at all. 
+    
+CUSTOMIZATION
+
+    EI allows you to plug in your own similarity measurement. In order to do
+    this, you will have to provide an implementation for the following
+    functions in binary of script form.
+    
+    db2db_distance
+
+    You need to write a binary or script that calculate database-to-database
+    distance matrix, which supports the following two syntax forms:
+
+        db2db_distance.my_measure chem.db 1.iddb 2.iddb
+        db2db_distance.my_measure chem.db chem2.db
+    
+    where chem.db is the path to <bindb> in, for example, the /data folder,
+    1.iddb is the first <iddb> and 2.iddb is the second <iddb> (see above for
+    definition of <bindb> and <iddb>). Your program must generate a distance
+    matrix for these two databases. Name your program as
+    db2db_distance.my_measure and then you can invoke EI as, for example, 
+
+        python ei.py -r 300 -d 100 -m my_measure
+    
+    to use your similarity measure.
+
+    To always use your similary measure as the default, just remove the
+    symbolic link named "db2db_distance" and recreate it to point it to your
+    new similarity measure:
+
+        cd bin
+        rm -f db2db_distance
+        ln -s db2db_distance.my_measure db2db_distance
+    
+    Now you could omit the "-m my_measure" part when you start ei.py
+
+    db_builder
+
+    This program takes one compound in whatever format you want to support and
+    generate database format you want to support. This is only used in
+    on-demand embedding, and therefore will be used in parsing one compound
+    only. It is up to you if you want to support more than one compounds. The
+    syntax you need to support is:
+
+        db_builder.my_measure input.compound output.db
+
+    db_subset
+
+    This program takes the database format you support and a 1-based index file
+    and generate a sub-database for compounds listed in the index file. This is
+    also only used in on-demand embedding. If you do not want to provide this
+    program, make sure before you invoke on-demand embedding, a sub database
+    for the reference compounds have already been generated somehow and have a
+    name that is expected by the on-demand embedding program. 
+
+    db_subset must support the following syntax
+    
+        db_subset.my_measure orignal.db index.file output.db
+    
+    Please note that indieces in index.file are 1-based.

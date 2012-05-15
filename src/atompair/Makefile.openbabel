@@ -1,0 +1,24 @@
+OPENBABELINC =      -I/home/ycao/opt/src/openbabel-2.1.1/include
+OPENBABELLIB =      -lopenbabel -L/home/ycao/opt64/lib
+CXXFLAGS =          -g -O3 -mtune=nocona -Wall -DHAS_OPENBABEL $(OPENBABELINC)
+
+OBJS =	            molecule.o formats.o desc.o similarity.o simpledb.o
+EXTRA_OBJS =        db_build.o compare.o db_search.o
+
+LIBS =              $(OPENBABELLIB)
+
+TARGETS =           compare db_build db_search
+
+all: $(TARGETS)
+
+compare:	$(OBJS) compare.o 
+	$(CXX) -o compare compare.o $(OBJS) $(LIBS)
+	
+db_build: $(OBJS) db_build.o
+	$(CXX) -o db_build db_build.o $(OBJS) $(LIBS)
+
+db_search: $(OBJS) db_search.o
+	$(CXX) -o db_search db_search.o $(OBJS) $(LIBS)  
+	
+clean:
+	rm -f $(OBJS) $(EXTRA_OBJS) $(TARGETS)

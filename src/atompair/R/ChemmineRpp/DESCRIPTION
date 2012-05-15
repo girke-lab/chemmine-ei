@@ -1,0 +1,10 @@
+Package: ChemmineRpp
+Type: Package
+Title: ChemmineR Performance Pack package
+Version: 0.0.2
+Date: 2008-08-29
+Author: Y. Eddie Cao
+Maintainer: Y. Eddie Cao<ycao@bioinfo.ucr.edu>
+Suggests: ChemmineR
+Description: A package that uses C++ code to speed up ChemmineR package. This package is not intended to be used alone. It is designed to be used with ChemmineR package, and users should use the ChemmineR APIs to access the functions provided in this package.
+License: GPL (>=2)

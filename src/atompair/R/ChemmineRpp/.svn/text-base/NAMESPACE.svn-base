@@ -1,0 +1,2 @@
+useDynLib(ChemmineRpp)
+export("similarity", "Descriptors", "Descriptors_parse_sdf", "Descriptors_parse_sdfile", "Descriptors_parse_smiles", "Descriptors_get_descriptor", "Descriptors_get_len", "delete_Descriptors", "Database", "Database_open", "Database_close", "Database_next", "Database_store", "delete_Database", "batch_parse")

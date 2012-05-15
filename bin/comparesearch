@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+"""
+compare two search results in the following format:
+
+index(1-based):dist index:dist ...
+
+"""
+import sys
+if len(sys.argv) != 3:
+	sys.stderr.write("usage: %s result1 result2\n" % sys.argv[0])
+	sys.exit(1)
+from gzip import GzipFile
+f1, f2 = sys.argv[1:]
+if f1.endswith('.gz'):
+	f1 = GzipFile(f1)
+else:
+	f1 = file(f1)
+if f2.endswith('.gz'):
+	f2 = GzipFile(f2)
+else:
+	f2 = file(f2)
+
+p = None
+try:
+	while True:
+		line1 = f1.next().split()
+		line2 = f2.next().split()
+		if p is None:
+			if len(line1) < len(line2):
+				p = len(line1)
+			else:
+				p = len(line2)
+		ind1 = set([i.split(':')[0] for i in line1[:p]])
+		ind2 = set([i.split(':')[0] for i in line2[:p]])
+		
+		a = len(ind1.intersection(ind2)) * 1.0 / p 
+		print a
+except StopIteration:
+	pass

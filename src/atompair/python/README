@@ -1,0 +1,124 @@
+ABOUT
+	
+	This is a simple python package for calculating descriptors for
+	compounds, and managing a simple flat file-based descriptor database.
+	The package is designed to provide a simple, miniature and pythonic
+	interface. It is also very efficient, with core functions written in C++.
+
+INSTALL
+
+	To install, in your shell, invoke:
+
+		$ python setup.py install
+	
+USAGE
+
+	IMPORT
+
+		Import the package named `descriptors':
+
+			>>>import descriptors
+
+		All you can import all the names into current namespace
+
+			>>>from descriptors import *
+
+		This will add two names, Descriptors and Database.
+	
+	DESCRIPTORS :: PARSE
+
+		The `Descriptors' class allows you to parse SDF string, or an
+		SD file, or a SMILES string (when linking against OpenBabel) to
+		create a Descriptors object:
+
+			>>>d = Descriptors('compound.sdf')
+
+			>>>sdf_string = file('compound.sdf').read()
+			>>>d = Descriptors(sdf_string, format="sdf")
+
+		The following example requires you to compile the package
+		against OpenBabel:
+
+			>>>d = Descriptors("c1ccccc1", format="smiles")
+
+	DESCRIPTORS :: USE
+	
+		The `Descriptors' class is a container for descriptors. You can
+		use the pythonic way to examine it:
+
+			>>>print d[1]
+			>>>len(d)
+			>>>for i in d: print i
+
+		The member function `similarity_to' can be used to calculate
+		Tanimoto similarity between two Descriptors objects.
+
+			>>>c.similarity_to(d)
+	
+	DATABASE :: OVERVIEW
+
+		The `Database' object can create and access a flat file-based
+		database of Descriptors objects.
+
+	DATABASE :: CREATE
+
+		To create a database for writing, set the mode to "out":
+			
+			>>>db = Database("file.cdb", mode="out")
+
+		This will create (or truncate if it exists) a file named file.cdb.
+
+		Now you can call `append' function to add Descriptors object to it:
+
+			>>>db.append(d)
+
+		Remember to close it when done.
+
+			>>>db.close()
+		
+		You may also append to an existing database using the "append" mode
+		instead of the "out" mode.
+
+	DATABASE :: READ
+
+		Database object provides pythonic stream-style acess when open in
+		"in" mode:
+
+			>>>db = Database("file.cdb", mode="in")
+			>>>for i in db: assert isintance(i, Descriptors)
+			>>>db.close()
+		
+		You can easily create a search routine:
+
+			>>>db = Database("file.cdb", mode="in")
+			>>>query = Descriptors("query.sdf")
+			>>>results = [query.similarity_to(i) for i in db]
+			>>>indexed = [(i, results[i]) for i in range(len(results))]
+			>>>indexed.sort(key=lambda x:x[1], reverse=True)
+			>>>print indexed[:10]
+			>>>db.close()
+
+		You can also easily easily create a sub-database:
+			
+			>>>db = Database("file.cdb", mode="in")
+			>>>db_s = Database("sub.cdb", mode="out")
+			>>>for i in range(10): db_s.append(db.next())
+			>>>db.close()
+			>>>dbs.close()
+
+		After reaching the end of the database, you can call `rewind'
+		method to let the database point to the beginning of the database
+		again.
+
+		Please note the database contains only one pointer. This means
+		that when looping over the database using the above style,
+		there is only one iterator available for each database,
+		meaning you cannot use nested loops over the same database. To
+		achieve nested loop, use the following methods.
+
+		Besided the "in" mode, the package provides two extra reading modes.
+		One is "indexed" mode. This mode will scan the database (which can
+		cost time), and build an index to allow fast random access. The 
+		other one is the "preloaded" mode, which loads the whole database
+		into the main memory. When you use this two modes, you can use 
+		pythonic random access with an index.

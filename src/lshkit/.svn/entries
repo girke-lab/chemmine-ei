@@ -1,0 +1,85 @@
+8
+
+dir
+5
+http://lshkit.googlecode.com/svn/trunk
+http://lshkit.googlecode.com/svn
+
+
+
+2008-08-01T18:32:31.406900Z
+1
+wdong.pku
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+0e2123e8-284e-0410-a910-e7292dcba638
+
+test
+dir
+
+include
+dir
+
+Makefile.inc
+file
+
+
+
+
+2008-12-12T01:21:50.000000Z
+471493d0a312959cca88da46abac8ed2
+2008-08-01T18:32:31.406900Z
+1
+wdong.pku
+
+src
+dir
+
+COPYING
+file
+
+
+
+
+2008-12-12T01:21:50.000000Z
+d32239bcb673463ab874e80d47fae504
+2008-08-01T18:32:31.406900Z
+1
+wdong.pku
+
+README
+file
+
+
+
+
+2008-12-12T01:21:50.000000Z
+6d3c60b39a4e8db289ec047ca0600d3d
+2008-08-01T18:32:31.406900Z
+1
+wdong.pku
+
+Makefile
+file
+
+
+
+
+2008-12-12T01:21:51.000000Z
+f280ab2708b5c62405d4db126305a984
+2008-08-01T18:32:31.406900Z
+1
+wdong.pku
+
