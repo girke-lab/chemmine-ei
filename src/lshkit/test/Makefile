@@ -3,10 +3,12 @@ include ../Makefile.inc
 CC=$(CXX)
 
 # change this to help me locate header files for boost and boost-threadpool
-CXXFLAGS += -I../include -I ../../atompair/ -I/home/ycao/opt/src/boost -I/home/ycao/opt/src/threadpool/boost
+#CXXFLAGS += -I../include -I ../../atompair/ -I/home/ycao/opt/src/boost -I/home/ycao/opt/src/threadpool/boost
+CXXFLAGS+= -I../include -I/usr/include/boost -I/home/khoran/programs/threadpool-0_2_5-src/threadpool/boost -I/home/khoran/programs/libdb/usr/include/
 
 # change this to help me locate boost library files
-LDFLAGS += -L../src  -L ../../atompair -L/home/ycao/opt64/lib/ 
+#LDFLAGS += -L../src  -L ../../atompair -L/home/ycao/opt64/lib/ -L /home/khoran/programs/libdb/usr/lib/
+LDFLAGS += -L../src  -L ../../atompair -L /usr/lib/  # -L /home/khoran/programs/libdb/usr/lib/
 
 LDLIBS += -llshkit -ldescriptors
 

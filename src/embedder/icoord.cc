@@ -1,13 +1,13 @@
+#include <stdlib.h>
 #include <fstream>
 #include <iostream>
 #ifdef _TIMER_
-#include "../../e-projects/descriptor/profiling.h"
+#include "../atompair/profiling.h"
 #endif
 #include "solver.h"
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <string.h>
-#include <stdlib.h>
 #define LINE_BUF_LIMIT 1048576
 using namespace std;
 

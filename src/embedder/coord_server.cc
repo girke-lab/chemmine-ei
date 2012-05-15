@@ -1,4 +1,5 @@
 // based on icoord.cc
+#include <stdlib.h>
 #include <fstream>
 #include <iostream>
 #ifdef _TIMER_
@@ -6,7 +7,6 @@
 #endif
 #include "solver.h"
 #include <string.h>
-#include <stdlib.h>
 #include <signal.h>
 #define LINE_BUF_LIMIT 1048576
 using namespace std;

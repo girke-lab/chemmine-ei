@@ -1,7 +1,8 @@
 include ../Makefile.inc
 
 # change this to help me locate header files for boost and boost-threadpool
-CXXFLAGS+= -I../include -I/home/ycao/opt/src/boost -I/home/ycao/opt/src/threadpool/boost
+#CXXFLAGS+= -I../include -I/home/ycao/opt/src/boost -I/home/ycao/opt/src/threadpool/boost
+CXXFLAGS+= -I../include -I/usr/include/boost -I/home/khoran/programs/threadpool-0_2_5-src/threadpool/boost -I/home/khoran/programs/libdb/usr/include/
 
 LIB = liblshkit.a
 SRCS = $(wildcard *.cpp)

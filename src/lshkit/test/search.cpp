@@ -11,8 +11,8 @@
 #include <queue>
 
 #ifndef _NO_REFINE_
-#include "desc.h"
-#include "simpledb.h"
+#include "../../atompair/desc.h"
+#include "../../atompair/simpledb.h"
 #endif
 
 class Timer
