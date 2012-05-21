@@ -1,12 +1,7 @@
-AR = ar
-ARFLAGS = cru
-PG= #-pg
-OPENMP = #-fopenmp
-#CC = gcc
-#CXX = g++ 
-AM_CXXFLAGS = $(PG) $(OPENMP)  -O3 -mtune=nocona
-AM_LDFLAGS = $(PG) $(OPENMP)
-#LDLIBS = -lboost_program_options-gcc41-mt -lboost_thread-gcc41-mt -lm -ldb  -lgsl -lgslcblas 
-LIBS = -lboost_program_options -lboost_thread -lm -ldb  -lgsl -lgslcblas 
 
-#.SUFFIXES:    .cpp .h .o .d .a
+AM_CXXFLAGS = -O3 -mtune=nocona
+LIBS = $(BOOST_PROGRAM_OPTIONS_LIB) $(BOOST_THREAD_LIB)  -lm -ldb  -lgsl -lgslcblas 
+
+# this could work, but includes stuff we don't need, including -lf2c which must be statically linked
+#LIBS += $(BOOST_PROGRAM_OPTIONS_LIB) $(BOOST_THREAD_LIB)
+

@@ -20,7 +20,7 @@
 #include <cassert>
 #include <map>
 #include <boost/bind.hpp>
-#include <threadpool.hpp>
+#include <boost/threadpool.hpp>
 #include <lshkit/common.h>
 #include <lshkit/metric.h>
 #include <lshkit/mplsh-file.h>

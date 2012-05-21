@@ -1,8 +1,6 @@
 
 SRC = solver.cc routines.c ../atompair/profiling.cc
 
-#AM_CFLAGS = -g -D_TIMER_
-#AM_CXXFLAGS = -g -D_TIMER_
 AM_CFLAGS = -mtune=nocona  -O3  -fomit-frame-pointer -funroll-loops -mfpmath=sse  -D_TIMER_ -I ../atompair/
 AM_CXXFLAGS = -mtune=nocona -O3  -fomit-frame-pointer -funroll-loops -mfpmath=sse  -D_TIMER_ -I ../atompair/
 #AM_LDFLAGS = -static
