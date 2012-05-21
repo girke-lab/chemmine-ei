@@ -1,6 +1,7 @@
 
 AM_CXXFLAGS = -I ../atompair
 SRC = ../atompair/profiling.cc
+AM_LDFLAGS = -static
 
 bin_PROGRAMS = format read
 
