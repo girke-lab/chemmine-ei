@@ -5,7 +5,7 @@
 # the SWIG interface file instead.
 
 ##   Generated via the command line invocation:
-##	 swig -c++ -module ChemmineRpp -o ChemmineRpp/src/r_wrap.cc -r ../swig.i
+##	 /usr/bin/swig -c++ -c++ -I.. -module ChemmineRpp -o ChemmineRpp/src/r_wrap.cc -r ../swig.i
 
 
 #                         srun.swg                            #
@@ -160,6 +160,7 @@ function(fun, userData = NULL)
 #######################################################################
 
 
+setClass('C++Reference', contains = 'ExternalReference')
 setClass('C++Reference', contains = 'ExternalReference')
 setClass('_p_Descriptors', contains = 'C++Reference')
 setClass('_p_Database', contains = 'C++Reference')

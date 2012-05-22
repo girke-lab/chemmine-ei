@@ -18,7 +18,7 @@ AC_PROG_LIBTOOL
 AC_ARG_WITH([chemminer],AS_HELP_STRING([--with-chemminer],[Build and install ChemmineR R extension]))
 AS_IF([ test "x$with_chemminer" = "xyes"],[
 	AC_PATH_PROG([R_PATH],[R])
-	if test  -z "${ac_av_path_R_HOME}"; then
+	if test  -z "$ac_cv_path_R_PATH"; then
 		echo "could not find R binary"
 		exit 1
 	fi
@@ -90,13 +90,12 @@ AC_CONFIG_FILES([Makefile
 					  src/Makefile
                  src/atompair/Makefile
                  src/atompair/python/Makefile
+                 src/atompair/R/Makefile
                  src/embedder/Makefile
                  src/euclidean-search/Makefile
                  src/lshkit/Makefile
                  src/lshkit/src/Makefile
                  src/lshkit/test/Makefile
                  src/matrix/Makefile])
-                 #src/atompair/R/Makefile
-                 #src/atompair/python/Makefile
 
 AC_OUTPUT
