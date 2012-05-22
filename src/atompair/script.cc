@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <assert.h>
 #include "db_build.h"
+#include <string.h>
 
 
 Descriptors::Descriptors()
