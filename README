@@ -1,7 +1,26 @@
 REQUIREMENT
     
     - Python (2.5 or newer)
-    - R
+	 - realine
+    - swig
+    For ChemmineR (configure option: --with-chemminer)
+       - R
+    For lshkit (on by default, turn off with configure option --without-lshkit)
+       - libdb
+       - boost
+       - boost program options
+       - boost thread
+       - boost threadppool
+       - gsl / gslcblas
+    For OpenBabel support (configure option: --with-openbabel)
+       - openbabel
+
+	 If your on Debian, the following packages should work:
+			libreadline-dev libdb-dev libbost-dev libboost-dev libboost-thread1.42.0 libboost-thread1.42-dev 
+			libboost-program-options1.42.0 libboost-program-options1.42-dev libgsl0-dev libgsl0ldbl 
+			python2.6-dev swig libopenbabel3 libopenbabel-dev r-base
+    Not that this list does not include boost threadpool.	
+
 
 HOW TO USE
 

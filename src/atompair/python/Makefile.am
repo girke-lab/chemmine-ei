@@ -12,9 +12,11 @@ LIBS=
 
 pkgpyexecdir = $(pyexecdir)/$(PACKAGENAME)
 pkgpythondir = $(pythondir)/$(PACKAGENAME)
-pkgpython_PYTHON =  $(MODULENAME).py $(PACKAGENAME)/__init__.py
+pkgpython_PYTHON =  $(PACKAGENAME)/__init__.py
+nodist_pkgpython_PYTHON =  $(MODULENAME).py 
 pkgpyexec_LTLIBRARIES  = _CDescriptors.la
-_CDescriptors_la_SOURCES = $(SRCDIR)/py_wrap.cc  $(SWIG_SOURCES) $(CCSOURCES)
+_CDescriptors_la_SOURCES =  $(SWIG_SOURCES) $(CCSOURCES)
+nodist__CDescriptors_la_SOURCES = $(SRCDIR)/py_wrap.cc  
 _CDescriptors_la_CPPFLAGS = $(SWIG_PYTHON_CPPFLAGS) -I/usr/include/python2.6 -I$(CCSOURCEDIR) 
 _CDescriptors_la_LDFLAGS = -module
 

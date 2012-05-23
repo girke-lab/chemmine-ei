@@ -2,7 +2,7 @@ include ../Makefile.inc
 
 
 AM_CXXFLAGS+= -I../include
-AM_LDFLAGS = -L../src  -L ../../atompair 
+AM_LDFLAGS = -L../src  -L../../atompair 
 LIBS += -llshkit -ldescriptors
 SRC = fitdata.cpp  flat-index.cpp  isearch.cpp  mkmplsh.cpp  mplsh.cpp  mplsh-predict.cpp  mplsh-tune.cpp  runmplsh.cpp  scan.cpp  search.cpp  searchp.cpp  test-probe.cpp
 

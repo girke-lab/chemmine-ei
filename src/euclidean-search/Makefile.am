@@ -1,5 +1,5 @@
 
-SRC = recordfile.cc search.cc ../atompair/desc.cc ../atompair/formats.cc ../atompair/molecule.cc ../atompair/similarity.cc ../atompair/simpledb.cc  ../atompair/profiling.cc
+SRC = recordfile.cc search.cc ../atompair/desc.cc ../atompair/formats.cc ../atompair/molecule.cc ../atompair/similarity.cc ../atompair/simpledb.cc  ../atompair/profiling.cc eucsearch.h search.h
 AM_CXXFLAGS = -O3 -mtune=nocona -D_REFINE_ -I ../atompair #-g
 AM_LDFLAGS = -static
 
