@@ -21,6 +21,57 @@ src/euclidean-search/rnn
 src/euclidean-search/scan
 src/euclidean-search/self
 src/euclidean-search/split
+
+Makefile
+stamp-h1
+
+aclocal.m4
+autom4te.cache/
+config.guess
+config.h
+config.h.in~
+config.log
+config.status
+config.sub
+configure
+debian/autoreconf.after
+debian/autoreconf.before
+debian/ei.debhelper.log
+debian/ei.postinst.debhelper
+debian/ei.postrm.debhelper
+debian/ei.substvars
+debian/ei/
+debian/files
+
+
+depcomp
+edit.vim
+ei-1.0.tar.gz
+libtool
+ltmain.sh
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
+missing
+py-compile
+src/atompair/R/ChemmineRpp/src/ChemmineRpp.so
+src/atompair/db_isearch
+src/atompair/python/.libs/
+src/atompair/python/CDescriptors.py
+src/atompair/python/_CDescriptors.la
+src/atompair/python/_CDescriptors_la-db_build.lo
+src/atompair/python/_CDescriptors_la-desc.lo
+src/atompair/python/_CDescriptors_la-formats.lo
+src/atompair/python/_CDescriptors_la-molecule.lo
+src/atompair/python/_CDescriptors_la-py_wrap.lo
+src/atompair/python/_CDescriptors_la-script.lo
+src/atompair/python/_CDescriptors_la-similarity.lo
+src/atompair/python/_CDescriptors_la-simpledb.lo
+src/atompair/python/py_wrap.cc
+src/eutils/.Makefile.am.swo
+src/lshkit/src/Makefile.withboost
 src/lshkit/src/liblshkit.a
 src/lshkit/test/fitdata
 src/lshkit/test/flat-index
@@ -36,22 +87,4 @@ src/lshkit/test/searchp
 src/lshkit/test/test-probe
 src/matrix/format
 src/matrix/read
-aclocal.m4                                                                                                                                                                                                                           │·········································
-autom4te.cache/                                                                                                                                                                                                                      │·········································
-autoscan.log                                                                                                                                                                                                                         │·········································
-bin/compare                                                                                                                                                                                                                          │·········································
-bin/db_build                                                                                                                                                                                                                         │·········································
-bin/db_isearch                                                                                                                                                                                                                       │·········································
-bin/db_search                                                                                                                                                                                                                        │·········································
-bin/db_search_range                                                                                                                                                                                                                  │·········································
-bin/db_search_self                                                                                                                                                                                                                   │·········································
-config.h                                                                                                                                                                                                                             │·········································
-config.h.in~                                                                                                                                                                                                                         │·········································
-config.log                                                                                                                                                                                                                           │·········································
-config.status                                                                                                                                                                                                                        │·········································
-configure                                                                                                                                                                                                                            │·········································
-configure.scan                                                                                                                                                                                                                       │·········································
-depcomp                                                                                                                                                                                                                              │·········································
-missing                                                                                                                                                                                                                              │·········································
-src/atompair/db_isearch                                                                                                                                                                                                              │·········································
-stamp-h1              
+
