@@ -30,42 +30,22 @@ HOW TO USE
     similarity and provided components - it should be straightforward (though
     still quite tedious). 
 
-    1 Make sure your system has Python and R
+    1 Make sure your system meets the above requirements.
+    
+    2 See the INSTALL file for complete directions, a summary is given here. First,
+      run ./configure. There are three main build options to this.
+         a) to use OpenBabel, add  --with-openbabel
+         b) to use the ChemmineR R extenstion add --with-chemminer
+         c) LSH-assisted search is on by default, to disable it add --without-lshkit
+      See above for the requirements for each of these. If some of the libraries 
+      are installed in a different location, you can set environment variables to
+      point to them, see INSTALL for complete details. For example, if boost 
+      threadpool was installed in /opt/threadpool, you would set CXXFLAGS as follows:
+         export CXXFLAGS="-I/opt/threadpool"
+      Then run configure.  Once configure has run, do 'make' and then 'make install'. 
+      In addition to the normal EI binaries, this will also install ChemmineR in R, 
+      if selected, and a python package called 'descriptors'.
 
-    2 If you need to recompile some binaries, enter the 'src' directory and
-      run 'make' from there. We provide pre-built binary for x86-64 with
-      static linking. However, for LSH code, we cannot provide static linked
-      code, and if you want to use LSH-assisted search, you will have to
-      install boost, and then change the following two Makefile's:
-      
-        src/lshkit/src/Makefile
-        src/lshkit/test/Makefile
-
-      and replace 
-        
-        -I/home/ycao/opt/src/boost -I/home/ycao/opt/src/threadpool/boost
-
-      with include paths for boost and boost-threadpool; also repalce
-
-        -L/home/ycao/opt64/lib/
-
-      with your library path of boost on your system.
-
-      You can still use EI code without these hassle. However, you won't be
-      able to use LSH-assisted search (the "I" part in EI) if you cannot have
-      lshkit built on your system.
-
-      If your system is not x86-64, rebuild the library:
-
-        $ cd src
-        $ make clean
-        $ make
-
-      Again, if you want to use LSH-assisted search, make sure you have boost
-      installed and have the above two Makefiles updated to point to your
-      boost include directories and library path. If you don't want to build
-      lshkit or you cannot build it, you may disable it by editing the Makefile
-      under src
 
     3 You will need to have your compound database ready to run EI. Copy your
       compound database to the 'data' folder. You may also just create a

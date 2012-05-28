@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """On-Demand Embedding. After the embedding of a whole database, you can embed
 other compounds on a per-compound basis. This program is for this embedding.
 You must specificy which reference compound database and reference coordinates

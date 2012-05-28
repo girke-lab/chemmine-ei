@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from config import *
 from logging import info, warning, error, debug, critical, root, NOTSET
 import sys
