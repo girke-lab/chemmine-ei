@@ -1,0 +1,21 @@
+Source: ei
+Section: science
+Priority: optional
+Maintainer: Kevin Horan <khoran@biocluster.ucr.edu>
+Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libboost-thread-dev, python-all-dev,
+   libboost-program-options-dev, mime-support, libdb-dev, file, libboost-dev, 
+   mawk, libmagic1, libmagic-dev, libgsl0-dev, libgsl0ldbl, python-support, libreadline6, 
+   libreadline-dev,swig, libopenbabel3, libopenbabel-dev, libboost-program-options1.42.0, 
+   libboost-thread1.42.0
+X-Python-Version: >=2.5
+Standards-Version: 3.8.4
+Homepage: <insert the upstream URL, if relevant>
+
+Package: ei
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},  python, mime-support, libdb4.8, file, libmagic1,  
+   libgsl0ldbl, python-support, libreadline6, libopenbabel3,, libboost-program-options1.42.0, 
+   libboost-thread1.42.0
+Suggests: r-base
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>

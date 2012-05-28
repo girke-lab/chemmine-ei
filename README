@@ -1,7 +1,7 @@
 REQUIREMENT
     
     - Python (2.5 or newer)
-	 - realine
+	 - readline
     - swig
     For ChemmineR (configure option: --with-chemminer)
        - R
