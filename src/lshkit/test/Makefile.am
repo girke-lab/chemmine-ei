@@ -1,5 +1,6 @@
 include ../Makefile.inc
 
+program_transform_name = s&^&ei-&
 
 AM_CXXFLAGS+= -I../include
 AM_LDFLAGS = -L../src  -L../../atompair 

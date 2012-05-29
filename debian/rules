@@ -9,7 +9,8 @@
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
 
+#dh $@ --  --buildsystem=python_distutils --with python2 --with autoreconf
 
 %:
-	dh $@ -- --buildsystem=python_distutils --with python2 --with autoreconf
+	dh $@ --  --buildsystem=autoconf --with python2 --with autoreconf
 

@@ -42,6 +42,7 @@ debian/ei.postrm.debhelper
 debian/ei.substvars
 debian/ei/
 debian/files
+debian/ei.prerm.debhelper
 
 
 depcomp
