@@ -15,6 +15,7 @@ JOB_DIR_PREFIX = os.path.expanduser(JOB_DIR_PREFIX)
 p_dir = os.path.dirname(os.path.abspath(__file__))
 logging.config.fileConfig(os.path.join(p_dir, "elog.config"))
 elog = logging.getLogger('elog')
+configFile = os.path.join(os.path.expanduser('~'),".eirc")
 
 not_empty = lambda x: os.path.exists(x) and os.stat(x)[ST_SIZE]
 
@@ -43,6 +44,33 @@ class GzipFile(object):
             except: pass
         self.p.stdout.close()
         self.status = 'closed'
+
+def getConfig():
+	"write out a default config file in ~/.eirc if not found, else, return the existing file"
+	if(not os.path.exists(configFile)):
+		out = open(configFile,"w")
+		out.write("""
+import os
+BASEDIR =  os.path.abspath(".")
+
+# path to the chemical database                    
+chem_db = os.path.join(BASEDIR, 'data', 'chemdb.cdb')
+
+# number of sample queries to create if not present
+n_sample_queries = 1000
+
+# processor through what? use 'qsub' if you have access to cluster or use
+# 'bash' for local processing
+processor = 'qsub'
+
+# parameter for LSH search. See
+# http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html
+lsh_param = " -W 1.39564 -M 19 -L 30 -K 600 -S 30 -T 30 "
+		""")
+		out.close()
+	return configFile
+
+
 
 def symlink_all(dir):
     """
@@ -241,7 +269,7 @@ def os_run2(cmd, msg=None, exception=True, prefix=None, stdout=DEFAULT,
 
         if exception:
             if subp.returncode != 0:
-                raise ExternalProgramError('Error in running %s' % cmd)
+               raise ExternalProgramError('Error in running %s, return code: %d' % (cmd, subp.returncode))
 
         return (subp.returncode, ret_out, ret_err)
     except OSError:

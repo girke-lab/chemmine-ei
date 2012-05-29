@@ -1,31 +1,32 @@
 #!/usr/bin/env python
-from config import *
 from logging import info, warning, error, debug, critical, root, NOTSET
 import sys
 import os
 import random
 from tempfile import NamedTemporaryFile as NTF
 import glob
-from eutils import OS_Runner, STORED, DISCARDED
+from eutils import OS_Runner, STORED, DISCARDED, getConfig
+
+execfile(getConfig())
 
 root.setLevel(NOTSET)
 os_run = OS_Runner()
 
-BASEDIR = os.path.dirname(os.path.abspath(__file__))
+BASEDIR =  os.path.abspath(".")
 DATADIR = os.path.join(BASEDIR, 'data')
-BINDIR = os.path.join(BASEDIR, 'bin')
+BINDIR = "" #os.path.join(BASEDIR, 'bin')
 CDB = os.path.join(DATADIR, 'chem.db')
 IDDB = os.path.join(DATADIR, 'main.iddb')
 TEST_QUERIES = os.path.join(DATADIR, 'test_query.iddb')
 CHEMICAL_SEARCH_RESULTS = os.path.join(DATADIR, 'chemical-search.results.gz')
-DB2DB_DISTANCE = os.path.join(BINDIR, "db2db_distance %s " % CDB)
-COORDTOOL = os.path.join(BINDIR, "coord")
-EUCSEARCHTOOL = os.path.join(BINDIR, "euclid_search")
+DB2DB_DISTANCE = os.path.join(BINDIR, "ei-db2db_distance %s " % CDB)
+COORDTOOL = os.path.join(BINDIR, "ei-coord")
+EUCSEARCHTOOL = os.path.join(BINDIR, "ei-euclid_search")
 MAX_EUCSEARCH_RESULTS = 50000
-EVALUATOR = os.path.join(BINDIR, "evaluator")
-COORD_TO_BINARY = os.path.join(BINDIR, "bin_formatter")
-INDEXED_SEARCH = os.path.join(BINDIR, "isearch") + lsh_param + "-D %s -C " + CDB + " < " + TEST_QUERIES
-INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "comparesearch")
+EVALUATOR = os.path.join(BINDIR, "ei-evaluator")
+COORD_TO_BINARY = os.path.join(BINDIR, "ei-bin_formatter")
+INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch") + lsh_param + "-D %s -C " + CDB + " < " + TEST_QUERIES
+INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
 
 
 class _Cdbsize(object):
@@ -39,6 +40,8 @@ class _Cdbsize(object):
 				int(os_run("wc -l %s" % (IDDB,), stdout=STORED)[1].split()[0])
 		return self._cdbsize
 cdbsize = _Cdbsize()
+
+
 
 def subset_db(n, cdb=IDDB, outfile="ref.iddb", base=1):
 	"""build ref cdb by randomly subsetting large cdb"""
@@ -57,7 +60,7 @@ def subset_db(n, cdb=IDDB, outfile="ref.iddb", base=1):
 		queries = set(queries)
 		error("!!!!! PLEASE GENERATE THE CHEMICAL SEARCH RESULT !!!!!")
 		error("!!!!! EXAMPLE:                                   !!!!!")
-		error("      db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz")
+		error("      ei-db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz")
 		error(" ")
 		error("Please press any key to continue or CTRL-C to exit")
 		sys.stdin.read()
@@ -201,6 +204,7 @@ def indexed_search(record, output="indexed.gz",
 	"""perform indexed search"""
 	info("running indexed search")
 	cmd = INDEXED_SEARCH % record + " | gzip > " + output
+	info("cmd: "+cmd)
 	ret, stdout, stderr = os_run(cmd, stderr=STORED) 
 	elapse = 0
 	prompt = ">>Query time:"
@@ -268,15 +272,16 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 		# use <post_action> to process jobs
 		if post_action:
 			jobs_todo = jobs
-			if True:
-			#while jobs_todo:
-				for job in jobs_todo:
-					if post_action == "dry":
-						info("dry: job=" + job)
-						continue
+			for job in jobs_todo:
+				if post_action == "dry":
+					info("dry: job=" + job)
+					continue
+				elif post_action == "bash":
+					os_run(post_action + " " + job+" 2> "+job+".e")
+				else:
 					os_run(post_action + " " + job)
-				if post_action == 'qsub':
-					wait_qsub(job_tmpl)
+			if post_action == 'qsub':
+				wait_qsub(job_tmpl)
 			# merge results
 			coord_file = "coord.%s-%s" % (n, k)
 			info("merging coordinate results")
@@ -348,12 +353,13 @@ if __name__ == '__main__':
 	else: post_action = processor
 
 	if opts.m is not None and opts.m:
-		DB2DB_DISTANCE = os.path.join(BINDIR, "db2db_distance.%s" % opts.m)
+		DB2DB_DISTANCE = os.path.join(BINDIR, "ei-db2db_distance.%s" % opts.m)
 		if not os.path.isfile(DB2DB_DISTANCE):
 			error("Cannot find " + DB2DB_DISTANCE)
 			sys.exit(1)
 		DB2DB_DISTANCE = DB2DB_DISTANCE + " " + CDB
 
+	print("before chdir\n")
 	if len(args) == 0:
 		work_dir = 'run-%s-%s' % (r, d)
 		os_run("mkdir -p %s" % work_dir)

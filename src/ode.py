@@ -15,7 +15,7 @@ def gen_subdb(ref_db_path, measure):
     if os.path.isfile(ref_real_db) and os.stat(ref_real_db)[ST_SIZE]:
         sys.stderr.write("Reusing database " + ref_real_db)
     else:
-        db_writer = os.path(BINDIR, 'db_subset')
+        db_writer = os.path(BINDIR, 'ei-db_subset')
         if measure: db_writer += ('.' + measure)
         os_run('%s %s %s' % (CDB, ref_db_path, ref_real_db), 
             msg="Cannot generate subdatabase")
@@ -48,7 +48,7 @@ def embed(compound, r, d, ref_db_path, ref_coord, db_builder, db2db_distance):
            msg="cannot compare input to reference database")
 
     # solve the puzzle
-    solver = os.path.join(BINDIR, 'coord')
+    solver = os.path.join(BINDIR, 'ei-coord')
     os_run("%(cmd)s %(inp)s" % dict(cmd=solver, inp=pz_path),
            msg="Cannot run embedder")
     f = file(pz_path + '.out')
@@ -88,8 +88,8 @@ if __name__ == '__main__':
     r = 2 + i
     sys.stderr.write("r = %d d = %d\n" % (r, d))
 
-    db_builder = os.path.join(BINDIR, 'db_builder')
-    db2db_distance = os.path.join(BINDIR, 'db2db_distance')
+    db_builder = os.path.join(BINDIR, 'ei-db_builder')
+    db2db_distance = os.path.join(BINDIR, 'ei-db2db_distance')
     if opts.m:
         db_builder += ('.' + opts.m)
         db2db_distance += ('.' + opts.m)

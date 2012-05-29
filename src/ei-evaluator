@@ -8,6 +8,7 @@ import sys
 
 # if you want to use only the top few result lines in evaluation, set this
 # number
+#num_queries_to_consider = 1000
 num_queries_to_consider = 1000
 # maximum k in k-nearest-neighbor search, i.e. maximum number of neighbors to
 # consider
@@ -94,11 +95,17 @@ for i in range(len(rs)): #+ len(r_plus)):
 
 # loop for each query in the result file. One query corresponds to one line
 for ii in range(num_queries_to_consider):
-	sys.stderr.write("processing query #%d\r" % (ii+1))
-	x_ref = get_ranking(ref.readline())
+	refLine = ref.readline()
+	targetLine = target.readline()
+	if refLine == "" or targetLine == "":
+		break
+
+	sys.stderr.write("processing query #%d\n" % (ii+1))
+
+	x_ref = get_ranking(refLine)
 	d_ref = dict()
 	for i in range(len(x_ref)): d_ref[x_ref[i]] = i
-	x_target = get_ranking(target.readline())
+	x_target = get_ranking(targetLine)
 	d_target = dict()
 	for i in range(len(x_target)): d_target[x_target[i]] = i
 	

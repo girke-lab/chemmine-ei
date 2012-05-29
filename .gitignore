@@ -6,7 +6,7 @@
 
 src/atompair/compare
 src/atompair/db2db_distance
-src/atompair/db_build
+src/atompair/db_builder
 src/atompair/db_search
 src/atompair/db_search_range
 src/atompair/db_search_self
@@ -18,7 +18,7 @@ src/embedder/icoord
 src/euclidean-search/knn
 src/euclidean-search/knn-self
 src/euclidean-search/rnn
-src/euclidean-search/scan
+src/euclidean-search/euclid_search
 src/euclidean-search/self
 src/euclidean-search/split
 
@@ -86,6 +86,6 @@ src/lshkit/test/scan
 src/lshkit/test/search
 src/lshkit/test/searchp
 src/lshkit/test/test-probe
-src/matrix/format
+src/matrix/bin_formatter
 src/matrix/read
 

@@ -48,16 +48,16 @@ HOW TO USE
 
 
     3 You will need to have your compound database ready to run EI. Copy your
-      compound database to the 'data' folder. You may also just create a
+      compound database to folder named 'data'. You may also just create a
       symbolic link to your compound database in the data folder instead. Make
       sure the name is chem.db. If you are using atom-pair similarity, you can
       create it using the following command (assuming EIROOT has been set to
       the root of the EI folder):
 
         $ cd $EIROOT/data
-        $ ../bin/db_build my.sdf chem.db
+        $ ei-db_build my.sdf chem.db
 
-      db_build might complain if your SDF does not follow the SDF
+      ei-db_build might complain if your SDF does not follow the SDF
       specification. If this happens, try use OpenBabel to convert it to SMILES
       and back to SDF.
 
@@ -170,7 +170,7 @@ HOW TO USE
       mode. The existing-input mode is started by adding the *.cdb file in the
       run-*-* folder. For example:
 	  	
-	$ python ei.py -r 300 -d 100 run-300-100/b0780f55853624ec274713648531e003.cdb
+      $ python ei.py -r 300 -d 100 run-300-100/b0780f55853624ec274713648531e003.cdb
 	
       This will allow ei.py to find intermediate files and pick up from where
       it stopped. If you to not specify the *.cdb and run
