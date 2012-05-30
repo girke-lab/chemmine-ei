@@ -267,7 +267,16 @@ CUSTOMIZATION
 
     EI allows you to plug in your own similarity measurement. In order to do
     this, you will have to provide an implementation for the following
-    functions in binary of script form.
+    functions in binary or script form.
+
+    There are two ways to tell EI about your own measures. The first is to set the 
+    full path of each binary in the configuration file (.eirc) using the variables
+    DB2DB_DISTANCE, DB_BUILDER, and DB_SUBSET. The second method is to put your 
+    binaries in a directory on the PATH (e.g. /usr/local/bin/), and name them 
+    like db2db_distance.my_measure, where the first part is one of the below 3 
+    binaries and the second part is the name of your measure. Then you can call
+    ei.py and ode.py with "-m my_measure". This method will be used below, but
+    either method will work.
     
     db2db_distance
 

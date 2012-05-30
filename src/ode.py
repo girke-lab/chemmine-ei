@@ -5,7 +5,7 @@ You must specificy which reference compound database and reference coordinates
 to use."""
 import os
 import sys
-from ei import BINDIR, os_run, CDB
+from ei import os_run, CDB, DB_SUBSET,DB2DB_DISTANCE,DB_BUILDER,COORDTOOL
 from tempfile import mkdtemp
 
 def gen_subdb(ref_db_path, measure):
@@ -15,9 +15,9 @@ def gen_subdb(ref_db_path, measure):
     if os.path.isfile(ref_real_db) and os.stat(ref_real_db)[ST_SIZE]:
         sys.stderr.write("Reusing database " + ref_real_db)
     else:
-        db_writer = os.path(BINDIR, 'ei-db_subset')
+        db_writer = DB_SUBSET
         if measure: db_writer += ('.' + measure)
-        os_run('%s %s %s' % (CDB, ref_db_path, ref_real_db), 
+        os_run('%s %s %s %s' % (db_writer,CDB, ref_db_path, ref_real_db), 
             msg="Cannot generate subdatabase")
     return ref_real_db
 
@@ -48,7 +48,7 @@ def embed(compound, r, d, ref_db_path, ref_coord, db_builder, db2db_distance):
            msg="cannot compare input to reference database")
 
     # solve the puzzle
-    solver = os.path.join(BINDIR, 'ei-coord')
+    solver = COORDTOOL 
     os_run("%(cmd)s %(inp)s" % dict(cmd=solver, inp=pz_path),
            msg="Cannot run embedder")
     f = file(pz_path + '.out')
@@ -88,17 +88,19 @@ if __name__ == '__main__':
     r = 2 + i
     sys.stderr.write("r = %d d = %d\n" % (r, d))
 
-    db_builder = os.path.join(BINDIR, 'ei-db_builder')
-    db2db_distance = os.path.join(BINDIR, 'ei-db2db_distance')
+    db_builder = DB_BUILDER
+    db2db_distance = DB2DB_DISTANCE
+
     if opts.m:
         db_builder += ('.' + opts.m)
         db2db_distance += ('.' + opts.m)
 
-    if not os.path.isfile(db_builder):
-        sys.stderr.write("Cannot find database builder to parse your input")
-        sys.stderr.write("\nI cannot find: ")
-        sys.stderr.write(db_builder)
-        sys.exit(1)
+   # this assumes absolute paths, which we don't need to have
+    #if not os.path.isfile(db_builder):
+        #sys.stderr.write("Cannot find database builder to parse your input")
+        #sys.stderr.write("\nI cannot find: ")
+        #sys.stderr.write(db_builder)
+        #sys.exit(1)
 
     ref_real_db = gen_subdb(ref_db_path, opts.m)
  

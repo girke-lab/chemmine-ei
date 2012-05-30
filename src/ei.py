@@ -7,27 +7,32 @@ from tempfile import NamedTemporaryFile as NTF
 import glob
 from eutils import OS_Runner, STORED, DISCARDED, getConfig
 
-execfile(getConfig())
 
 root.setLevel(NOTSET)
 os_run = OS_Runner()
 
+BINDIR = "" #os.path.join(BASEDIR, 'bin')
+DB2DB_DISTANCE = os.path.join(BINDIR, "ei-db2db_distance")
+DB_SUBSET = os.path.join(BINDIR,"ei-db_subset")
+DB_BUILDER = os.path.join(BINDIR,"ei-db_builder")
+EUCSEARCHTOOL = os.path.join(BINDIR, "ei-euclid_search")
+EVALUATOR = os.path.join(BINDIR, "ei-evaluator")
+COORD_TO_BINARY = os.path.join(BINDIR, "ei-bin_formatter")
+INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
+COORDTOOL = os.path.join(BINDIR, "ei-coord")
+INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch")
+
+execfile(getConfig())
+
 BASEDIR =  os.path.abspath(".")
 DATADIR = os.path.join(BASEDIR, 'data')
-BINDIR = "" #os.path.join(BASEDIR, 'bin')
 CDB = os.path.join(DATADIR, 'chem.db')
 IDDB = os.path.join(DATADIR, 'main.iddb')
 TEST_QUERIES = os.path.join(DATADIR, 'test_query.iddb')
 CHEMICAL_SEARCH_RESULTS = os.path.join(DATADIR, 'chemical-search.results.gz')
-DB2DB_DISTANCE = os.path.join(BINDIR, "ei-db2db_distance %s " % CDB)
-COORDTOOL = os.path.join(BINDIR, "ei-coord")
-EUCSEARCHTOOL = os.path.join(BINDIR, "ei-euclid_search")
 MAX_EUCSEARCH_RESULTS = 50000
-EVALUATOR = os.path.join(BINDIR, "ei-evaluator")
-COORD_TO_BINARY = os.path.join(BINDIR, "ei-bin_formatter")
-INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch") + lsh_param + "-D %s -C " + CDB + " < " + TEST_QUERIES
-INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
 
+INDEXED_SEARCH = INDEXED_SEARCH + " " + lsh_param + " -D %s -C " + CDB + " < " + TEST_QUERIES
 
 class _Cdbsize(object):
 	"""a callable that returns the database size and remembers it"""
@@ -91,7 +96,7 @@ def dist_mat(dbfile, outfile=None):
 	if os.path.exists(outfile):
 		debug('reusing small distance matrix file: %s' % outfile)
 		return outfile
-	cmd = "%s %s %s > %s" % (DB2DB_DISTANCE, dbfile, dbfile,
+	cmd = "%s %s %s %s > %s" % (DB2DB_DISTANCE, CDB, dbfile, dbfile,
 		outfile)
 	os_run(cmd, msg='cannot build distance matrix')
 	return outfile
@@ -127,7 +132,7 @@ def distances(db, ref_db, outfile=None):
 	if os.path.exists(outfile):
 		debug('reusing big distance table file: %s' % outfile)
 		return outfile
-	cmd = "%s %s %s > %s" % (DB2DB_DISTANCE, db, ref_db, outfile)
+	cmd = "%s %s %s %s > %s" % (DB2DB_DISTANCE,  CDB, db, ref_db, outfile)
 	os_run(cmd, msg='cannot run %s to get "puzzle body"' % DB2DB_DISTANCE)
 	return outfile
 	
@@ -353,11 +358,11 @@ if __name__ == '__main__':
 	else: post_action = processor
 
 	if opts.m is not None and opts.m:
-		DB2DB_DISTANCE = os.path.join(BINDIR, "ei-db2db_distance.%s" % opts.m)
-		if not os.path.isfile(DB2DB_DISTANCE):
-			error("Cannot find " + DB2DB_DISTANCE)
-			sys.exit(1)
-		DB2DB_DISTANCE = DB2DB_DISTANCE + " " + CDB
+		DB2DB_DISTANCE = os.path.join(BINDIR, "%s.%s" % (DB2DB_DISTANCE,opts.m))
+		#if not os.path.isfile(DB2DB_DISTANCE):
+			#error("Cannot find " + DB2DB_DISTANCE)
+			#sys.exit(1)
+		#DB2DB_DISTANCE = DB2DB_DISTANCE + " " + CDB
 
 	print("before chdir\n")
 	if len(args) == 0:

@@ -61,7 +61,7 @@ n_sample_queries = 1000
 
 # processor through what? use 'qsub' if you have access to cluster or use
 # 'bash' for local processing
-processor = 'qsub'
+processor = 'bash'
 
 # parameter for LSH search. See
 # http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html
