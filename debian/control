@@ -9,7 +9,7 @@ Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libboost-thread-dev, pytho
    libboost-thread1.42.0
 X-Python-Version: >=2.5
 Standards-Version: 3.8.4
-Homepage: <insert the upstream URL, if relevant>
+Homepage: http://chemmine.ucr.edu/ei/
 
 Package: ei
 Architecture: any
@@ -17,5 +17,6 @@ Depends: ${shlibs:Depends}, ${misc:Depends},  python, mime-support, libdb4.8, fi
    libgsl0ldbl, python-support, libreadline6, libopenbabel3,, libboost-program-options1.42.0, 
    libboost-thread1.42.0
 Suggests: r-base
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Description: Fast search of large chemical compound sets
+See Y. Cao, T. Jiang, and T. Girke. Accelerated Similarity Searching and Clustering of Large
+Compound Sets by Geometric Embedding and Locality Sensitive Hashing.

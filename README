@@ -69,7 +69,7 @@ HOW TO USE
         $ cd $EIROOT/data
         $ seq 1000 > main.iddb
     
-    5 Check config.py and make appropriate changes. One important setting is
+    5 Check ~/.eirc and make appropriate changes. One important setting is
       whether to use qsub. If you do not have access to qsub-style job queue,
       set the 'processor' value to 'bash' to run the job locally.
 
@@ -206,28 +206,6 @@ HOW TO USE
 
       To find the best values for these parameters
         
-
-FILE ORGANIZATION
-
-    There are two files under the ei-dist's root folder:
-
-    - config.py : basic configurations
-    - ei.py : the main script that users use to invoke the workflow
-
-    There are three folders at the root folder:
-
-    - data : data folder. This folder is where user should store data
-      including compound database, sample query information, reference search
-      results, etc.
-    - bin : binary folder. This folder contains programs that EI will use to
-      perform embedding, search, quality check, etc. User can place their own
-      version of similarity comparision binaries to apply EI to more similarity
-      measures.
-    - src : C/C++ programs that does the actual heavy lifting. Binaries in bin
-      folder link to programs in this folder
-    - eutils : this folder contains depended Python module. The user should
-      not touch this folder
-
 
 CONCEPTS
 
