@@ -11,7 +11,7 @@ AM_CXXFLAGS += -DHAS_OPENBABEL
 LIBS += -lopenbabel
 endif
 
-bin_PROGRAMS = compare db_builder db_search db_isearch db_search_self db_search_range db2db_distance db_subset
+bin_PROGRAMS = compare db_builder db_search db_isearch db_search_self db_search_range db2db_distance db_subset fp_search_server
 
 noinst_LIBRARIES = libdescriptors.a
 libdescriptors_a_SOURCES =  $(SRC)
@@ -24,4 +24,5 @@ db_search_self_SOURCES = db_search_self.cc  $(SRC)
 db_search_range_SOURCES = db_search_range.cc $(SRC)
 db2db_distance_SOURCES = db2db_distance.cc  $(SRC)
 db_subset_SOURCES = db_subset.cc   $(SRC)
+fp_search_server_SOURCES = fp_search_server.cc $(SRC)
 

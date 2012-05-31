@@ -9,7 +9,7 @@ SRC = fitdata.cpp  flat-index.cpp  isearch.cpp  mkmplsh.cpp  mplsh.cpp  mplsh-pr
 
 
 if BUILD_LSHKIT
-bin_PROGRAMS = fitdata  flat-index  isearch  mkmplsh  mplsh  mplsh-predict  mplsh-tune  runmplsh  scan  search  searchp  test-probe
+bin_PROGRAMS = fitdata  flat-index  isearch  mkmplsh  mplsh  mplsh-predict  mplsh-tune  runmplsh  scan  search  searchp  test-probe search_server
 fitdata_SOURCES= fitdata.cpp
 flat_index_SOURCES=flat-index.cpp
 isearch_SOURCES=isearch.cpp
@@ -22,4 +22,5 @@ scan_SOURCES=scan.cpp
 search_SOURCES=search.cpp
 searchp_SOURCES=searchp.cpp
 test_probe_SOURCES=test-probe.cpp
+search_server_SOURCE=search_server.cpp
 endif
