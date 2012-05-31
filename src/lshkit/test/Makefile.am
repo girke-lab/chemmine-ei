@@ -3,24 +3,14 @@ include ../Makefile.inc
 program_transform_name = s&^&ei-&
 
 AM_CXXFLAGS+= -I../include
-AM_LDFLAGS = -L../src  -L../../atompair 
-LIBS += -llshkit -ldescriptors
-SRC = fitdata.cpp  flat-index.cpp  isearch.cpp  mkmplsh.cpp  mplsh.cpp  mplsh-predict.cpp  mplsh-tune.cpp  runmplsh.cpp  scan.cpp  search.cpp  searchp.cpp  test-probe.cpp
+AM_LDFLAGS = -L../src
+LIBS += -llshkit 
+SRC = flat-index.cpp   mkmplsh.cpp  runmplsh.cpp  test-probe.cpp
 
 
 if BUILD_LSHKIT
-bin_PROGRAMS = fitdata  flat-index  isearch  mkmplsh  mplsh  mplsh-predict  mplsh-tune  runmplsh  scan  search  searchp  test-probe search_server
-fitdata_SOURCES= fitdata.cpp
-flat_index_SOURCES=flat-index.cpp
-isearch_SOURCES=isearch.cpp
-mkmplsh_SOURCES=mkmplsh.cpp
-mplsh_SOURCES=mplsh.cpp
-mplsh_predict_SOURCES= mplsh-predict.cpp
-mplsh_tune_SOURCES=mplsh-tune.cpp
+bin_PROGRAMS =  runmplsh  test-probe 
+#mkmplsh_SOURCES=mkmplsh.cpp
 runmplsh_SOURCES=runmplsh.cpp
-scan_SOURCES=scan.cpp
-search_SOURCES=search.cpp
-searchp_SOURCES=searchp.cpp
 test_probe_SOURCES=test-probe.cpp
-search_server_SOURCE=search_server.cpp
 endif

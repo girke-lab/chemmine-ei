@@ -17,39 +17,27 @@
     along with LSHKIT.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __WDONG_BTUNE__
-#define __WDONG_BTUNE__
+#include <cassert>
+#include <queue>
+#include <lshkit/common.h>
+#include <lshkit/vq.h>
+#include "kdtree.h"
 
-#include <db.h>
-
-struct btune_minmax
+namespace lshkit
 {
-	int min;
-	int max;	/* max will always work */
-};
+    void VQ::init () {
+        if (tree != 0) free();
+        tree = kd_tree_alloc(K, dim);
+        kd_tree_index((kd_tree_t *)tree, &means[0]);
+    }
 
-typedef int (*btune_f) (double *r, const int *p1, void *p2);
+    void VQ::free () {
+        kd_tree_free((kd_tree_t *)tree);
+    }
 
-struct btune
-{
-	DB *db;
-	int N;
-	struct btune_minmax *minmax;
-	btune_f fun;
-	void *param;
-};
-
-/* min r[0]
-   st
-   	r[1] >= 0
-*/
-
-int btune_init (struct btune *btune, int N, const struct btune_minmax *minmax, btune_f f1, void *param);
-
-/* val[i] = -1 means val[i] to be tuned */
-int btune_tune (struct btune *btune, int *val, double *f);
-
-int btune_cleanup (struct btune *btune);
-
-#endif
+    unsigned VQ::search (Domain obj) const {
+        unsigned cnt;
+        return kd_tree_search((kd_tree_t *)tree, obj, &cnt);
+    }
+}
 

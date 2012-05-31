@@ -17,6 +17,62 @@
     along with LSHKIT.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**
+ * \file concept.h
+ * \brief Check the LSH concept.
+ *
+ *  An LSH class should define the following items to be used in the 
+ *  LSHKIT framework:
+ *
+ *  - The parameter type:
+ *      \code
+ *      typedef ... Parameter;
+ *      \endcode
+ *  - The domain type (type that the LSH applies on):
+ *      \code
+ *      typedef ... Domain;
+ *      \endcode
+ *  - Default constructor:
+ *      \code
+ *      LSH()
+ *      \endcode
+ *  - Initialization method (same as LSH() immediately followed by reset()):
+ *      \code
+ *      void reset(const Parameter &, RNG &);
+ *      \endcode
+ *      The reset() function and on of the constructors take a random number
+ *      generator.  This random number generator should not be further used after reset() or the constructor has returned.
+ *  - Initializing constructor:
+ *      \code
+ *      LSH(const Parameter &, RNG &);  // equivalent to LSH() followed by reset()
+ *      \endcode
+ *  - A method that returns the range of hash value:
+ *      \code
+ *      unsigned getRange () const;
+ *      \endcode
+ *      If getRange() returns 0, then the hash value (returned by
+ *      operator()) can be anything.  Otherwise, it can be from 0 to getRange() - 1.
+ *  - An operator to apply the hash function:
+ *      \code
+ *      unsigned operator () (const Domain) const;
+ *      \endcode
+ *  - A serialization method following Boost serialization interface.
+ *      \code
+ *      template<class Archive>
+ *      void serialize(Archive & ar, const unsigned int version)
+ *      \endcode
+ *
+ *  Some of the LSH functions are created by rouding a real number to an integer,
+ *  and the part rounded off (delta) usually carries useful information.
+ *  Such LSH functions are modeled by the DeltaLSH concept,
+ *  which should implement the following extra method:
+ *
+ *  - An operator to apply the LSH and also return the delta.
+ *     \code
+ *     unsigned operator () const (Domain, float *delta); 
+ *     \endcode
+*/
+
 #ifndef __LSHKIT_CONCEPT__
 #define __LSHKIT_CONCEPT__
 
@@ -25,29 +81,7 @@
 
 namespace lshkit {
 
-/*
-    This class checks the LSH concept.  A LSH class should define the following
-    items to be used with LSHKIT:
-
-    typedef ... Parameter;  // The parameter type.
-    typedef ... Domain;     // The domain of the LSH function.
-    LSH();                  // Default constructor.
-    void reset(const Parameter &, RNG &);   // Initialize the object
-    LSH(const Parameter &, RNG &);  // equivalent to LSH() followed by reset()
-    unsigned getRange () const; // get the range of the hash value
-    unsigned operator () const (const Domain);  // apply the hash function.
-
-    The type Parameter should contain only POD, so that it can be written to
-    /load from files in the internal binary representation.
-
-    If getRange() returns 0, then the hash value (returned by operator()) can be
-    any thing.  Otherwise, it can be from 0 to getRange() - 1.
-
-    The reset() function and on of the constructors take a random number
-    generator.  This random number generator should not be further used after
-    reset() or the constructor has returned.
-*/
-
+/// LSH concept checker.
 template <typename LSH>
 struct LshConcept
 {
@@ -63,6 +97,7 @@ struct LshConcept
         lsh.reset(param, rng2);
         same_type(lsh.getRange(), u);
         same_type(lsh(object), u);
+        // current we do not check serialization.
     }
 protected:
     boost::mt11213b rng1;
@@ -76,15 +111,7 @@ protected:
     void same_type(T const &, T const&);
 };
 
-/*
-   Some of the LSH functions are created by rouding a real number to an integer,
-   and the rounded off part (delta) of the hash value carries information that
-   sometimes can be useful.  Such LSH functions are represented by DeltaLSH,
-   which should implement the following besides all that apply to the general
-    LSH:
-
-    unsigned operator () const (Domain, float *delta);  // apply the hash function.
-*/
+/// DeltaLSH concept checker.
 template <typename LSH>
 struct DeltaLshConcept: public LshConcept<LSH>
 {

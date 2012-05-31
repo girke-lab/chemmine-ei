@@ -27,6 +27,7 @@
 #include <boost/thread.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <stdint.h>
+#include <lshkit/common.h>
 #include <lshkit/storage.h>
 
 namespace lshkit {
@@ -193,7 +194,7 @@ namespace lshkit {
                 }
                 file_.wunlock(bin.blocks.back());
             }
-            assert(done);
+            verify(done);
             ++bin.count;
             bin.mutex.unlock();
         }
@@ -218,7 +219,7 @@ namespace lshkit {
                     callback(key, adaptor_.read(block->data + offset, &s));
                     offset += s;
                 }
-                assert(offset == block->size);
+                verify(offset == block->size);
                 file_.runlock(id);
             }
         }

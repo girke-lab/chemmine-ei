@@ -20,15 +20,25 @@
 #ifndef __LSHKIT_COMMON__
 #define __LSHKIT_COMMON__
 
+/**
+ * \file common.h
+ * \brief Common type and function definitions used by all components.
+ */
+
 
 #include <cmath>
 #include <limits>
 #include <vector>
+#include <stdexcept>
+#include <boost/assert.hpp>
+#include <boost/foreach.hpp>
 #include <boost/random.hpp>
 
-// Concept checking requires boost > 1.35.
-// remove the following line to disable concept checking
-#define CONCEPT_CHECK 1
+/// Enable concept checking.
+/** Concept checking requires boost > 1.35.
+  * Remove this definition to disable concept checking.
+  */
+//#define CONCEPT_CHECK 0
 
 #ifdef CONCEPT_CHECK
 #include <lshkit/concept.h>
@@ -36,32 +46,39 @@
 #define BOOST_CONCEPT_ASSERT(A)
 #endif
 
-
 namespace lshkit {
 
-// The default random number generator.
+/// The default random number generator.
 typedef boost::mt19937 DefaultRng;
 
 // Some of the frequently used distributions.
+
+/// Gaussian distribution.
 typedef boost::normal_distribution<float> Gaussian;
+/// Cauchy distribution.
 typedef boost::cauchy_distribution<float> Cauchy;
-typedef boost::uniform_real<float> UniformReal;
+/// Uniform distribution.
+typedef boost::uniform_real<float> Uniform;
+/// Uniform distribution with int values.
 typedef boost::uniform_int<int> UniformInt;
+/// Uniform distribution with unsigned values.
 typedef boost::uniform_int<unsigned> UniformUnsigned;
 
-/*
-   The minimum & maximum of two values.
-   We define this so that <algorithm> doesn't have to be included solely for
+/// Take the minimum of two values.
+/* We define this so that <algorithm> doesn't have to be included solely for
    this simple function.
  */
 template <typename T>
 T min (T a, T b) { return a < b ? a : b; }
 
+/// Take the maximum of two values.
 template <typename T>
 T max (T a, T b) { return a < b ? b : a; }
 
-// Squre function.
+/// Square function.
 template <typename T> T sqr (const T &x) { return x * x; }
+
+void panic_intern(const char *fmt, ...);
 
 }
 

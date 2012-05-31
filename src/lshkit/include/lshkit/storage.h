@@ -34,7 +34,7 @@
 
 namespace lshkit {
 
-    //Basic file operations.  Sync. I/O, no buffering.
+    /// Basic file operations.  Sync. I/O, no buffering.
 	class File
 	{
 		int fd_;
@@ -51,11 +51,11 @@ namespace lshkit {
         void truncate (uint64_t offset);
 	};
 
-    // Cached, block-based I/O
+    /// Cached, block-based I/O
     class CachedBlockFile: private File
     {
 
-        // Meta information of a block
+        /// Meta information of a block
         struct Meta
         {
             bool dirty;

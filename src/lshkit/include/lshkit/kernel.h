@@ -17,48 +17,41 @@
     along with LSHKIT.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __LSHKIT_PARAM_FITTING__
-#define __LSHKIT_PARAM_FITTING__
+/**
+ * \file kernel.h
+ * \brief Common kernel definitions.
+ */
 
-#include <cmath>
+#ifndef __LSHKIT_KERNEL__
+#define __LSHKIT_KERNEL__
 
-namespace lshkit
+// This file implements some common kernel functions.
+
+#include <functional>
+
+namespace lshkit { namespace kernel {
+
+/// inner product
+template <typename T /* real type */>
+class dot : public std::binary_function<const T*, const T*, float>
 {
-
-    /*
-    class GammaDistEst
+    unsigned dim_;
+public:
+    dot (unsigned dim) : dim_(dim) {}
+    float operator () (const T *first1, const T *first2) const
     {
-        float S_, lS_;
-        unsigned cnt_;
-    public:
-        struct Parameter
+        float r = 0.0;
+        for (unsigned i = 0; i < dim_; ++i)
         {
-            float k;
-            float t;
-        };
-
-        GammaDist () : S_(0.0), lS_(0.0), cnt_(0) {}
-
-        void reset () { S_ = lS_ = 0.0; cnt_ = 0; }
-
-        GammaDistEst &operator << (float sample)
-        {
-            S_ += sample;
-            lS_ += ::logf(sample);
-            ++cnt_;
-            return *this;
+            r += first1[i] * first2[i];
         }
+        return r;
+    }
+};
 
-        Parameter operator ();
-    };
 
-    class KnnGammaDistEst
-    {
-    public:
-        KnnGammaDistEst () {}
-    };
-    */
-}
+}}
 
 #endif
+
 

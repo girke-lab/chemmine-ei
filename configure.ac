@@ -95,7 +95,7 @@ AC_CONFIG_FILES([Makefile
                  src/euclidean-search/Makefile
                  src/lshkit/Makefile
                  src/lshkit/src/Makefile
-                 src/lshkit/test/Makefile
+                 src/lshkit/tools/Makefile
 					  src/eutils/Makefile
                  src/matrix/Makefile])
 

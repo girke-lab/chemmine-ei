@@ -17,30 +17,136 @@
     along with LSHKIT.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**
+  * \file mplsh.h
+  * \brief Multi-Probe LSH indexing.
+  *
+  * Multi-Probe LSH (MPLSH) uses the same data structure as LshIndex, except that it
+  * probes more than one buckets in each hash table to generate more accurate
+  * results.  Equivalently, less hash tables are needed to achieve the same
+  * accuracy.  The limitation is that the current implementation only works for
+  * L2 distance.
+  * 
+  * Follow the following 4 steps to use the MPLSH API.
+  * 
+  * \section mplsh-1 1. Implement a scanner class which scan the candidate keys.
+  * 
+  * The MPLSH data structure doesn't manage the feature vectors, but only keeps
+  * the keys to retrieve them.  You need to provide a scanner class to MPLSH, and
+  * for each query, MPLSH will pass the candidate keys to the scanner.
+  * The scanner usually keeps an K-NN data structure internally and updates
+  * it when receives candidate keys.
+  *
+  * MPLSH uses the scanner as a unary function taking a key as argument.
+  *
+  * The default scanner implementation is TopkScanner.
+  * 
+  * \code
+  * class Scanner
+  * {
+  *      ...
+  *      void operator () (unsigned key);
+  * };
+  * \endcode
+  *
+  * \section mplsh-2 2. Construct the MPLSH data structure.
+  *
+  * Assume we use key type KEY.
+  *
+  * \code
+  *
+  * typedef MultiProbeLshIndex<KEY> Index;
+  *
+  * Index index;
+  * \endcode
+  *
+  * The index can not be used yet.
+  *
+  * \section mplsh-3 3. Populate the index / Load the index from a previously saved file.
+  *
+  * When the index is initially built, use the following to populate the index:
+  * \code
+  * Index::Parameter param;
+  *
+  * //Setup the parameters.  Note that L is not provided here.
+  * param.W = W;
+  * param.H = H; // See H in the program parameters.  You can just use the default value.
+  * param.M = M;
+  * param.dim = DIMENSION_OF_THE_DATA
+  * DefaultRng rng; // random number generator.
+  * 
+  * index.init(param, rng, L);
+  * 
+  * for (each possible key, value pair) {
+  *     index.insert(key, value);
+  * }
+  * 
+  * // You can now save the index for future use.
+  * ofstream os(index_file.c_str(), std::ios::binary);
+  * index.save(os);
+  * \endcode
+  *  
+  * Or you can load from a previously saved file
+  *  
+  * \code
+  * ifstream is(index_file.c_str(), std::ios::binary);
+  * index.load(is);
+  * \endcode
+  * 
+  * \section mplsh-4 4. Query the MPLSH. 
+  * 
+  * \code
+  *   
+  * float *query;
+  * ...
+  * index.query(query, T, scanner);   cnt is the number of points actually scanned.
+  * 
+  * \endcode
+  *
+  * See the source file lshkit/tools/mplsh-run.cpp for a full example of using MPLSH.
+  *
+  * For adaptive probing, I hard coded the sensitive range of KNN distance to
+  * [0.0001W, 100W] and logarithmically quantized the range to 200 levels.
+  * If you find that your KNN distances fall outside this range, or want more refined
+  * quantization, you'll have to modify the code in lshkit::MultiProbeLshIndex::init().
+  *
+  * \section ref Reference
+  *
+  * Wei Dong, Zhe Wang, William Josephson, Moses Charikar, Kai Li. Modeling LSH
+  * for Performance Tuning.. To appear in In Proceedings of ACM 17th Conference
+  * on Information and Knowledge Management (CIKM). Napa Valley, CA, USA.
+  * October 2008.
+  *
+  * Qin Lv, William Josephson, Zhe Wang, Moses Charikar, Kai Li. Multi-Probe LSH:
+  * Efficient Indexing for High-Dimensional Similarity Search. Proceedings of the
+  * 33rd International Conference on Very Large Data Bases (VLDB). Vienna,
+  * Austria. September 2007.
+  *
+  */
+
 #ifndef __LSHKIT_PROBE__
 #define __LSHKIT_PROBE__
-
-#include <vector>
-#include <fstream>
-#include <string>
-#include <stdint.h>
 
 #include <lshkit/common.h>
 #include <lshkit/lsh.h>
 #include <lshkit/composite.h>
 #include <lshkit/metric.h>
-#include <lshkit/flat-index.h>
+#include <lshkit/lsh-index.h>
 #include <lshkit/mplsh-model.h>
+#include <lshkit/topk.h>
 
 namespace lshkit
 {
 
-// the data structure
+static inline unsigned long long leftshift (unsigned N) {
+    return (unsigned long long)1 << N;
+}
 
+/// Probe vector.
 struct Probe
 {
-    uint32_t mask;
-    uint32_t shift;
+    unsigned long long mask;
+    unsigned long long shift;
     float score;
     unsigned reserve;
     bool operator < (const Probe &p) const { return score < p.score; }
@@ -56,14 +162,17 @@ struct Probe
     {
         return (mask & m.mask) != 0;
     }
-    static const unsigned MAX_M = 20;
-    static const unsigned MAX_T = 100;
+    static const unsigned MAX_M = 64;
+    static const unsigned MAX_T = 200;
 }; 
 
+/// Probe sequence.
 typedef std::vector<Probe> ProbeSequence;
 
+/// Generate a template probe sequence.
 void GenProbeSequenceTemplate (ProbeSequence &seq, unsigned M, unsigned T);
 
+/// Probe sequence template.
 class ProbeSequenceTemplates: public std::vector<ProbeSequence>
 {
 public:
@@ -79,41 +188,52 @@ public:
 
 extern ProbeSequenceTemplates __probeSequenceTemplates;
 
-
+/// Multi-Probe LSH class.
 class MultiProbeLsh: public RepeatHash<GaussianLsh> 
 {
-    typedef RepeatHash<GaussianLsh> Super;
+    unsigned H_;
 public:
-    struct Parameter {
-        unsigned H;
-        unsigned M;
-        unsigned dim;
-        float W;
+    typedef RepeatHash<GaussianLsh> Super;
+    typedef Super::Domain Domain;
+
+    /**
+     * Parameter to MPLSH. 
+     *
+     * The following parameters are inherited from the ancestors
+     * \code
+     *   unsigned repeat; // the same as M in the paper
+     *   unsigned dim;
+     *   float W;
+     * \endcode
+     */
+    struct Parameter : public Super::Parameter {
+
+        unsigned range;
+
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version)
+        {
+            ar & range;
+            ar & repeat;
+            ar & dim;
+            ar & W;
+        }
     };
 
-    typedef Super::Domain Domain;
-private:
-    unsigned H_;
-
-
-public:
     MultiProbeLsh () {}
 
     template <typename RNG>
     void reset(const Parameter &param, RNG &rng)
     {
-        Super::Parameter bp;
-        bp.first = param.M;
-        bp.second.dim = param.dim;
-        bp.second.W = param.W;
-        H_ = param.H;
-        Super::reset(bp, rng);
+        H_ = param.range;
+        Super::reset(param, rng);
     }
 
     template <typename RNG>
     MultiProbeLsh(const Parameter &param, RNG &rng)
     {
-        reset(param, rng);
+        H_ = param.range;
+        Super::reset(param, rng);
     }
 
     unsigned getRange () const
@@ -126,93 +246,131 @@ public:
         return Super::operator ()(obj) % H_;
     }
 
-    void genProbeSequence (Domain obj, std::vector<unsigned> &seq, unsigned T);
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+        Super::serialize(ar, version);
+        ar & H_;
+    }
 
+    void genProbeSequence (Domain obj, std::vector<unsigned> &seq, unsigned T) const;
 };
 
 
-template <typename ACCESSOR>
-class MultiProbeLshIndex: public FlatIndex<MultiProbeLsh, ACCESSOR, metric::l2<float> >
+/// Multi-Probe LSH index.
+template <typename KEY>
+class MultiProbeLshIndex: public LshIndex<MultiProbeLsh, KEY>
 {
-    typedef FlatIndex<MultiProbeLsh, ACCESSOR, metric::l2<float> > Super;
-
-    MultiProbeLshModel model_;
-    MultiProbeLshRecallTable recall_;
-public: 
+public:
+    typedef LshIndex<MultiProbeLsh, KEY> Super;
+    /**
+     * Super::Parameter is the same as MultiProbeLsh::Parameter
+     */
     typedef typename Super::Parameter Parameter;
-    typedef typename Super::Domain Domain;
-    typedef typename Super::Key Key;
 
+private:
+
+    Parameter param_;
+    MultiProbeLshRecallTable recall_;
+
+public: 
+    typedef typename Super::Domain Domain;
+    typedef KEY Key;
+
+    /// Constructor.
+    MultiProbeLshIndex() {
+    } 
+
+    /// Initialize MPLSH.
+    /**
+      * @param param parameters.
+      * @param engine random number generator (if you are not sure about what to
+      * use, then pass DefaultRng.
+      * @param accessor object accessor (same as in LshIndex).
+      * @param L number of hash tables maintained.
+      */
     template <typename Engine>
-    MultiProbeLshIndex(const Parameter &param, Engine &engine, const ACCESSOR &accessor, unsigned L) 
-        : Super(param, engine, accessor, metric::l2<float>(param.dim), L),
-        model_(L, param.W, param.M, Probe::MAX_T),
-        recall_(model_, 200, 0.00001, 1.0)
-    {
+    void init (const Parameter &param, Engine &engine, unsigned L) {
+        Super::init(param, engine, L);
+        param_ = param;
+        // we are going to normalize the distance by window size, so here we pass W = 1.0.
+        // We tune adaptive probing for KNN distance range [0.0001W, 20W].
+        recall_.reset(MultiProbeLshModel(Super::lshs_.size(), 1.0, param_.repeat, Probe::MAX_T), 200, 0.0001, 20.0);
     }
 
-    void query (const Domain &obj, Topk<Key> &topk, unsigned T, unsigned *pcnt = (unsigned *)0)
+    /// Load the index from stream.
+    void load (std::istream &ar) 
+    {
+        Super::load(ar);
+        param_.serialize(ar, 0);
+        recall_.load(ar);
+        BOOST_VERIFY(ar);
+    }
+
+    /// Save to the index to stream.
+    void save (std::ostream &ar)
+    {
+        Super::save(ar);
+        param_.serialize(ar, 0);
+        recall_.save(ar);
+        BOOST_VERIFY(ar);
+    }
+
+    /// Query for K-NNs.
+    /**
+      * @param obj the query object.
+      * @param scanner 
+      */
+    template <typename SCANNER>
+    void query (Domain obj, unsigned T, SCANNER &scanner)
     {
         std::vector<unsigned> seq;
-        unsigned L = Super::lshs_.size();
-        unsigned cnt = 0;
-        Super::accessor_.reset();
-        for (unsigned i = 0; i < L; ++i)
-        {
+        for (unsigned i = 0; i < Super::lshs_.size(); ++i) {
             Super::lshs_[i].genProbeSequence(obj, seq, T);
-            for (unsigned j = 0; j < seq.size(); ++j)
-            {
+            for (unsigned j = 0; j < seq.size(); ++j) {
                 typename Super::Bin &bin = Super::tables_[i][seq[j]];
-                for (typename Super::Bin::const_iterator it = bin.begin();
-                    it != bin.end(); ++it)
-                    if (Super::accessor_.mark(*it))
-                    {
-                        ++cnt;
-                        topk << typename Topk<Key>::Element(*it, Super::metric_(obj,
-                                    Super::accessor_(*it)));
-                    }
+                BOOST_FOREACH(Key key, bin) {
+                    scanner(key);
+                }
             }
         }
-        if (pcnt != 0) *pcnt = cnt;
     }
 
-    void query (const Domain &obj, Topk<Key> &topk, float recall, unsigned *pcnt = (unsigned *)0)
+    /// Query for K-NNs, try to achieve the given recall by adaptive probing.
+    /**
+      * There's a special requirement for the scanner type used in adaptive query.
+      * It should support the following method to return the current K-NNs:
+      *
+      * const Topk<KEY> &topk () const;
+      */
+    template <typename SCANNER>
+    void query_recall (Domain obj, float recall, SCANNER &scanner) const
     {
+        unsigned K = scanner.topk().getK();
+        if (K == 0) throw std::logic_error("CANNOT ACCEPT R-NN QUERY");
+        if (scanner.topk().size() < K) throw std::logic_error("ERROR");
         unsigned L = Super::lshs_.size();
         std::vector<std::vector<unsigned> > seqs(L);
-        for (unsigned i = 0; i < L; ++i) Super::lshs_[i].genProbeSequence(obj,
-                seqs[i], Probe::MAX_T);
+        for (unsigned i = 0; i < L; ++i) {
+            Super::lshs_[i].genProbeSequence(obj, seqs[i], Probe::MAX_T);
+        }
 
-        unsigned cnt = 0;
-        Super::accessor_.reset();
-        for (unsigned j = 0; j < Probe::MAX_T; ++j)
-        {
+        for (unsigned j = 0; j < Probe::MAX_T; ++j) {
             if (j >= seqs[0].size()) break;
-            for (unsigned i = 0; i < L; ++i)
-            {
-                typename Super::Bin &bin = Super::tables_[i][seqs[i][j]];
-                for (typename Super::Bin::const_iterator it = bin.begin();
-                    it != bin.end(); ++it)
-                    if (Super::accessor_.mark(*it))
-                    {
-                        ++cnt;
-                        topk << typename Topk<Key>::Element(*it, Super::metric_(obj,
-                                    Super::accessor_(*it)));
-                    }
+            for (unsigned i = 0; i < L; ++i) {
+                BOOST_FOREACH(Key key, Super::tables_[i][seqs[i][j]]) {
+                    scanner(key);
+                }
             }
             float r = 0.0;
-            for (unsigned i = 0; i < topk.size(); ++i)
-            {
-                r += recall_.lookup(topk[i].dist, j+1);
+            for (unsigned i = 0; i < K; ++i) {
+                r += recall_.lookup(std::sqrt(scanner.topk()[i].dist) / param_.W, j + 1);
             }
-            r /= topk.size();
+            r /= K;
             if (r >= recall) break;
         }
-        if (pcnt != 0) *pcnt = cnt;
     }
 };
-
-// model
 
 }
 

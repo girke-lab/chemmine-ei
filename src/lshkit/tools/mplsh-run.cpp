@@ -1,4 +1,3 @@
-// derived from isearch.cpp
 /* 
     Copyright (C) 2008 Wei Dong <wdong@princeton.edu>. All Rights Reserved.
   
@@ -18,21 +17,15 @@
     along with LSHKIT.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "../../atompair/profiling.h"
 #include <boost/program_options.hpp>
 #include <boost/progress.hpp>
 #include <boost/format.hpp>
+#include <boost/timer.hpp>
 #include <lshkit.h>
-#include <vector>
-#include <fstream>
-#include <queue>
-#include <string.h>
-#include <stdlib.h>
-#include <signal.h>
 
 /**
-  * \file isearch.cpp
-  * \brief Interactive search using LSH index
+  * \file mplsh-run.cpp
+  * \brief Example of using MPLSH.
   *
   * This program is an example of using MPLSH index.
   *
@@ -50,9 +43,12 @@ Allowed options:
   -M [ -- ] arg (=1)
   -T [ -- ] arg (=1)              # probes
   -L [ -- ] arg (=1)              # hash tables
+  -Q [ -- ] arg (=100)            # queries
   -K [ -- ] arg (=50)             # nearest neighbor to retrieve
   -R [ -- ] arg (=3.40282347e+38) R-NN distance range
+  --recall arg                    desired recall
   -D [ --data ] arg               data file
+  -B [ --benchmark ] arg          benchmark file
   --index arg                     index file
   -H [ -- ] arg (=1017881)        hash table size, use the default value.
 \endverbatim
@@ -61,8 +57,6 @@ Allowed options:
 using namespace std;
 using namespace lshkit;
 namespace po = boost::program_options; 
-const unsigned int BUFSIZE = 10485760;
-const char* INPUT_FP = "coord.in";
 
 /*
     You must provide an access class to query the MPLSH.
@@ -122,27 +116,20 @@ public:
 };
 */
 
-void on_sig(int status) 
-{
-	std::cerr << "waked up to work: " << status << std::endl;
-	return; 
-}
-
 int main (int argc, char *argv[])
 {
-		signal(SIGINT, on_sig);
     string data_file;
+    string benchmark;
     string index_file;
 
-		Timer t;
     float W, R, desired_recall = 1.0;
     unsigned M, L, H;
     unsigned Q, K, T;
+    bool do_recall = false;
+    bool do_benchmark = true;
     bool use_index = false; // load the index from a file
-    bool do_refine = false; // whether to perform refinement step
-    unsigned skip = 0;
 
-    vector<unsigned> queries;
+    boost::timer timer;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -151,9 +138,12 @@ int main (int argc, char *argv[])
         (",M", po::value<unsigned>(&M)->default_value(1), "")
         (",T", po::value<unsigned>(&T)->default_value(1), "# probes")
         (",L", po::value<unsigned>(&L)->default_value(1), "# hash tables")
-        (",K", po::value<unsigned>(&K)->default_value(0), "default # nearest neighbor to retrieve")
+        (",Q", po::value<unsigned>(&Q)->default_value(100), "# queries")
+        (",K", po::value<unsigned>(&K)->default_value(0), "# nearest neighbor to retrieve")
         ("radius,R", po::value<float>(&R)->default_value(numeric_limits<float>::max()), "R-NN distance range (L2)")
+        ("recall", po::value<float>(&desired_recall), "desired recall")
         ("data,D", po::value<string>(&data_file), "data file")
+        ("benchmark,B", po::value<string>(&benchmark), "benchmark file")
         ("index", po::value<string>(&index_file), "index file")
         (",H", po::value<unsigned>(&H)->default_value(1017881), "hash table size, use the default value.")
         ;
@@ -164,7 +154,7 @@ int main (int argc, char *argv[])
 
     if (vm.count("help") || (vm.count("data") < 1))
     {
-        cerr << desc;
+        cout << desc;
         return 0;
     }
 
@@ -172,12 +162,26 @@ int main (int argc, char *argv[])
         R *= R; // we use L2sqr in the program.
     }
 
+    if (vm.count("recall") >= 1)
+    {
+        do_recall = true;
+        if (K == 0) {
+            cerr << "Automatic probing does not support R-NN query." << endl;
+        }
+    }
+
+    if ((Q == 0) || (vm.count("benchmark") == 0)) {
+        do_benchmark = false;
+    }
+
     if (vm.count("index") == 1) {
         use_index = true;
     }
 
-    cerr << "LOADING DATA..." << endl;
+    cout << "LOADING DATA..." << endl;
+    timer.restart();
     FloatMatrix data(data_file);
+    cout << boost::format("LOAD TIME: %1%s.") % timer.elapsed() << endl;
 
     typedef MultiProbeLshIndex<unsigned> Index;
 
@@ -187,14 +191,15 @@ int main (int argc, char *argv[])
     // try loading index
     bool index_loaded = false;
 
-    // load index?
     if (use_index) {
         ifstream is(index_file.c_str(), ios_base::binary);
         if (is) {
             is.exceptions(ios_base::eofbit | ios_base::failbit | ios_base::badbit);
-            cerr << "LOADING INDEX..." << endl;
+            cout << "LOADING INDEX..." << endl;
+            timer.restart();
             index.load(is);
-            verify(is);
+            BOOST_VERIFY(is);
+            cout << boost::format("LOAD TIME: %1%s.") % timer.elapsed() << endl;
             index_loaded = true;
         }
     }
@@ -214,10 +219,11 @@ int main (int argc, char *argv[])
         // The accessor.
 
         // Initialize the index structure.  Note L is passed here.
-        cerr << "CONSTRUCTING INDEX..." << endl;
+        cout << "CONSTRUCTING INDEX..." << endl;
 
+        timer.restart();
         {
-            boost::progress_display progress(data.getSize(), cerr);
+            boost::progress_display progress(data.getSize());
             for (unsigned i = 0; i < data.getSize(); ++i)
             {
                 // Insert an item to the hash table.
@@ -227,83 +233,85 @@ int main (int argc, char *argv[])
                 ++progress;
             }
         }
+        cout << boost::format("CONSTRUCTION TIME: %1%s.") % timer.elapsed() << endl;
 
         if (use_index) {
-            cerr << "SAVING INDEX..." << endl;
+            timer.restart();
+            cout << "SAVING INDEX..." << endl;
             {
                 ofstream os(index_file.c_str(), ios_base::binary);
                 os.exceptions(ios_base::eofbit | ios_base::failbit | ios_base::badbit);
                 index.save(os);
             }
+            cout << boost::format("SAVING TIME: %1%s") % timer.elapsed() << endl;
         }
     }
 
-    metric::l2sqr<float> l2sqr(data.getDim());
-		char* inp = new char[BUFSIZE];
-		float* query_vec = new float[data.getDim()];
-		while (true) {
-			unsigned int k = K;
-			std::cout << ">>";
-			std::cout.flush();
-			pause();
-			ifstream inp_f;
-			inp_f.open(INPUT_FP, std::ios::in);
-			if (not inp_f.good()) {
-				std::cerr << "Error in opening input file\n" << std::endl;
-				continue;
-			}
-			inp_f.getline(inp, BUFSIZE);
-			if (inp_f.fail()) {
-				std::cerr << "Error in reading input file\n" << std::endl;
-				continue;
-			}
+    if (do_benchmark) {
 
-			// parsing input line
-			char* str = strtok(inp, " ");
-			if (strcmp(str, "/Q") == 0) break;
-			if (strcmp(str, "/K") == 0) {
-					str = strtok(NULL, " ");
-					int _k = atoi(str);
-					if (_k > 0) k = _k;
-					str = strtok(NULL, " ");
-			}
-			bool vector_ok = true;
-			for (unsigned dim = 0; dim < data.getDim(); dim ++) {
-				query_vec[dim] = atof(str);
-				if (dim < data.getDim() - 1) {
-					str = strtok(NULL, " ");
-					if (str == NULL) {
-						std::cerr << "Wrong number of dimensions in input vector" 
-							<< std::endl;
-						vector_ok = false;
-						break;
-					}
-				}
-			}
-			if (not vector_ok) continue;
+        Benchmark<> bench;
+        cout << "LOADING BENCHMARK..." << endl;
+        bench.load(benchmark);
+        bench.resize(Q, K);
+        cout << "DONE." << endl;
 
-      unsigned cnt;
-      Topk<unsigned> topk;
-      TopkScanner<FloatMatrix::Accessor, metric::l2sqr<float> > query(accessor, l2sqr, k, R);
-			topk.reset(k);
-			query.reset(query_vec);
-			t.start();
-			index.query(query_vec, T, query);
-			topk.swap(query.topk());
-  
-			cout << "OK:"; 
-			for (unsigned j = 0; j < k; j ++)
-				cout << topk[j].key + 1 << ":" << topk[j].dist << " ";
-  
-			cout << endl;
-			cerr << boost::format("QUERY TIME: %1%s.") % t.pause() << endl;
-			t.reset();
+        for (unsigned i = 0; i < Q; ++i)
+        {
+            for (unsigned j = 0; j < K; ++j)
+            {
+                assert(bench.getAnswer(i)[j].key < data.getSize());
+            }
+        }
+
+        cout << "RUNNING QUERIES..." << endl;
+
+        Stat recall;
+        Stat cost;
+        metric::l2sqr<float> l2sqr(data.getDim());
+        TopkScanner<FloatMatrix::Accessor, metric::l2sqr<float> > query(accessor, l2sqr, K, R);
+        vector<Topk<unsigned> > topks(Q);
+
+        timer.restart();
+        if (do_recall)
+            // Specify the required recall
+            // and let MPLSH to guess how many bins to probe.
+        {
+            boost::progress_display progress(Q);
+            for (unsigned i = 0; i < Q; ++i)
+            {
+                // Query for one point.
+                query.reset(data[bench.getQuery(i)]);
+                index.query_recall(data[bench.getQuery(i)], desired_recall, query);
+                cost << double(query.cnt())/double(data.getSize());
+                topks[i].swap(query.topk());
+                ++progress;
+            }
+        }
+        else
+            // specify how many bins to probe.
+        {
+            boost::progress_display progress(Q);
+            for (unsigned i = 0; i < Q; ++i)
+            {
+                query.reset(data[bench.getQuery(i)]);
+                index.query(data[bench.getQuery(i)], T, query);
+                cost << double(query.cnt())/double(data.getSize());
+                topks[i].swap(query.topk());
+                ++progress;
+            }
+        }
+
+        for (unsigned i = 0; i < Q; ++i) {
+            recall << bench.getAnswer(i).recall(topks[i]);
+        }
+
+        cout << boost::format("QUERY TIME: %1%s.") % timer.elapsed() << endl;
+
+        cout << "[RECALL] " << recall.getAvg() << " +/- " << recall.getStd() << endl;
+        cout << "[COST] " << cost.getAvg() << " +/- " << cost.getStd() << endl;
+
     }
 
-		if (inp) {
-			delete[] inp;
-			inp = NULL;
-		}
     return 0;
 }
 

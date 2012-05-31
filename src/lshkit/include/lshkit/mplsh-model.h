@@ -22,20 +22,44 @@
 #include <fstream>
 #include <boost/math/distributions/gamma.hpp>
 #include <boost/math/distributions/normal.hpp>
-#include <boost/numeric/ublas/matrix.hpp>
+#include <lshkit/matrix.h>
+
+/**
+ * \file mplsh-model.h
+ * \brief Model of Multi-probe LSH.
+ * 
+ * The modeling code is not well documented because I find it hard to do so.
+ * The code is essentially a translation of our CIKM'08 paper.  If you do wish
+ * to look into the code, beware that when the distance is used, sometime I
+ * mean L2 distance (when Gaussian distribution of the distance between
+ * the random projection of two points is considered)
+ * and sometime I mean L2sqr distance because L2sqr distance between two points
+ * in the database follows Gamma distribution.
+ */
 
 namespace lshkit {
 
-typedef boost::math::normal_distribution<double> NormalDist;
-typedef boost::math::gamma_distribution<double> GammaDist;
+typedef boost::math::normal_distribution<double> GaussianDouble;
+typedef boost::math::gamma_distribution<double> GammaDouble;
 
-GammaDist GammaDistMLE (double M, double G);
+/// Maximum likelihood estimation of gamma distribution.
+/**
+  * @param M sample mean.
+  * @param G geometric mean of sample.
+  */
+GammaDouble GammaDoubleMLE (double M, double G);
 
+/// Data parameter.
+/**
+  * This class represents the parameters extracted from the dataset.
+  */
+// We use l2sqr here.
 class DataParam
 {
     double M, G;
     double a_M, b_M, c_M;
     double a_G, b_G, c_G;
+
     /*
     DataParam () {}
     DataParam (const DataParam &dp)
@@ -44,27 +68,52 @@ class DataParam
         a_G(dp.a_G), b_G(dp.b_G), c_G(dp.c_G) {}
         */
 public:
+    /// Constructor.
+    /**
+      * For now, parameters can only be loaded from a file.
+      */
     DataParam (const std::string &path)
     {
         std::ifstream is(path.c_str());
         is >> M >> G >> a_M >> b_M >> c_M
              >> a_G >> b_G >> c_G;
     }
-
-    GammaDist globalDist () const
+    
+    /// Estimate the global distance distribution.
+    GammaDouble globalDist () const
     {
-        return GammaDistMLE(M, G);
+        return GammaDoubleMLE(M, G);
     }
 
-    GammaDist topkDist (unsigned N, unsigned K) const
+    /// Estimate the distance distribution of the K-th NN.
+    /**
+      * @param N size of the (extraplolated) dataset.
+      */
+    GammaDouble topkDist (unsigned N, unsigned K) const
     {
         double m, g;
         m = std::exp(a_M) * std::pow(double(N), b_M) * std::pow(double(K), c_M);
         g = std::exp(a_G) * std::pow(double(N), b_G) * std::pow(double(K), c_G);
-        return GammaDistMLE(m,g);
+        return GammaDoubleMLE(m,g);
     }
+
+    void scale (double s) {
+        M /= s;
+        G /= s;
+        a_M -= std::log(s);
+        a_G -= std::log(s);
+    }
+
+    double scale () {
+        double s = M;
+        scale(s);
+        return s;
+    }
+    
 };
 
+/// Multi-probe LSH parameters.
+// we use l2 here.
 class MultiProbeLshModel
 {
     unsigned L_;
@@ -75,7 +124,7 @@ public:
         : L_(L), W_(W), M_(M), T_(T)
     {}
 
-    double recall (double l2dist) const;
+    double recall (double l2) const;
 
     void setL (unsigned L) { L_ = L; }
     void setW (double W) { W_ = W; }
@@ -86,11 +135,12 @@ public:
 
 };
 
+// we use l2sqr here.
 class MultiProbeLshDataModel: public MultiProbeLshModel
 {
 // temporary, not thread safe
-    GammaDist globalDist_;
-    std::vector<GammaDist> topkDists_;
+    GammaDouble globalDist_;
+    std::vector<GammaDouble> topkDists_;
 
 public:
     MultiProbeLshDataModel(const DataParam &param, unsigned N, unsigned K)
@@ -108,36 +158,65 @@ public:
     double cost () const;
 };
 
+// we use l2 here.
 class MultiProbeLshRecallTable
 {
-	unsigned step_;
-	float min_, max_;
-    boost::numeric::ublas::matrix<float> table_;
+    unsigned step_;
+    double min_, max_;
+    double lmin_, lmax_;
+    Matrix<float> table_;
+
 public:
 
-    MultiProbeLshRecallTable (MultiProbeLshModel model, unsigned d_step, float d_min,
-            float d_max)
-        : step_(d_step), min_(d_min), max_(d_max), table_(model.getT(), d_step)
+    void load (std::istream &is) {
+        is.read((char *)&min_, sizeof(min_));
+        is.read((char *)&max_, sizeof(max_));
+        table_.load(is);
+        
+        step_ = table_.getDim();
+        lmin_ = log(min_);
+        lmax_ = log(max_);
+    }
+
+    void save (std::ostream &os) {
+        os.write((const char *)&min_, sizeof(min_));
+        os.write((const char *)&max_, sizeof(max_));
+        table_.save(os);
+    }
+
+    void reset (MultiProbeLshModel model, unsigned d_step, double d_min, double d_max)
     {
+        if (d_min <= 0 || d_max <= 0) {
+            throw std::logic_error("Make sure a distance is positive.");
+        }
+
+        step_ = d_step;
+
+        min_ = d_min;
+        max_ = d_max;
+        lmin_ = log(d_min);
+        lmax_ = log(d_max);
+        table_.reset(d_step, model.getT());
+
         unsigned T = model.getT();
-        double delta = (max_ - min_) / step_;
+        double delta = (lmax_ - lmin_) / step_;
         for (unsigned t = 0; t < T; ++t)
         {
             model.setT(t+1);
             for (unsigned d = 0; d < step_; ++d)
             {
-                table_(t, d) = model.recall(sqr(min_ + delta * d));
+                table_[t][d] = model.recall(exp(lmin_ + delta * d));
             }
         }
     }
     
-    float lookup (float dist, int T)
+    float lookup (float dist, int T) const
     {
         unsigned d;
         if (dist < min_) return 1.0;
         if (!(dist < max_)) return 0.0;
-        d = (unsigned int) ((dist - min_) * step_ / (max_ - min_));
-        return table_(T-1,d);
+        d = std::floor((log(dist) - lmin_) * step_ / (lmax_ - lmin_) + 0.5);
+        return table_[T-1][d];
     }
 
 };

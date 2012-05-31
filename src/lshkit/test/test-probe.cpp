@@ -19,11 +19,12 @@
 
 #include <limits>
 #include <iostream>
-#include <cstdlib>
 #include <lshkit/mplsh.h>
+#include <boost/program_options.hpp>
 
 using namespace std;
 using namespace lshkit;
+namespace po = boost::program_options; 
 
 ostream &operator << (ostream &os, const Probe &p)
 {
@@ -50,7 +51,26 @@ ostream &operator << (ostream &os, const Probe &p)
 
 int main (int argc, char *argv[])
 {
-    int M = atoi(argv[1]);
+    unsigned M;
+
+	po::options_description desc("Allowed options");
+	desc.add_options()
+		("help,h", "produce help message.")
+		(",M", po::value<unsigned>(&M)->default_value(5), "")
+		;
+
+	po::variables_map vm;
+	po::store(po::parse_command_line(argc, argv, desc), vm);
+	po::notify(vm);	
+
+	if (vm.count("help"))
+	{
+        cout << "This program prints the full template probe sequence." << endl;
+		cout << desc;
+		return 0;
+	}
+
+
     ProbeSequence seq;
     GenProbeSequenceTemplate(seq, M, numeric_limits<unsigned>::max());
     for (ProbeSequence::const_iterator it = seq.begin(); it != seq.end(); ++it)
