@@ -21,6 +21,7 @@ src/euclidean-search/rnn
 src/euclidean-search/euclid_search
 src/euclidean-search/self
 src/euclidean-search/split
+src/atompair/fp_db_compare_server
 
 Makefile
 stamp-h1
