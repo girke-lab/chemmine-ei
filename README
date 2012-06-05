@@ -55,7 +55,7 @@ HOW TO USE
       the root of the EI folder):
 
         $ cd $EIROOT/data
-        $ ei-db_build my.sdf chem.db
+        $ ei-db_builder my.sdf chem.db
 
       ei-db_build might complain if your SDF does not follow the SDF
       specification. If this happens, try use OpenBabel to convert it to SMILES

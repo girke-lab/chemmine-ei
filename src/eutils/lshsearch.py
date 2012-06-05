@@ -5,10 +5,9 @@ Performing LSH search (without refinement)
 import os
 import sys
 from pexpect import spawn, TIMEOUT
-bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'search_server')
-matrix = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'matrix')
-exchange_fp = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-	'coord.in')
+bin = 'ei-search_server'
+matrix =  'matrix'
+exchange_fp = 'coord.in'
 import signal
 from time import time
 from traceback import print_exc
@@ -21,7 +20,7 @@ class LSHSearchError(Exception):
 
 class LSHSearcher(object):
 	"""The fingerprint calculator wrapper class"""
-	def __init__(self, matrix, w=0.65664, m=16, l=30, k=1000, t=80):
+	def __init__(self, matrix, w=0.65664, m=16, l=10, k=1000, t=80): # l=30
 		"""start the process"""
 		sys.stderr.write("Using parameters:\n"
 			" -W %s -M %s -L %s -K %s -T %s -D %s\n" % (w, m, l, k, t, matrix)

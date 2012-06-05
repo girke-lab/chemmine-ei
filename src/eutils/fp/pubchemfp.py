@@ -19,7 +19,7 @@ class FPCalculator(object):
 	"""The fingerprint calculator wrapper class"""
 	def __init__(self):
 		"""start the process"""
-		self.cmd = "java -cp %s:. %s" % (lib_jar, java_class)
+		self.cmd = "java -Xmx128M -cp %s:%s %s" % (lib_jar,bin_dir, java_class)
 		self.start()
 	
 	def start(self):

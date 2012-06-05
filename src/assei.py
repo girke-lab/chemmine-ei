@@ -24,7 +24,7 @@ queue = Queue()
 from time import time
 from stat import ST_SIZE
 from traceback import print_exc
-import lshsearch
+from lshsearch import LSHSearcher
 
 import signal
 
@@ -59,7 +59,7 @@ def lsh(query):
 		print_exc()
 		elapsed = 0
 		result = '\n'
-	return "/t:"+elapased + " " + result
+	return "/t:"+str(elapsed) + " " + result
 	
 
 def lshRemote(query):

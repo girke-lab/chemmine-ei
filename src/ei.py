@@ -344,6 +344,11 @@ if __name__ == '__main__':
 		default=False)
 	p.add_option("-s", "--slice", help="number of puzzles per job", dest="s")
 	opts, args = p.parse_args()
+
+	if opts.m is not None and opts.m:
+		DB2DB_DISTANCE = os.path.join(BINDIR, "%s.%s" % (DB2DB_DISTANCE,opts.m))
+
+
 	if opts.r is None or opts.d is None:
 		sys.stderr.write("must specify r and d. Use --help to see usage\n")
 		sys.exit(1)
@@ -357,14 +362,7 @@ if __name__ == '__main__':
 	if opts.dry: post_action = "dry"
 	else: post_action = processor
 
-	if opts.m is not None and opts.m:
-		DB2DB_DISTANCE = os.path.join(BINDIR, "%s.%s" % (DB2DB_DISTANCE,opts.m))
-		#if not os.path.isfile(DB2DB_DISTANCE):
-			#error("Cannot find " + DB2DB_DISTANCE)
-			#sys.exit(1)
-		#DB2DB_DISTANCE = DB2DB_DISTANCE + " " + CDB
 
-	print("before chdir\n")
 	if len(args) == 0:
 		work_dir = 'run-%s-%s' % (r, d)
 		os_run("mkdir -p %s" % work_dir)
