@@ -20,13 +20,9 @@ class LSHSearchError(Exception):
 
 class LSHSearcher(object):
 	"""The fingerprint calculator wrapper class"""
-	def __init__(self, matrix, w=0.65664, m=16, l=10, k=1000, t=80): # l=30
+	def __init__(self, matrix,parameters):
 		"""start the process"""
-		sys.stderr.write("Using parameters:\n"
-			" -W %s -M %s -L %s -K %s -T %s -D %s\n" % (w, m, l, k, t, matrix)
-			)
-		self.cmd = bin + " -W %s -M %s -L %s -K %s -T %s -D %s" % (
-			w, m, l, k, t, matrix)
+		self.cmd = "%s %s -D %s" % (bin,parameters,matrix)
 		self.start()
 	
 	def tell(self, msg):

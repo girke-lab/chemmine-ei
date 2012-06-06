@@ -5,11 +5,10 @@ perform chemical search
 import os
 import sys
 from pexpect import spawn, TIMEOUT
-bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fp_search_server')
-db = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'db.fp_cdb')
-q_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'query.fp_cdb')
-candidates_f = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-	'candidates.data')
+bin = 'ei-fp_search_server'
+db =  'db.fp_cdb'
+q_db =  'query.fp_cdb'
+candidates_f =  'candidates.data'
 from base64 import b64decode
 from time import time
 import signal
@@ -48,7 +47,8 @@ class Refiner(object):
 		if not line.endswith('\n'):
 			line += '\n'
 		start = time()
-		#self.child.send(line)
+		sys.stderr.write("sending line: "+line)
+		self.child.send(line)
 		self.child.kill(signal.SIGINT)
 		sys.stderr.write("sending took %f seconds\n" % (time() - start))
 		start = time()

@@ -282,12 +282,23 @@ int main (int argc, char *argv[])
 			}
 			if (not vector_ok) continue;
 
-      unsigned cnt;
+		unsigned cnt;
       Topk<unsigned> topk;
       TopkScanner<FloatMatrix::Accessor, metric::l2sqr<float> > query(accessor, l2sqr, k, R);
 			topk.reset(k);
 			query.reset(query_vec);
 			t.start();
+
+			cout<<"topk init:"<<endl;
+			for (unsigned j = 0; j < k; j ++)
+				cout << topk[j].key + 1 << ":" << topk[j].dist << " ";
+
+			cout<<"query vector: "<<endl;
+			for (unsigned j = 0; j < data.getDim(); j ++)
+				cout << query_vec[j] << " ";
+			cout<<endl;
+
+
 			index.query(query_vec, T, query);
 			topk.swap(query.topk());
   

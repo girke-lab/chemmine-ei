@@ -7,6 +7,17 @@ from tempfile import NamedTemporaryFile as NTF
 import glob
 from eutils import OS_Runner, STORED, DISCARDED, getConfig
 
+#sys.path.append('eutils')
+#sys.path.append('eutils/fp')
+from fpcdb import create_db
+from coord import CoordinateSolver
+from fpdbcompare import DBComparer
+from time import time
+from stat import ST_SIZE
+from traceback import print_exc
+from lshsearch import LSHSearcher
+from refineserver import Refiner
+
 
 root.setLevel(NOTSET)
 os_run = OS_Runner()
@@ -307,11 +318,134 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 
 	# perform euclidean search
 	eucsearch(r1, r2, "eucsearch.%s-%s" % (n, k))
-	if input:
-		clean(input[:-3], n, k)
+#	if input:
+#		clean(input[:-3], n, k)
 
 	# do accuracy test
 	accuracy(n, k)
+
+def query(r,d,query_sdf):
+	t = time()
+	assert os.path.isfile(query_sdf)
+	work_dir = 'run-%s-%s' % (r, d)
+	query_base = os.path.splitext(query_sdf)[0]
+	query_cdb = os.path.join(work_dir,query_base+".cdb")
+
+	info("creating query cdb")
+	try:
+		#produces dist.names?
+		create_db(query_sdf,query_cdb,log_names=False,first=True)
+		assert os.stat(query_cdb)[ST_SIZE] != 17
+	except:
+		print_exc()
+		return False
+	parsing_time = time() - t
+
+	#create distance matrix
+	info("creating distance matrix")
+	query_dist = os.path.join(work_dir,query_base+".dist")
+	try:
+		unlink(query_dist)
+	except:
+		pass
+	t=time()
+	failed=False
+	try:
+		#uses ref.cdb
+		comparer = DBComparer(CDB)
+		comparer.compare(query_cdb,query_dist)
+	except:
+		failed=True
+	if failed or os.stat(query_dist)[ST_SIZE] == 0:
+		print_exc()
+		error("Error in comparing to references")
+		return False
+
+	# solve the coordinate
+	info("solving coordinate puzzle")
+	query_coord = os.path.join(work_dir,query_base+".coord")
+	try:
+		#uses puzzle
+		puzzle_file = os.path.join(work_dir,"puzzle")
+		f = file(puzzle_file,'w')
+		f.write('%s %s'%(d,r))
+		f.close()
+		os_run("cat %s >> %s" % (os.path.join(work_dir,'coord.%s-%s' % (r,d)),puzzle_file))
+		solver = CoordinateSolver(puzzle_file)
+		solverResult = solver.solve(query_dist).strip()
+		assert solverResult
+	except:
+		print_exc()
+		error("Error in embedding")
+		return False
+	f = file(query_coord,'w')
+	f.write(solverResult)
+	f.close()
+	coord_time = time() - t
+
+	# perform lsh search
+	info("performing lsh search")
+	t=time()
+	try:
+		#uses matrix
+		lshsearcher = LSHSearcher(os.path.join(work_dir,"matrix.%s-%s" % (r,d)),lsh_param)
+		lshResult = lshsearcher.search(solverResult).strip()
+		assert lshResult
+		print lshResult
+	except:
+		print_exc()
+		error("Error in performing LSH query")
+		info("solver result: \n"+solverResult)
+		return False
+	lsh_time = time() - t
+
+	#refine
+	info("refining")
+	t = time()
+	try:
+		query_lsh = "candidates.data"
+		f = file(query_lsh,'w')
+		f.write(lshResult)
+		f.close()
+
+		#refiner = Refiner("db.fp_cdb",200)
+		refiner = Refiner(CDB,d)
+		os_run("cp "+query_cdb+" query.fp_cdb")	
+		refineResult = refiner.refine(query_cdb+" "+query_lsh)
+		assert refineResult
+	except:
+		print_exc()
+		error("Error in performing refinement")
+		return False
+	refine_time = time() - t
+
+	info("outputing results")
+	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
+		(parsing_time, coord_time, lsh_time, refine_time))
+
+	names = [i.strip() for i in file(CDB+".names")]
+
+	f = file(query_base+".out",'w')
+	f.write('# %s %s %s %s\n' % 
+		(parsing_time, coord_time, lsh_time, refine_time))
+	for pair in refineResult.split():
+		seq_id, dist = pair.split(':')
+		cid = names[int(seq_id)-1]
+		f.write('%s %s\n' %(cid,dist))
+	f.close()
+
+	info("done")
+	return True
+
+
+
+def time_and_result(line):
+	if line.startswith('/t:'):
+		time_block,line = line.split(None,1)
+		time= float(time_block.split(':')[1])
+	else:
+		time = 0
+	return (time,line)
 
 def clean(input, n, k):
 	info("cleaning up files")
@@ -340,6 +474,7 @@ if __name__ == '__main__':
 	p.add_option("-r", help="number of references", dest="r")
 	p.add_option("-d", help="number of dimensions", dest="d")
 	p.add_option("-m", help="similarity measure to use", dest="m")
+	p.add_option("-q", help="query", dest="q")
 	p.add_option("--dry-run", help="dry run", dest="dry", action="store_true",
 		default=False)
 	p.add_option("-s", "--slice", help="number of puzzles per job", dest="s")
@@ -363,7 +498,9 @@ if __name__ == '__main__':
 	else: post_action = processor
 
 
-	if len(args) == 0:
+	if opts.q:
+		query(r,d,opts.q)
+	elif len(args) == 0:
 		work_dir = 'run-%s-%s' % (r, d)
 		os_run("mkdir -p %s" % work_dir)
 		os.chdir(work_dir)
