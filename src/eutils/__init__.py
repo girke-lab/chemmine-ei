@@ -501,6 +501,19 @@ def wrap_onspace(text, width):
                   text.split(' ')
                  )
 
+def gen_subdb(ref_db_path, measure,db_writer,main_cdb):
+    """generate real database for iddb-style subdatabase"""
+    ref_real_db = ref_db_path + '.db'
+    from stat import ST_SIZE
+    if os.path.isfile(ref_real_db) and os.stat(ref_real_db)[ST_SIZE]:
+        sys.stderr.write("Reusing database " + ref_real_db)
+    else:
+        if measure: db_writer += ('.' + measure)
+        os_run('%s %s %s %s' % (db_writer,main_cdb, ref_db_path, ref_real_db), 
+            msg="Cannot generate subdatabase")
+    return ref_real_db
+
+
 import re
 def wrap_onspace_strict(text, width):
     """Similar to wrap_onspace, but enforces the width constraint:

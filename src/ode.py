@@ -7,19 +7,7 @@ import os
 import sys
 from ei import os_run, CDB, DB_SUBSET,DB2DB_DISTANCE,DB_BUILDER,COORDTOOL
 from tempfile import mkdtemp
-
-def gen_subdb(ref_db_path, measure):
-    """generate real database for iddb-style subdatabase"""
-    ref_real_db = ref_db_path + '.db'
-    from stat import ST_SIZE
-    if os.path.isfile(ref_real_db) and os.stat(ref_real_db)[ST_SIZE]:
-        sys.stderr.write("Reusing database " + ref_real_db)
-    else:
-        db_writer = DB_SUBSET
-        if measure: db_writer += ('.' + measure)
-        os_run('%s %s %s %s' % (db_writer,CDB, ref_db_path, ref_real_db), 
-            msg="Cannot generate subdatabase")
-    return ref_real_db
+from eutils import gen_subdb
 
 def embed(compound, r, d, ref_db_path, ref_coord, db_builder, db2db_distance):
     """embed <compound> in <d> dimensional space using <r> reference compounds
@@ -56,7 +44,8 @@ def embed(compound, r, d, ref_db_path, ref_coord, db_builder, db2db_distance):
     f.close()
 
     from shutil import rmtree
-    rmtree(dir)
+    #rmtree(dir)
+    print("dir: "+dir)
     return x
 
 if __name__ == '__main__':
@@ -102,7 +91,7 @@ if __name__ == '__main__':
         #sys.stderr.write(db_builder)
         #sys.exit(1)
 
-    ref_real_db = gen_subdb(ref_db_path, opts.m)
+    ref_real_db = gen_subdb(ref_db_path, opts.m,DB_SUBSET,CDB)
  
     print embed(args[0], r, d, ref_real_db, ref_coord, db_builder, db2db_distance)
 

@@ -294,6 +294,7 @@ int main (int argc, char *argv[])
 				cout << topk[j].key + 1 << ":" << topk[j].dist << " ";
 
 			cout<<"query vector: "<<endl;
+
 			for (unsigned j = 0; j < data.getDim(); j ++)
 				cout << query_vec[j] << " ";
 			cout<<endl;

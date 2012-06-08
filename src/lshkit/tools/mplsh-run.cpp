@@ -294,9 +294,21 @@ int main (int argc, char *argv[])
             for (unsigned i = 0; i < Q; ++i)
             {
                 query.reset(data[bench.getQuery(i)]);
+
+					cout<<"query vector: "<<endl;
+					for (unsigned j = 0; j < data.getDim(); j ++)
+						cout << data[bench.getQuery(i)][j] << " ";
+					cout<<endl;
+
+
+
+
                 index.query(data[bench.getQuery(i)], T, query);
                 cost << double(query.cnt())/double(data.getSize());
                 topks[i].swap(query.topk());
+					 for(unsigned j = 0;j<K;j++)
+						 cout<<topks[i][j].key+1<<":"<<topks[i][j].dist<<" ";
+					 cout<<endl;
                 ++progress;
             }
         }
