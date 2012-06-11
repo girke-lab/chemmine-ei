@@ -65,7 +65,7 @@ processor = 'bash'
 
 # parameter for LSH search. See
 # http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html
-lsh_param = " -W 1.39564 -M 19 -L 30 -K 600 -S 30 -T 30 "
+lsh_param = " -W 1.39564 -M 19 -L 30 -K 600 -T 30 "
 		""")
 		out.close()
 	return configFile

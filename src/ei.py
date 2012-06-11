@@ -326,7 +326,6 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 
 def createQueryCdb(query_sdf,query_cdb):
 	t = time()
-	info("creating query cdb")
 	#create_db(query_sdf,query_cdb,log_names=False,first=True)
 	#assert os.stat(query_cdb)[ST_SIZE] != 17
 
@@ -374,7 +373,6 @@ def lshSearch(matrix_file,solverResult):
 	return time() - t
 
 def refine(d,query_cdb):
-	info("refining")
 	t = time()
 
 	refiner = Refiner(CDB,d)
@@ -399,7 +397,7 @@ def query(r,d,query_sdf,ref_file):
 		parsing_time = createQueryCdb(query_sdf,query_cdb)
 		dist_time = createDistanceMatrix(ref_file,query_cdb,query_dist)
 		coord_time,solverResult = solvePuzzle(r,d,query_coord,query_dist,coord_file,puzzle_file)
-		print("solverResult: "+solverResult)
+		#print("solverResult: "+solverResult)
 		lsh_time = lshSearch(matrix_file,solverResult)
 		refine_time,refineResult = refine(d,query_cdb)
 

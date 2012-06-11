@@ -36,7 +36,8 @@ void output(std::vector<std::pair<double, unsigned int> >& results,
 			for (unsigned int i = results.size(); i > 0; i --) {
 				db.at(results[i-1].second - 1, desc_db);
 				std::cout << results[i-1].second << ":"
-					<< 1 - similarity(desc_query, desc_db) << " ";
+					<< results[i-1].first << " ";
+					//<< 1 - similarity(desc_query, desc_db) << " ";
 			}
 			std::cout << std::endl;
 		} else {
@@ -137,6 +138,9 @@ int main(int argc, char* argv[])
 				}
 			} while (str);
 		}
+		for(int j=0; j< candidates.size(); j++)
+			std::cerr<<j<<": "<<candidates[j]<<" ";
+		std::cerr<<std::endl;
 
 		if (candidates.size() > 0) 
 			use_candidate = true;

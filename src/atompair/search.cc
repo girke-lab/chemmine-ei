@@ -64,6 +64,7 @@ int limited_knn(PreloadedDB& db, const std::vector<unsigned int>& desc,
 	for (unsigned int j = 0; j < candidates.size(); j ++) {
 		db.at(candidates[j] - index_base, db_cmp);
 		s = similarity(db_cmp, const_cast<std::vector<unsigned int>&>(desc), 1);
+		std::cerr<<"("<<j<<","<<s<<") ";
 		if (reverse) v = s;
 		else v = 1 - s;
 		/* keep the smallest v's in the queue */
@@ -76,6 +77,7 @@ int limited_knn(PreloadedDB& db, const std::vector<unsigned int>& desc,
 			q_dist.push(std::pair<double, unsigned int>(v, candidates[j]));
 		}
 	}
+	std::cerr<<std::endl;
 
 	/* copy result */
 	while (! q_dist.empty()) {
