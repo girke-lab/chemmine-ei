@@ -3,7 +3,7 @@ from logging import info, warning, error, debug, critical, root, NOTSET
 import sys
 import os
 import random
-from tempfile import NamedTemporaryFile as NTF
+from tempfile import NamedTemporaryFile as NTF,mkdtemp
 import glob
 from eutils import OS_Runner, STORED, DISCARDED, getConfig, gen_subdb
 
@@ -326,8 +326,6 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 
 def createQueryCdb(query_sdf,query_cdb):
 	t = time()
-	#create_db(query_sdf,query_cdb,log_names=False,first=True)
-	#assert os.stat(query_cdb)[ST_SIZE] != 17
 
 	os_run("%(cmd)s %(inp)s %(out)s" % dict(cmd=DB_BUILDER, inp=query_sdf,
 													  out=query_cdb), msg="Cannot parse input file")
@@ -344,7 +342,7 @@ def createDistanceMatrix(ref_file,query_cdb,query_dist):
 	assert os.stat(query_dist)[ST_SIZE] != 0
 	return time() - t
 
-def solvePuzzle(r,d,query_coord,query_dist,coord_file,puzzle_file):
+def solvePuzzle(r,d,query_dist,coord_file,puzzle_file):
 	t = time()
 	f = file(puzzle_file,'w')
 	f.write('%s %s'%(d,r))
@@ -355,9 +353,6 @@ def solvePuzzle(r,d,query_coord,query_dist,coord_file,puzzle_file):
 	solverResult = solver.solve(query_dist).strip()
 	assert solverResult
 
-	f = file(query_coord,'w')
-	f.write(solverResult)
-	f.close()
 	return (time() - t,solverResult)
 
 def lshSearch(matrix_file,solverResult):
@@ -383,27 +378,40 @@ def refine(d,query_cdb):
 	return (time() - t,refineResult)
 
 def query(r,d,query_sdf,ref_file):
-	assert os.path.isfile(query_sdf)
-	work_dir = 'run-%s-%s' % (r, d)
+
+	current_dir = os.path.abspath(".")
+	ref_file = os.path.join(current_dir,ref_file)
+	work_dir = os.path.join(current_dir,'run-%s-%s' % (r, d))
+
+	if not os.path.isfile(query_sdf):
+		raise StandardError("query file "+query_sdf+" not found")
+	if not os.path.isfile(ref_file):
+		raise StandardError("reference file "+ref_file+" not found")
+	if not os.path.isdir(work_dir):
+		raise StandardError("working directory "+work_dir+" not found")
+
+	temp_dir=mkdtemp()
 	query_base = os.path.splitext(query_sdf)[0]
-	query_cdb = os.path.join(work_dir,query_base+".cdb")
-	query_dist = os.path.join(work_dir,query_base+".dist")
-	query_coord = os.path.join(work_dir,query_base+".coord")
-	coord_file = ref_file+".distmat.coord"
-	puzzle_file = os.path.join(work_dir,"puzzle")
+	query_cdb = os.path.join(temp_dir,query_base+".cdb")
+	query_dist = os.path.join(temp_dir,query_base+".dist")
+	puzzle_file = os.path.join(temp_dir,"puzzle")
+
 	matrix_file = os.path.join(work_dir,"matrix.%s-%s" % (r,d))
+	coord_file = ref_file+".distmat.coord"
 
 	try:
 		parsing_time = createQueryCdb(query_sdf,query_cdb)
+
+		os.chdir(temp_dir)
 		dist_time = createDistanceMatrix(ref_file,query_cdb,query_dist)
-		coord_time,solverResult = solvePuzzle(r,d,query_coord,query_dist,coord_file,puzzle_file)
-		#print("solverResult: "+solverResult)
+		coord_time,solverResult = solvePuzzle(r,d,query_dist,coord_file,puzzle_file)
 		lsh_time = lshSearch(matrix_file,solverResult)
 		refine_time,refineResult = refine(d,query_cdb)
+		os.chdir(current_dir)
 
-
-
-		info("outputing results")
+		from shutil import rmtree
+		rmtree(temp_dir)
+		
 		sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
 			(parsing_time, dist_time + coord_time, lsh_time, refine_time))
 
@@ -418,11 +426,9 @@ def query(r,d,query_sdf,ref_file):
 			f.write('%s %s\n' %(cid,dist))
 		f.close()
 
-		info("done")
 
 	except:
 		print_exc()
-
 
 def time_and_result(line):
 	if line.startswith('/t:'):

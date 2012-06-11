@@ -44,7 +44,7 @@ def embed(compound, r, d, ref_db_path, ref_coord, db_builder, db2db_distance):
     f.close()
 
     from shutil import rmtree
-    #rmtree(dir)
+    rmtree(dir)
     print("dir: "+dir)
     return x
 
