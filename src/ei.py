@@ -6,6 +6,8 @@ import random
 from tempfile import NamedTemporaryFile as NTF,mkdtemp
 import glob
 from eutils import OS_Runner, STORED, DISCARDED, getConfig, gen_subdb
+from io import StringIO
+from subprocess import Popen, PIPE, STDOUT
 
 #sys.path.append('eutils')
 #sys.path.append('eutils/fp')
@@ -32,6 +34,9 @@ COORD_TO_BINARY = os.path.join(BINDIR, "ei-bin_formatter")
 INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
 COORDTOOL = os.path.join(BINDIR, "ei-coord")
 INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch")
+SINGLE_SEARCH = os.path.join(BINDIR,"ei-single_search")
+DB_ISEARCH = os.path.join(BINDIR,"ei-db_isearch")
+K = 600
 
 execfile(getConfig())
 
@@ -327,22 +332,46 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 def createQueryCdb(query_sdf,query_cdb):
 	t = time()
 
-	os_run("%(cmd)s %(inp)s %(out)s" % dict(cmd=DB_BUILDER, inp=query_sdf,
-													  out=query_cdb), msg="Cannot parse input file")
+	#os_run("%(cmd)s %(inp)s %(out)s" % dict(cmd=DB_BUILDER, inp=query_sdf, out=query_cdb), msg="Cannot parse input file")
+	subp = Popen([DB_BUILDER,query_sdf,query_cdb], stdout=PIPE)
+	num_compounds=0
+	for line in subp.stdout:
+		m = re.match(r"(\d+) compunds read.",line)
+		if m:
+			num_compounds=int(m.group(1))
 
-	return time() - t
+	return (time() - t,num_compounds)
 
-def createDistanceMatrix(ref_file,query_cdb,query_dist):
+def createDistanceMatrixBatch(ref_db,query_cdb,query_dist):
 	t = time()
 
-	try: unlink(query_dist) 
-	except: pass
-	comparer = DBComparer(gen_subdb(ref_file,None,DB_SUBSET,CDB))
+	subp=Popen([DB2DB_DISTANCE,query_cdb,ref_db],stdout=query_dist)
+
+
+	comparer = DBComparer(ref_db)
 	comparer.compare(query_cdb,query_dist)
 	assert os.stat(query_dist)[ST_SIZE] != 0
 	return time() - t
 
-def solvePuzzle(r,d,query_dist,coord_file,puzzle_file):
+def solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file):
+	f = file(puzzle_file,'w')
+	f.write('%s %s'%(d,r))
+	f.close()
+
+	os_run("cat %s >> %s" % (coord_file,puzzle_file))
+	os_run("%(cmd)s %(cmp)s %(ref_db)s >> %(out)s" % 
+				dict(cmd=DB2DB_DISTANCE, cmp=query_cdb, ref_db=ref_db, out=puzzle_file),
+           msg="cannot compare input to reference database")
+
+	os_run("%(cmd)s %(inp)s" % dict(cmd=COORDTOOL, inp=puzzle_file), msg="Cannot run embedder")
+	f = file(puzzle_file + '.out')
+	x = f.read()
+	f.close()
+	info("puzzle: "+x)
+	return x
+
+
+def solvePuzzleBatch(r,d,query_dist,coord_file,puzzle_file):
 	t = time()
 	f = file(puzzle_file,'w')
 	f.write('%s %s'%(d,r))
@@ -356,6 +385,15 @@ def solvePuzzle(r,d,query_dist,coord_file,puzzle_file):
 	return (time() - t,solverResult)
 
 def lshSearch(matrix_file,solverResult):
+	f = file("coords.in","w")
+	f.write(solverResult)
+	f.close()
+
+	subp = Popen("%s %s -D %s -C coords.in " % (SINGLE_SEARCH, lsh_param,matrix_file), shell=True, stdout=PIPE)
+
+	return okResult(subp.stdout.read())
+
+def lshSearchBatch(matrix_file,solverResult):
 	t = time()
 
 	lshsearcher = LSHSearcher(matrix_file,lsh_param)
@@ -367,26 +405,46 @@ def lshSearch(matrix_file,solverResult):
 	f.close()
 	return time() - t
 
-def refine(d,query_cdb):
+def refine(query_cdb,candidates):
+	f = file("candidates.data",'w')
+	f.write(candidates)
+	f.close()
+	info("candidates: "+candidates)
+	subp = Popen( [DB_ISEARCH,CDB,str(K)],stdin=PIPE,stdout=PIPE)
+	subp.stdin.write(query_cdb+" candidates.data\n")
+	subp.stdin.close()
+	return okResult(subp.stdout.read())
+
+def okResult(output):
+	#info("output: "+output)
+	result=None
+	import re
+	m = re.search(r"OK:(.*)\n",output)
+	if m:
+		return m.group(1)
+	else:
+		raise StandardError("no results found. output: "+output)
+
+def refineBatch(query_cdb):
 	t = time()
 
-	refiner = Refiner(CDB,d)
-	os_run("cp "+query_cdb+" query.fp_cdb")	
-	refineResult = refiner.refine("");
+	refiner = Refiner(CDB,K)
+	#os_run("cp "+query_cdb+" query.fp_cdb")	
+	refineResult = refiner.refine("%s %s" %(query_cdb,"candidates.data"));
 	assert refineResult
 
 	return (time() - t,refineResult)
 
-def query(r,d,query_sdf,ref_file):
+def query(r,d,query_sdf,ref_iddb):
 
 	current_dir = os.path.abspath(".")
-	ref_file = os.path.join(current_dir,ref_file)
+	ref_iddb = os.path.join(current_dir,ref_iddb)
 	work_dir = os.path.join(current_dir,'run-%s-%s' % (r, d))
 
 	if not os.path.isfile(query_sdf):
 		raise StandardError("query file "+query_sdf+" not found")
-	if not os.path.isfile(ref_file):
-		raise StandardError("reference file "+ref_file+" not found")
+	if not os.path.isfile(ref_iddb):
+		raise StandardError("reference file "+ref_iddb+" not found")
 	if not os.path.isdir(work_dir):
 		raise StandardError("working directory "+work_dir+" not found")
 
@@ -397,29 +455,36 @@ def query(r,d,query_sdf,ref_file):
 	puzzle_file = os.path.join(temp_dir,"puzzle")
 
 	matrix_file = os.path.join(work_dir,"matrix.%s-%s" % (r,d))
-	coord_file = ref_file+".distmat.coord"
+	coord_file = ref_iddb+".distmat.coord"
 
 	try:
-		parsing_time = createQueryCdb(query_sdf,query_cdb)
+		parsing_time,num_compounds = createQueryCdb(query_sdf,query_cdb)
+		ref_db = gen_subdb(ref_iddb,None,DB_SUBSET,CDB)
+
+		f = file(query_base+".out",'w')
 
 		os.chdir(temp_dir)
-		dist_time = createDistanceMatrix(ref_file,query_cdb,query_dist)
-		coord_time,solverResult = solvePuzzle(r,d,query_dist,coord_file,puzzle_file)
-		lsh_time = lshSearch(matrix_file,solverResult)
-		refine_time,refineResult = refine(d,query_cdb)
+		if num_compounds > 1:
+			dist_time = createDistanceMatrixBatch(ref_db,query_cdb,query_dist)
+			coord_time,solverResult = solvePuzzleBatch(r,d,query_dist,coord_file,puzzle_file)
+			lsh_time = lshSearchBatch(matrix_file,solverResult)
+			refine_time,refineResult = refineBatch(query_cdb)
+			sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
+				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
+			f.write('# %s %s %s %s\n' % 
+				(parsing_time, coord_time, lsh_time, refine_time))
+		else:
+			refineResult = refine(query_cdb,lshSearch(matrix_file,solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
+			info("refine result: "+refineResult)
+	
 		os.chdir(current_dir)
 
 		from shutil import rmtree
 		rmtree(temp_dir)
 		
-		sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
-			(parsing_time, dist_time + coord_time, lsh_time, refine_time))
 
 		names = [i.strip() for i in file(CDB+".names")]
 
-		f = file(query_base+".out",'w')
-		f.write('# %s %s %s %s\n' % 
-			(parsing_time, coord_time, lsh_time, refine_time))
 		for pair in refineResult.split():
 			seq_id, dist = pair.split(':')
 			cid = names[int(seq_id)-1]

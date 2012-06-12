@@ -63,9 +63,11 @@ n_sample_queries = 1000
 # 'bash' for local processing
 processor = 'bash'
 
+K=600 # number of nearest neighbors in embedded space
+
 # parameter for LSH search. See
 # http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html
-lsh_param = " -W 1.39564 -M 19 -L 30 -K 600 -T 30 "
+lsh_param = " -W 1.39564 -M 19 -L 30 -K %s -T 30 " % K
 		""")
 		out.close()
 	return configFile

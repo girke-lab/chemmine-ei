@@ -5,7 +5,8 @@ perform chemical search
 import os
 import sys
 from pexpect import spawn, TIMEOUT
-bin = 'ei-fp_search_server'
+#bin = 'ei-fp_search_server'
+bin = 'ei-db_isearch'
 db =  'db.fp_cdb'
 q_db =  'query.fp_cdb'
 candidates_f =  'candidates.data'

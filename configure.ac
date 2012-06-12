@@ -37,13 +37,13 @@ AX_SWIG_ENABLE_CXX
 AX_SWIG_PYTHON
 
 # Checks for libraries.
-AC_ARG_WITH([openbabel],AS_HELP_STRING([--with-openbabel],[Build with OpenBabel]))
-AS_IF([test "x$with_openbabel" = "xyes"],[
+AC_ARG_WITH([openbabel],AS_HELP_STRING([--without-openbabel],[Build without OpenBabel]))
+AS_IF([test "x$with_openbabel" != "xno"],[
 	AC_LANG_PUSH([C++])
 		 AC_CHECK_LIB([openbabel],[acos],[:],[AC_MSG_FAILURE])
 	AC_LANG_POP([C++])
 ])
-AM_CONDITIONAL([HAVE_OPENBABEL], [test "x$with_openbabel" = "xyes"])
+AM_CONDITIONAL([HAVE_OPENBABEL], [test "x$with_openbabel" != "xno"])
 
 AC_CHECK_LIB([f2c], [main],[:],[AC_MSG_FAILURE],[-static])
 AC_CHECK_LIB([m], [pow],[],[AC_MSG_FAILURE])
