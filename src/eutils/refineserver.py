@@ -50,7 +50,7 @@ class Refiner(object):
 		start = time()
 		sys.stderr.write("sending line: "+line)
 		self.child.send(line)
-		self.child.kill(signal.SIGINT)
+		#self.child.kill(signal.SIGINT)
 		sys.stderr.write("sending took %f seconds\n" % (time() - start))
 		start = time()
 		index = self.child.expect_exact(['OK:', 'Cannot open', TIMEOUT])
