@@ -1,32 +1,29 @@
 #!/usr/bin/env python
 from logging import info, warning, error, debug, critical, root, NOTSET
 import sys
+print(sys.path)
 import os
 import random
 from tempfile import NamedTemporaryFile as NTF,mkdtemp
 import glob
-from eutils import OS_Runner, STORED, DISCARDED, getConfig, gen_subdb,time_function
 from io import StringIO
 from subprocess import Popen, PIPE, STDOUT
 import re
-from sdfiterator import sdf_iter
-
-#sys.path.append('eutils')
-#sys.path.append('eutils/fp')
-from fpcdb import create_db
-from coord import CoordinateSolver
-from fpdbcompare import DBComparer
 from time import time
 from stat import ST_SIZE
 from traceback import print_exc
-from lshsearch import LSHSearcher
-from refineserver import Refiner
+from eutils import OS_Runner, STORED, DISCARDED, getConfig, gen_subdb, time_function
+from eutils.sdfiterator import sdf_iter
+from eutils.coord import CoordinateSolver
+from eutils.fpdbcompare import DBComparer
+from eutils.lshsearch import LSHSearcher
+from eutils.refineserver import Refiner
 
 
 root.setLevel(NOTSET)
 os_run = OS_Runner()
 
-BINDIR = "" #os.path.join(BASEDIR, 'bin')
+BINDIR = "" 
 DB2DB_DISTANCE = os.path.join(BINDIR, "ei-db2db_distance")
 DB_SUBSET = os.path.join(BINDIR,"ei-db_subset")
 DB_BUILDER = os.path.join(BINDIR,"ei-db_builder")
