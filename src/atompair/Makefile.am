@@ -7,7 +7,7 @@ AM_CXXFLAGS = -g -Wall -fPIC -D_BUILD_DB_BUILD_ -DPRELOAD_DATABASE -O3 -mtune=no
 LIBS =    -lreadline -static
 
 if HAVE_OPENBABEL
-AM_CXXFLAGS += -DHAS_OPENBABEL
+AM_CXXFLAGS += -DHAS_OPENBABEL $(OPENBABEL_CFLAGS)
 LIBS += -lopenbabel
 endif
 

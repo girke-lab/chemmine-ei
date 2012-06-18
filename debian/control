@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libboost-thread-dev, pytho
    libboost-program-options-dev, mime-support, libdb-dev, file, libboost-dev, 
    mawk, libmagic1, libmagic-dev, libgsl0-dev, libgsl0ldbl, python-support, libreadline6, 
    libreadline-dev,swig, libopenbabel3, libopenbabel-dev, libboost-program-options1.42.0, 
-   libboost-thread1.42.0
+   libboost-thread1.42.0, pkg-config
 X-Python-Version: >=2.5
 Standards-Version: 3.8.4
 Homepage: http://chemmine.ucr.edu/ei/
@@ -15,7 +15,7 @@ Package: ei
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},  python, mime-support, libdb4.8, file, libmagic1,  
    libgsl0ldbl, python-support, libreadline6, libopenbabel3,, libboost-program-options1.42.0, 
-   libboost-thread1.42.0, python-pexpect, default-jdk,r-base
+   libboost-thread1.42.0, python-pexpect, r-base
 Suggests: openbabel
 Description: Fast search of large chemical compound sets
 See Y. Cao, T. Jiang, and T. Girke. Accelerated Similarity Searching and Clustering of Large

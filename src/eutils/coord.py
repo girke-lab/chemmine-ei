@@ -52,11 +52,13 @@ class CoordinateSolver(object):
 		start = time()
 		self.tell(line)
 		start = time()
-		index = self.child.expect_exact(['OK:', 'Input:', TIMEOUT])
+		index = self.child.expect_exact(['OK:', 'Input: File I/O failed when reading first line', TIMEOUT])
 		if index == 0:
 			fp = self.child.readline()
 			return fp
 		elif index == 1:
+			print "before: "+self.child.before
+			print "after: "+self.child.after
 			raise SolverError
 		elif index == 2:
 			self.close()

@@ -40,6 +40,8 @@ AX_SWIG_PYTHON
 AC_ARG_WITH([openbabel],AS_HELP_STRING([--without-openbabel],[Build without OpenBabel]))
 AS_IF([test "x$with_openbabel" != "xno"],[
 	AC_LANG_PUSH([C++])
+		 #AC_CHECK_HEADERS([openbabel/obconversion.h openbable/mol.h openbable/obiter.h],[],[AC_MSG_FAILURE])
+		 PKG_CHECK_MODULES([OPENBABEL],[openbabel-2.0])
 		 AC_CHECK_LIB([openbabel],[acos],[:],[AC_MSG_FAILURE])
 	AC_LANG_POP([C++])
 ])

@@ -5,7 +5,7 @@ import os
 import random
 from tempfile import NamedTemporaryFile as NTF,mkdtemp
 import glob
-from eutils import OS_Runner, STORED, DISCARDED, getConfig, gen_subdb
+from eutils import OS_Runner, STORED, DISCARDED, getConfig, gen_subdb,time_function
 from io import StringIO
 from subprocess import Popen, PIPE, STDOUT
 import re
@@ -409,37 +409,48 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 
 	createPuzzleFile(r,d,coord_file,puzzle_file)
 
-	comparer = DBComparer(ref_db)
-	solver = CoordinateSolver(puzzle_file)
-	lshsearcher = LSHSearcher(matrix_file,lsh_param)
-	refiner = Refiner(CDB,K)
+	parsing_time = 0
+	dist_time,comparer = time_function(DBComparer,ref_db)
+	coord_time,solver = time_function(CoordinateSolver,puzzle_file)
+	lsh_time,lshsearcher = time_function(LSHSearcher,matrix_file,lsh_param)
+	refine_time,refiner = time_function(Refiner,CDB,K)
 
 	for i,current_query in enumerate(sdf_iter(queries)):
 		#write current query to file and convert to a cdb. will create a names file as well
 		f = file(query_sdf,'w')
 		f.write(current_query)
 		f.close()
-		createQueryCdb(query_sdf,query_cdb)
+		parsing_time += time_function(createQueryCdb,query_sdf,query_cdb)[0]
 
 		#read the name of this query
 		f=file(query_name_file,'r')
 		name=f.readline().rstrip()
 		f.close()
+		info("=============== "+name+" =====================")
 
 		#perform search
-		comparer.compare(query_cdb,query_dist)
-		solverResult = solver.solve(query_dist).strip()
+		dist_time += time_function(comparer.compare,query_cdb,query_dist)[0]
+		t,solverResult = time_function(solver.solve,query_dist)
+		coord_time += t
+		solverResult = solverResult.strip()
 
-		lshResult = lshsearcher.search(solverResult).strip()
+		t,lshResult = time_function(lshsearcher.search,solverResult)
+		lsh_time += t
+		lshResult = lshResult.strip()
+
 		f = file(candidate_file,'w')
 		f.write(lshResult)
 		f.close()
 
-		refineResult = refiner.refine("%s %s" %(query_cdb,candidate_file));
+		t,refineResult = time_function(refiner.refine,"%s %s" %(query_cdb,candidate_file))
+		refine_time += t
+
 		for pair in refineResult.split():
 			seq_id,dist = pair.split(":")
 			outf.write("%s\t%s\t%s\n" %(name,names[int(seq_id)-1],dist))
 	
+	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
+				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
 
 def lshSearchBatch(matrix_file,solverResult):
 	t = time()

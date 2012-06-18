@@ -8,6 +8,7 @@ import logging.config
 from tempfile import mkstemp, TemporaryFile, NamedTemporaryFile
 from stat import ST_SIZE
 from copy import copy
+from time import time
 
 JOB_DIR_PREFIX = '~www/dockgui' # Where Job folders are located
 JOB_DIR_PREFIX = os.path.expanduser(JOB_DIR_PREFIX)
@@ -71,6 +72,11 @@ lsh_param = " -W 1.39564 -M 19 -L 30 -K %s -T 30 " % K
 		""")
 		out.close()
 	return configFile
+
+def time_function(fun,*args):
+	t = time()
+	result = fun(*args)
+	return (time() - t, result)
 
 
 

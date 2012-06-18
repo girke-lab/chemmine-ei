@@ -135,6 +135,7 @@ int main(int argc, char* argv[])
 	std::cerr.flush();
 	while (true) {
 		pause();
+		sleep(1);
 		if (read_line(m, d) == 0) continue;
 #ifdef _TIMER_
 		t.start();
