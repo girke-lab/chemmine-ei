@@ -1,3 +1,20 @@
-#!/bin/sh
+#!/usr/bin/env python
 
-cp $1 $2
+import sys
+import os
+from eutils.sdfiterator import sdf_iter
+from shutil import copyfile
+
+input=sys.argv[1]
+out = sys.argv[2]
+
+
+copyfile(input,out)
+
+names=file(out+".names","w")
+count=0
+for current_sdf in sdf_iter(input):
+	names.write(current_sdf.split(os.linesep,1)[0]+"\n")
+	count+=1
+names.close()
+sys.stderr.write("%d compounds read.\n" % count)

@@ -356,7 +356,7 @@ def createQueryCdb(query_sdf,query_cdb):
 		if m:
 			num_compounds=int(m.group(1))
 	if num_compounds == -1:
-		warn("could not read how many compounds we have")
+		warning("could not read how many compounds we have")
 
 	return (time() - t,num_compounds)
 
@@ -633,6 +633,8 @@ if __name__ == '__main__':
 
 	if opts.m is not None and opts.m:
 		DB2DB_DISTANCE = os.path.join(BINDIR, "%s.%s" % (DB2DB_DISTANCE,opts.m))
+		DB_SUBSET = os.path.join(BINDIR,"%s.%s" % (DB_SUBSET,opts.m))
+		DB_BUILDER = os.path.join(BINDIR,"%s.%s" % (DB_BUILDER,opts.m))
 
 
 	if opts.initdb is not None:
