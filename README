@@ -274,16 +274,6 @@ CUSTOMIZATION
     
     to use your similarity measure.
 
-    To always use your similary measure as the default, just remove the
-    symbolic link named "db2db_distance" and recreate it to point it to your
-    new similarity measure:
-
-        cd bin
-        rm -f db2db_distance
-        ln -s db2db_distance.my_measure db2db_distance
-    
-    Now you could omit the "-m my_measure" part when you start ei.py
-
     db_builder
 
     This program takes one compound in whatever format you want to support and
@@ -307,4 +297,4 @@ CUSTOMIZATION
     
         db_subset.my_measure orignal.db index.file output.db
     
-    Please note that indieces in index.file are 1-based.
+    Please note that indieces in index.file are 2-based.
