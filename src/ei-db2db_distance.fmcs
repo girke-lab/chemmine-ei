@@ -50,7 +50,12 @@ def batch_dist(db,query,output):
 	check_call(['fmcsBatch',db,query,output],stdout=null)
 	#print "done"
 	#the 4th number of each line is the distance value
-	return [int(line.split(" ")[3].strip()) for line in file(output)]
+	def distance(line):
+		values = line.split(" ")
+		size1,size2,mcs = float(values[1]),float(values[2]),float(values[3])
+		return 1-(mcs/(size1+size2-mcs))
+
+	return [distance(line) for line in file(output)]
 
 
 def readIndex(index):

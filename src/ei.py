@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 from logging import info, warning, error, debug, critical, root, NOTSET
 import sys
-print(sys.path)
 import os
 import random
 from tempfile import NamedTemporaryFile as NTF,mkdtemp
 import glob
 from io import StringIO
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, STDOUT,check_call
 import re
 from time import time
 from stat import ST_SIZE
@@ -78,12 +77,12 @@ def subset_db(n, cdb=IDDB, outfile="ref.iddb", base=1):
 		for q in queries: f.write("%d\n" % q)
 		f.close()
 		queries = set(queries)
-		error("!!!!! PLEASE GENERATE THE CHEMICAL SEARCH RESULT !!!!!")
-		error("!!!!! EXAMPLE:                                   !!!!!")
-		error("      ei-db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz")
-		error(" ")
-		error("Please press any key to continue or CTRL-C to exit")
-		sys.stdin.read()
+#		error("!!!!! PLEASE GENERATE THE CHEMICAL SEARCH RESULT !!!!!")
+#		error("!!!!! EXAMPLE:                                   !!!!!")
+#		error("      ei-db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz")
+#		error(" ")
+#		error("Please press any key to continue or CTRL-C to exit")
+#		sys.stdin.read()
 	all = set(range(base, cdbsize() + base))
 	assert queries.issubset(all)
 	ref = random.sample(all.difference(queries), n)
@@ -213,8 +212,22 @@ def eucsearch(record1, record2, output):
 	os_run(cmd)
 	return output
 
+def gen_chemical_search_results():
+	
+	data=os.path.join("..","data")
+	results = os.path.join(data,"chemical-search.results.gz")
+	if not os.path.isfile(results):
+		check_call("ei-db_search -id %s %s %s  50000 | gzip > %s" % 
+				( os.path.join(data,"chem.db"),
+				  os.path.join(data,"main.iddb"),
+				  os.path.join(data,"test_query.iddb"),
+				  results),
+				shell=True)
+
 def accuracy(n, k):
 	"""perform evaluation to see how embedding works"""
+	gen_chemical_search_results()
+	eucsearch("matrix.%s-%s"%(n,k),"matrix.query.%s-%s"%(n,k), "eucsearch.%s-%s" % (n, k))
 	cmd = "%s %s eucsearch.%d-%d recall" % (EVALUATOR,
 			CHEMICAL_SEARCH_RESULTS, n, k)
 	os_run(cmd)
@@ -236,6 +249,7 @@ def indexed_search(record, output="indexed.gz",
 	cmd = "echo %s > index.search.timing" % elapse
 	os_run(cmd)
 
+	gen_chemical_search_results()
 	cmd = "%s %s %s > %s" % (INDEXED_SEARCH_EVALUATOR, 
 			CHEMICAL_SEARCH_RESULTS, output, evaluation_out)
 	os_run(cmd)
@@ -320,13 +334,16 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 	r1 = binarize_coord(coord_file, "matrix.%s-%s" % (n,k), k)
 	r2 = binarize_coord(coord_file2, "matrix.query.%s-%s" % (n,k), k)
 
-	# perform euclidean search
-	eucsearch(r1, r2, "eucsearch.%s-%s" % (n, k))
+# don't test by default
+#	# perform euclidean search
+#	eucsearch(r1, r2, "eucsearch.%s-%s" % (n, k))
+
 	if input:
 		clean(input[:-3], n, k)
 
-	# do accuracy test
-	accuracy(n, k)
+# don't test by default
+#	# do accuracy test
+#	accuracy(n, k)
 
 def createQueryCdb(query_sdf,query_cdb):
 	t = time()
@@ -577,6 +594,21 @@ def clean(input, n, k):
 		info("removing %s" % i)
 		os.unlink(i)
 		
+def init(input_db):
+	if not os.path.isdir("data"):
+		os.mkdir("data")
+	chemdb=os.path.join("data","chem.db")	
+	if not os.path.isfile(chemdb):
+		t,numCompounds = createQueryCdb(input_db,chemdb)
+		f=file(os.path.join("data","main.iddb"),"w")
+		for i in range(1,numCompounds+1):
+			f.write(str(i)+"\n")
+		f.close()
+
+def check_data_exists():
+	if not os.path.isfile(CDB):
+		sys.stderr.write("No chem.db file found. Please create a database with the --init option\n")
+		sys.exit(1)
 
 if __name__ == '__main__':
 	per_file = 20000
@@ -596,11 +628,16 @@ if __name__ == '__main__':
 	p.add_option("--dry-run", help="dry run", dest="dry", action="store_true",
 		default=False)
 	p.add_option("-s", "--slice", help="number of puzzles per job", dest="s")
+	p.add_option("--init", help="create initial database", dest="initdb")
 	opts, args = p.parse_args()
 
 	if opts.m is not None and opts.m:
 		DB2DB_DISTANCE = os.path.join(BINDIR, "%s.%s" % (DB2DB_DISTANCE,opts.m))
 
+
+	if opts.initdb is not None:
+		init(opts.initdb)
+		sys.exit(0)
 
 	if opts.r is None or opts.d is None:
 		sys.stderr.write("must specify r and d. Use --help to see usage\n")
@@ -615,6 +652,8 @@ if __name__ == '__main__':
 	if opts.dry: post_action = "dry"
 	else: post_action = processor
 
+
+	check_data_exists()
 
 	if opts.q and opts.x:
 		query(r,d,opts.q,opts.x)
