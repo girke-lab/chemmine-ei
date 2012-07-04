@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+import sys
+import os
+from eutils.sdfiterator import sdf_iter
+from tempfile import mkstemp
+from ei_fmcs import write_subset, foreach_compound
+from subprocess import Popen, check_call
+
+def build_score_fn(db,all_results):
+
+	def score(sdf):
+		x,query_file = mkstemp(".query")
+		x,query_result = mkstemp(".result")
+		f=file(query_file,"w")
+		f.write(sdf)
+		f.close()
+
+		all_results.append(batch_dist(db,query_file,query_result))
+
+		os.unlink(query_file)
+		os.unlink(query_result)
+
+	return score
+
+def db2db(db1,db2):
+	all_results=[]
+	score = build_score_fn(db1,all_results)
+
+	for current_sdf in sdf_iter(db2):
+		score(current_sdf)
+	print_results(all_results)
+
+def indexed_db(db,index1,index2):
+	x,db1 = mkstemp(".db1")
+	write_subset(db,index1,db1)
+	all_results=[]
+	score = build_score_fn(db1,all_results)
+	foreach_compound(db,index2,score)
+	os.unlink(db1)
+	print_results(all_results)
+
+def print_results(results):
+	for row in results:
+		print " ".join(map(lambda x:str(x),row))
+
+def batch_dist(db,query,output):
+	#print "db: "+db+", query: "+query+", output: "+output
+	null = file("/dev/null")
+	check_call(['fmcsBatch',db,query,output],stdout=null)
+	#print "done"
+	#the 4th number of each line is the distance value
+	return [int(line.split(" ")[3].strip()) for line in file(output)]
+
+
+def readIndex(index):
+	return [int(line) for line in file(index)]
+
+
+
+args=sys.argv
+
+if len(args) == 3:
+	db2db(args[1],args[2])
+elif len(args) == 4:
+	indexed_db(args[1],args[2],args[3])
+else:
+	sys.stderr.write("Usage: db2dbdistance.fmcs <compound db> (<iddb 1> <iddb 2> | <compound db2> ) ")
+	sys.exit(2)
+
+

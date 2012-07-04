@@ -91,3 +91,10 @@ src/matrix/bin_formatter
 src/matrix/read
 
 
+src/atompair/fp_search_server
+src/lshkit/test.old/
+src/lshkit/tools/mplsh-run
+src/lshkit/tools/search_server
+src/lshkit/tools/single_search
+src/lshkit/tools/txt2bin
+

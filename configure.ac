@@ -99,6 +99,7 @@ AC_CONFIG_FILES([Makefile
                  src/lshkit/src/Makefile
                  src/lshkit/tools/Makefile
 					  src/eutils/Makefile
+					  src/ei_fmcs/Makefile
                  src/matrix/Makefile])
 
 AC_OUTPUT
