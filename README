@@ -251,12 +251,12 @@ CUSTOMIZATION
     full path of each binary in the configuration file (.eirc) using the variables
     DB2DB_DISTANCE, DB_BUILDER, and DB_SUBSET. The second method is to put your 
     binaries in a directory on the PATH (e.g. /usr/local/bin/), and name them 
-    like db2db_distance.my_measure, where the first part is one of the below 3 
+    like ei-db2db_distance.my_measure, where the first part is one of the below 3 
     binaries and the second part is the name of your measure. Then you can call
     ei.py and ode.py with "-m my_measure". This method will be used below, but
     either method will work.
     
-    db2db_distance
+    ei-db2db_distance
 
     You need to write a binary or script that calculate database-to-database
     distance matrix, which supports the following two syntax forms:
@@ -274,7 +274,7 @@ CUSTOMIZATION
     
     to use your similarity measure.
 
-    db_builder
+    ei-db_builder
 
     This program takes one compound in whatever format you want to support and
     generate database format you want to support. This is only used in
@@ -284,7 +284,7 @@ CUSTOMIZATION
 
         db_builder.my_measure input.compound output.db
 
-    db_subset
+    ei-db_subset
 
     This program takes the database format you support and a 1-based index file
     and generate a sub-database for compounds listed in the index file. This is
@@ -297,4 +297,4 @@ CUSTOMIZATION
     
         db_subset.my_measure orignal.db index.file output.db
     
-    Please note that indieces in index.file are 2-based.
+    Please note that indieces in index.file are 1-based.

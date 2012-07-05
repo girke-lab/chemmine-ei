@@ -372,11 +372,8 @@ def createDistanceMatrixBatch(ref_db,query_cdb,query_dist):
 	return time() - t
 
 def solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file):
-	f = file(puzzle_file,'w')
-	f.write('%s %s'%(d,r))
-	f.close()
+	createPuzzleFile(r,d,coord_file,puzzle_file)
 
-	os_run("cat %s >> %s" % (coord_file,puzzle_file))
 	os_run("%(cmd)s %(cmp)s %(ref_db)s >> %(out)s" % 
 				dict(cmd=DB2DB_DISTANCE, cmp=query_cdb, ref_db=ref_db, out=puzzle_file),
            msg="cannot compare input to reference database")
@@ -390,7 +387,7 @@ def solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file):
 
 def createPuzzleFile(r,d,coord_file,puzzle_file):
 	f = file(puzzle_file,'w')
-	f.write('%s %s'%(d,r))
+	f.write('%s %s\n'%(d,r))
 	f.close()
 
 	os_run("cat %s >> %s" % (coord_file,puzzle_file))
@@ -421,7 +418,7 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 	puzzle_file="puzzle"
 	candidate_file="candidates.data"
 
-	createPuzzleFile(r,d,coord_file,puzzle_file)
+	cjreatePuzzleFile(r,d,coord_file,puzzle_file)
 
 	parsing_time = 0
 	dist_time,comparer = time_function(DBComparer,ref_db)
