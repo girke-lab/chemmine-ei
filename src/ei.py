@@ -418,7 +418,7 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 	puzzle_file="puzzle"
 	candidate_file="candidates.data"
 
-	cjreatePuzzleFile(r,d,coord_file,puzzle_file)
+	createPuzzleFile(r,d,coord_file,puzzle_file)
 
 	parsing_time = 0
 	dist_time,comparer = time_function(DBComparer,ref_db)
@@ -474,6 +474,43 @@ def lshSearchBatch(matrix_file,solverResult):
 	f.write(lshResult)
 	f.close()
 	return time() - t
+
+def distToCandidates(candidate_indcies,query_db):
+	"""return a matrix of distances, queries are rows, candidates are columns"""
+	f = file("candidates.iddb","w")
+	for index in candidate_indcies:
+		f.write("%d\n" % index)
+	f.close()
+
+	info("call db_subset")
+	check_call([DB_SUBSET,CDB,"candidates.iddb","candidates.db"])
+	info("call db2db_distance")
+	#subp = Popen( [DB2DB_DISTANCE,query_db,"candidates.db"],stdout=PIPE)
+	subp = Popen( [DB2DB_DISTANCE,query_db,"candidates.db"])
+	info("back")
+	t=[ [float(value) for value in line.strip().split()] for line in subp.stdout.read().splitlines()]
+	info("done reading: "+str(t))
+	return t
+
+def bestCandidates(distances,candidate_indcies):
+	"""takes a one dimentional distance array and candidates indcies. 
+		returns (candidate_index, distance) tuples"""
+	print "distances: "+str(distances)
+	print "candidates: "+str(candidate_indcies)
+	distances = [ (candidate_indcies[di[0]],di[1]) for di in enumerate(distances)]
+	distances.sort(key=lambda x:x[1] )
+	return distances[:K]
+
+def refineLocal(query_cdb,candidates):
+	candidate_indcies=[]
+	for s in candidates.split():
+		index = int(s.split(":")[0])
+		candidate_indcies.append(index)
+
+	return bestCandidates( distToCandidates(candidate_indcies,query_cdb)[0], candidate_indcies)
+	#distances = [ (candidate_indcies[di[0]],di[1]) for di in enumerate(distances)]
+	#distances.sort(key=lambda x:x[1] )
+	#return distances[:K]
 
 def refine(query_cdb,candidates):
 	f = file("candidates.data",'w')
@@ -552,12 +589,19 @@ def query(r,d,query_sdf,ref_iddb):
 			query_dist = os.path.join(temp_dir,query_base+".dist")
 			puzzle_file = os.path.join(temp_dir,"puzzle")
 
-			refineResult = refine(query_cdb,lshSearch(matrix_file,solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
-			info("refine result: "+refineResult)
-			for pair in refineResult.split():
-				seq_id, dist = pair.split(':')
-				cid = names[int(seq_id)-1]
-				f.write('%s %s\n' %(cid,dist))
+			#refineResult = refine(query_cdb,lshSearch(matrix_file,solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
+			#for pair in refineResult.split():
+				#seq_id, dist = pair.split(':')
+				#cid = names[int(seq_id)-1]
+				#f.write('%s %s\n' %(cid,dist))
+
+			refineResult = refineLocal(query_cdb,lshSearch(matrix_file,solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
+			for seq_id,dist in refineResult:
+				f.write('%s %s\n' %(names[int(seq_id)-1],dist))
+
+
+
+			info("refine result: "+str(refineResult))
 
 		f.close()
 	
