@@ -456,34 +456,6 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 
 		for candidate_index,dist in distances:
 			outf.write("%s\t%s\t%s\n" %(name,names[candidate_index],dist))
-
-
-		#candidate_indcies = [int(s.split(":")[0]) for s in lshResult.split() ]
-
-		#distances = distToCandidates(candidate_set,all_queries_cdb)
-		#best = bestCandidates(row,query_candidates[i][1])
-
-		#f = file(candidate_file,'w')
-		#f.write(lshResult)
-		#f.close()
-
-		#t,refineResult = time_function(refiner.refine,"%s %s" %(query_cdb,candidate_file))
-		#refine_time += t
-
-		#for pair in refineResult.split():
-			#seq_id,dist = pair.split(":")
-			#outf.write("%s\t%s\t%s\n" %(name,names[int(seq_id)-1],dist))
-
-#	candidate_set = reduce(lambda x,y:x|y,[set(qc[1]) for qc in query_candidates])
-#	info("candidate set: "+str(candidate_set))
-#	parsing_time += time_function(createQueryCdb,queries,all_queries_cdb)[0]
-#	distances = distToCandidates(candidate_set,all_queries_cdb)
-#	#distances[x][y] is distance from candidate x to query y
-#	for i,row in enumerate(distances):
-#		best = bestCandidates(row,query_candidates[i][1])
-#		for candidate_index,dist in best:
-#			outf.write("%s\t%s\t%s\n" %(query_canidates[i][0],names[candidate_index],dist))
-
 	
 	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
 				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
