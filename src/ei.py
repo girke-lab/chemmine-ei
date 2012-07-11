@@ -413,6 +413,7 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 
 	query_dist="query.dist"
 	query_cdb="query.cdb"
+	all_queries_cdb="all_queries.cdb"
 	query_sdf="query.sdf"
 	query_name_file="query.cdb.names"
 	puzzle_file="puzzle"
@@ -425,6 +426,7 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 	coord_time,solver = time_function(CoordinateSolver,puzzle_file)
 	lsh_time,lshsearcher = time_function(LSHSearcher,matrix_file,lsh_param)
 	refine_time,refiner = time_function(Refiner,CDB,K)
+	query_candidates = []
 
 	for i,current_query in enumerate(sdf_iter(queries)):
 		#write current query to file and convert to a cdb. will create a names file as well
@@ -449,16 +451,31 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 		lsh_time += t
 		lshResult = lshResult.strip()
 
-		f = file(candidate_file,'w')
-		f.write(lshResult)
-		f.close()
+		info("lshResult %d: %s" % (i,lshResult))
+		query_candidates.append((name,[int(s.split(":")[0]) for s in lshResult.split() ]))
 
-		t,refineResult = time_function(refiner.refine,"%s %s" %(query_cdb,candidate_file))
-		refine_time += t
+		#f = file(candidate_file,'w')
+		#f.write(lshResult)
+		#f.close()
 
-		for pair in refineResult.split():
-			seq_id,dist = pair.split(":")
-			outf.write("%s\t%s\t%s\n" %(name,names[int(seq_id)-1],dist))
+		#t,refineResult = time_function(refiner.refine,"%s %s" %(query_cdb,candidate_file))
+		#refine_time += t
+
+		#for pair in refineResult.split():
+			#seq_id,dist = pair.split(":")
+			#outf.write("%s\t%s\t%s\n" %(name,names[int(seq_id)-1],dist))
+
+#TODO: check this
+	candidate_set = reduce(lambda x,y:x|y,[set(qc[1]) for qc in query_candidates])
+	info("candidate set: "+str(candidate_set))
+	parsing_time += time_function(createQueryCdb,queries,all_queries_cdb)[0]
+	distances = distToCandidates(candidate_set,all_queries_cdb)
+	#distances[x][y] is distance from candidate x to query y
+	for i,row in enumerate(distances):
+		best = bestCandidates(row,query_candidates[i][1])
+		for candidate_index,dist in best:
+			outf.write("%s\t%s\t%s\n" %(query_canidates[i][0],names[candidate_index],dist))
+
 	
 	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
 				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
