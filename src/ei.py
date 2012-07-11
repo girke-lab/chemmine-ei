@@ -413,7 +413,6 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 
 	query_dist="query.dist"
 	query_cdb="query.cdb"
-	all_queries_cdb="all_queries.cdb"
 	query_sdf="query.sdf"
 	query_name_file="query.cdb.names"
 	puzzle_file="puzzle"
@@ -426,8 +425,8 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 	coord_time,solver = time_function(CoordinateSolver,puzzle_file)
 	lsh_time,lshsearcher = time_function(LSHSearcher,matrix_file,lsh_param)
 	refine_time,refiner = time_function(Refiner,CDB,K)
-	query_candidates = []
 
+	print "names: "+str(names)
 	for i,current_query in enumerate(sdf_iter(queries)):
 		#write current query to file and convert to a cdb. will create a names file as well
 		f = file(query_sdf,'w')
@@ -452,7 +451,17 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 		lshResult = lshResult.strip()
 
 		info("lshResult %d: %s" % (i,lshResult))
-		query_candidates.append((name,[int(s.split(":")[0]) for s in lshResult.split() ]))
+
+		distances = refineLocal(query_cdb,lshResult)
+
+		for candidate_index,dist in distances:
+			outf.write("%s\t%s\t%s\n" %(name,names[candidate_index],dist))
+
+
+		#candidate_indcies = [int(s.split(":")[0]) for s in lshResult.split() ]
+
+		#distances = distToCandidates(candidate_set,all_queries_cdb)
+		#best = bestCandidates(row,query_candidates[i][1])
 
 		#f = file(candidate_file,'w')
 		#f.write(lshResult)
@@ -465,16 +474,15 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 			#seq_id,dist = pair.split(":")
 			#outf.write("%s\t%s\t%s\n" %(name,names[int(seq_id)-1],dist))
 
-#TODO: check this
-	candidate_set = reduce(lambda x,y:x|y,[set(qc[1]) for qc in query_candidates])
-	info("candidate set: "+str(candidate_set))
-	parsing_time += time_function(createQueryCdb,queries,all_queries_cdb)[0]
-	distances = distToCandidates(candidate_set,all_queries_cdb)
-	#distances[x][y] is distance from candidate x to query y
-	for i,row in enumerate(distances):
-		best = bestCandidates(row,query_candidates[i][1])
-		for candidate_index,dist in best:
-			outf.write("%s\t%s\t%s\n" %(query_canidates[i][0],names[candidate_index],dist))
+#	candidate_set = reduce(lambda x,y:x|y,[set(qc[1]) for qc in query_candidates])
+#	info("candidate set: "+str(candidate_set))
+#	parsing_time += time_function(createQueryCdb,queries,all_queries_cdb)[0]
+#	distances = distToCandidates(candidate_set,all_queries_cdb)
+#	#distances[x][y] is distance from candidate x to query y
+#	for i,row in enumerate(distances):
+#		best = bestCandidates(row,query_candidates[i][1])
+#		for candidate_index,dist in best:
+#			outf.write("%s\t%s\t%s\n" %(query_canidates[i][0],names[candidate_index],dist))
 
 	
 	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
@@ -496,15 +504,14 @@ def distToCandidates(candidate_indcies,query_db):
 	"""return a matrix of distances, queries are rows, candidates are columns"""
 	f = file("candidates.iddb","w")
 	for index in candidate_indcies:
-		f.write("%d\n" % index)
+		f.write("%d\n" % (index+1))
 	f.close()
 
 	info("call db_subset")
 	check_call([DB_SUBSET,CDB,"candidates.iddb","candidates.db"])
 	info("call db2db_distance")
-	#subp = Popen( [DB2DB_DISTANCE,query_db,"candidates.db"],stdout=PIPE)
-	subp = Popen( [DB2DB_DISTANCE,query_db,"candidates.db"])
-	info("back")
+	subp = Popen( [DB2DB_DISTANCE,query_db,"candidates.db"],stdout=PIPE)
+	#subp = Popen( [DB2DB_DISTANCE,query_db,"candidates.db"])
 	t=[ [float(value) for value in line.strip().split()] for line in subp.stdout.read().splitlines()]
 	info("done reading: "+str(t))
 	return t
@@ -519,15 +526,8 @@ def bestCandidates(distances,candidate_indcies):
 	return distances[:K]
 
 def refineLocal(query_cdb,candidates):
-	candidate_indcies=[]
-	for s in candidates.split():
-		index = int(s.split(":")[0])
-		candidate_indcies.append(index)
-
+	candidate_indcies = [int(s.split(":")[0])-1 for s in candidates.split() ]
 	return bestCandidates( distToCandidates(candidate_indcies,query_cdb)[0], candidate_indcies)
-	#distances = [ (candidate_indcies[di[0]],di[1]) for di in enumerate(distances)]
-	#distances.sort(key=lambda x:x[1] )
-	#return distances[:K]
 
 def refine(query_cdb,candidates):
 	f = file("candidates.data",'w')
