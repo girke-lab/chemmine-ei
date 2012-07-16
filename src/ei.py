@@ -112,6 +112,7 @@ def dist_mat(dbfile, outfile=None):
 		return outfile
 	cmd = "%s %s %s %s > %s" % (DB2DB_DISTANCE, CDB, dbfile, dbfile,
 		outfile)
+	print("dist cmd: "+cmd)
 	os_run(cmd, msg='cannot build distance matrix')
 	return outfile
 
@@ -474,8 +475,10 @@ def lshSearchBatch(matrix_file,solverResult):
 
 def distToCandidates(candidate_indcies,query_db):
 	"""return a matrix of distances, queries are rows, candidates are columns"""
+	print "writing candidates: "+str(candidate_indcies)
 	f = file("candidates.iddb","w")
-	for index in candidate_indcies:
+	
+	for index in sorted(candidate_indcies):
 		f.write("%d\n" % (index+1))
 	f.close()
 
@@ -498,7 +501,10 @@ def bestCandidates(distances,candidate_indcies):
 	return distances[:K]
 
 def refineLocal(query_cdb,candidates):
+	print "orig candidates: "+candidates
 	candidate_indcies = [int(s.split(":")[0])-1 for s in candidates.split() ]
+	if not candidate_indcies:
+		return []
 	return bestCandidates( distToCandidates(candidate_indcies,query_cdb)[0], candidate_indcies)
 
 def refine(query_cdb,candidates):
@@ -597,7 +603,8 @@ def query(r,d,query_sdf,ref_iddb):
 		os.chdir(current_dir)
 
 		from shutil import rmtree
-		rmtree(temp_dir)
+		warning("NOT CLEANING UP")
+	#	rmtree(temp_dir)
 		
 		
 	except:

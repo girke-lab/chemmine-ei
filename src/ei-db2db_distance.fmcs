@@ -5,7 +5,7 @@ import os
 from eutils.sdfiterator import sdf_iter
 from tempfile import mkstemp
 from ei_fmcs import write_subset, foreach_compound
-from subprocess import Popen, check_call
+from subprocess import Popen, check_call,PIPE
 
 def build_score_fn(db,all_results):
 
@@ -16,7 +16,7 @@ def build_score_fn(db,all_results):
 		f.write(sdf)
 		f.close()
 
-		all_results.append(batch_dist(db,query_file,query_result))
+		all_results.append(batch_dist_row(db,query_file,query_result))
 
 		os.unlink(query_file)
 		os.unlink(query_result)
@@ -24,40 +24,79 @@ def build_score_fn(db,all_results):
 	return score
 
 def db2db(db1,db2):
-	all_results=[]
-	score = build_score_fn(db1,all_results)
+#	all_results=[]
+#	score = build_score_fn(db1,all_results)
 
-	for current_sdf in sdf_iter(db2):
-		score(current_sdf)
-	print_results(all_results)
+#	for current_sdf in sdf_iter(db2):
+#		score(current_sdf)
+#	print_results(all_results)
+
+#	print "=========================================="
+
+	print_results(batch_dist(db1,db2))
 
 def indexed_db(db,index1,index2):
 	x,db1 = mkstemp(".db1")
 	write_subset(db,index1,db1)
-	all_results=[]
-	score = build_score_fn(db1,all_results)
-	foreach_compound(db,index2,score)
+
+	x,db2 = mkstemp(".db2")
+	write_subset(db,index2,db2)
+
+	db2db(db1,db2)
+
 	os.unlink(db1)
-	print_results(all_results)
+	os.unlink(db2)
+
+#	write_subset(db,index1,db1)
+#	all_results=[]
+#	score = build_score_fn(db1,all_results)
+#	foreach_compound(db,index2,score)
+#	os.unlink(db1)
+#	print_results(all_results)
 
 def print_results(results):
 	for row in results:
 		print " ".join(map(lambda x:str(x),row))
 
-def batch_dist(db,query,output):
+def batch_dist_row(db,query,output):
+
 	#print "db: "+db+", query: "+query+", output: "+output
 	null = file("/dev/null")
 	#check_call(['fmcsBatch',db,query,output],stdout=null)
 	check_call(['fmcsBatch',"--timeout=30",db,query,output],stdout=null)
 	#print "done"
+
 	#the 4th number of each line is the distance value
 	def distance(line):
-		values = line.split(" ")
-		size1,size2,mcs = float(values[1]),float(values[2]),float(values[3])
+		values = line.split()
+		#size1,size2,mcs = float(values[1]),float(values[2]),float(values[3])
+		size1,size2,mcs = float(values[2]),float(values[3]),float(values[4])
 		return 1-(mcs/(size1+size2-mcs))
 
 	return [distance(line) for line in file(output)]
 
+
+def batch_dist(db,query):
+
+	x,output= mkstemp(".result")
+	#print "db: "+db+", query: "+query+", output: "+output
+	null = file("/dev/null")
+	#check_call(['fmcsBatch',db,query,output],stdout=null)
+	check_call(['fmcsBatch',"--timeout=30","--loadTarget=15000",db,query,output],stdout=null)
+	#print "done"
+	subp=Popen(["sort","-k1n","-k2n",output],stdout=PIPE)
+
+	data = []
+	for line in subp.stdout:
+		targetIdx,queryIdx,targetSize,querySize,mcs = tuple([int(x) for
+			x in line.split()[:5]])
+		if not queryIdx < len(data):
+			data.append([])
+		if not targetIdx < len(data[queryIdx]):
+			data[queryIdx].append(0)
+		data[queryIdx][targetIdx] = 1-(float(mcs)/float(querySize+targetSize-mcs))
+	os.unlink(output)
+	return data
 
 def readIndex(index):
 	return [int(line) for line in file(index)]
