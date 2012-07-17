@@ -349,7 +349,6 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 def createQueryCdb(query_sdf,query_cdb):
 	t = time()
 
-	#os_run("%(cmd)s %(inp)s %(out)s" % dict(cmd=DB_BUILDER, inp=query_sdf, out=query_cdb), msg="Cannot parse input file")
 	subp = Popen([DB_BUILDER,query_sdf,query_cdb], stderr=PIPE)
 	num_compounds=-1
 	for line in subp.stderr:
@@ -363,9 +362,6 @@ def createQueryCdb(query_sdf,query_cdb):
 
 def createDistanceMatrixBatch(ref_db,query_cdb,query_dist):
 	t = time()
-
-	#subp=Popen([DB2DB_DISTANCE,query_cdb,ref_db],stdout=query_dist)
-
 
 	comparer = DBComparer(ref_db)
 	comparer.compare(query_cdb,query_dist)
@@ -479,7 +475,7 @@ def distToCandidates(candidate_indcies,query_db):
 	f = file("candidates.iddb","w")
 	
 	for index in sorted(candidate_indcies):
-		f.write("%d\n" % (index+1))
+		f.write("%d\n" % (index))
 	f.close()
 
 	info("call db_subset")
@@ -502,7 +498,7 @@ def bestCandidates(distances,candidate_indcies):
 
 def refineLocal(query_cdb,candidates):
 	print "orig candidates: "+candidates
-	candidate_indcies = [int(s.split(":")[0])-1 for s in candidates.split() ]
+	candidate_indcies = [int(s.split(":")[0]) for s in candidates.split() ]
 	if not candidate_indcies:
 		return []
 	return bestCandidates( distToCandidates(candidate_indcies,query_cdb)[0], candidate_indcies)
