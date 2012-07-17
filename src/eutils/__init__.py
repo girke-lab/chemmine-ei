@@ -51,11 +51,7 @@ def getConfig():
 	if(not os.path.exists(configFile)):
 		out = open(configFile,"w")
 		out.write("""
-import os
-BASEDIR =  os.path.abspath(".")
-
-# path to the chemical database                    
-chem_db = os.path.join(BASEDIR, 'data', 'chemdb.cdb')
+DATADIR = "data"
 
 # number of sample queries to create if not present
 n_sample_queries = 1000
@@ -68,7 +64,7 @@ K=600 # number of nearest neighbors in embedded space
 
 # parameter for LSH search. See
 # http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html
-lsh_param = " -W 1.39564 -M 19 -L 30 -K %s -T 30 " % K
+lsh_param = " -W 1.39564 -M 19 -L 30  -T 30 "
 		""")
 		out.close()
 	return configFile

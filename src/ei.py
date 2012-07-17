@@ -11,7 +11,7 @@ import re
 from time import time
 from stat import ST_SIZE
 from traceback import print_exc
-from eutils import OS_Runner, STORED, DISCARDED, getConfig, gen_subdb, time_function
+from eutils import OS_Runner, STORED, DISCARDED, getConfig,gen_subdb, time_function
 from eutils.sdfiterator import sdf_iter
 from eutils.coord import CoordinateSolver
 from eutils.fpdbcompare import DBComparer
@@ -23,6 +23,8 @@ root.setLevel(NOTSET)
 os_run = OS_Runner()
 
 BINDIR = "" 
+BASEDIR = "."
+DATADIR = "data"
 DB2DB_DISTANCE = os.path.join(BINDIR, "ei-db2db_distance")
 DB_SUBSET = os.path.join(BINDIR,"ei-db_subset")
 DB_BUILDER = os.path.join(BINDIR,"ei-db_builder")
@@ -38,14 +40,20 @@ K = 600
 
 execfile(getConfig())
 
-BASEDIR =  os.path.abspath(".")
-DATADIR = os.path.join(BASEDIR, 'data')
+BASEDIR =  os.path.abspath(BASEDIR)
+DATADIR = os.path.join(BASEDIR, DATADIR)
+
+localConfig = os.path.join(DATADIR,"eirc")
+if os.path.exists(localConfig):
+	execfile(localConfig)
+
 CDB = os.path.join(DATADIR, 'chem.db')
 IDDB = os.path.join(DATADIR, 'main.iddb')
 TEST_QUERIES = os.path.join(DATADIR, 'test_query.iddb')
 CHEMICAL_SEARCH_RESULTS = os.path.join(DATADIR, 'chemical-search.results.gz')
 MAX_EUCSEARCH_RESULTS = 50000
 
+lsh_param = "%s -K %d" % (lsh_param,K)
 INDEXED_SEARCH = INDEXED_SEARCH + " " + lsh_param + " -D %s -C " + CDB + " < " + TEST_QUERIES
 
 class _Cdbsize(object):
@@ -369,13 +377,15 @@ def createDistanceMatrixBatch(ref_db,query_cdb,query_dist):
 	return time() - t
 
 def solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file):
+
 	createPuzzleFile(r,d,coord_file,puzzle_file)
 
-	os_run("%(cmd)s %(cmp)s %(ref_db)s >> %(out)s" % 
-				dict(cmd=DB2DB_DISTANCE, cmp=query_cdb, ref_db=ref_db, out=puzzle_file),
+	os_run("%s %s %s >> %s" % (DB2DB_DISTANCE, query_cdb, ref_db, puzzle_file),
            msg="cannot compare input to reference database")
 
 	os_run("%(cmd)s %(inp)s" % dict(cmd=COORDTOOL, inp=puzzle_file), msg="Cannot run embedder")
+	if os.path.getsize(puzzle_file+".out") == 0:
+		warning("empty "+puzzle_file+".out")
 	f = file(puzzle_file + '.out')
 	x = f.read()
 	f.close()
@@ -399,6 +409,8 @@ def solvePuzzleBatch(r,d,query_dist,coord_file,puzzle_file):
 	return (time() - t,solverResult)
 
 def lshSearch(matrix_file,solverResult):
+	if not solverResult:
+		warning("no solver result")
 	f = file("coords.in","w")
 	f.write(solverResult)
 	f.close()
@@ -423,7 +435,7 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 	lsh_time,lshsearcher = time_function(LSHSearcher,matrix_file,lsh_param)
 	refine_time,refiner = time_function(Refiner,CDB,K)
 
-	print "names: "+str(names)
+	debug("names: "+str(names))
 	for i,current_query in enumerate(sdf_iter(queries)):
 		#write current query to file and convert to a cdb. will create a names file as well
 		f = file(query_sdf,'w')
@@ -471,7 +483,7 @@ def lshSearchBatch(matrix_file,solverResult):
 
 def distToCandidates(candidate_indcies,query_db):
 	"""return a matrix of distances, queries are rows, candidates are columns"""
-	print "writing candidates: "+str(candidate_indcies)
+	debug( "writing candidates: "+str(candidate_indcies))
 	f = file("candidates.iddb","w")
 	
 	for index in sorted(candidate_indcies):
@@ -490,14 +502,14 @@ def distToCandidates(candidate_indcies,query_db):
 def bestCandidates(distances,candidate_indcies):
 	"""takes a one dimentional distance array and candidates indcies. 
 		returns (candidate_index, distance) tuples"""
-	print "distances: "+str(distances)
-	print "candidates: "+str(candidate_indcies)
+	debug( "distances: "+str(distances))
+	debug("candidates: "+str(candidate_indcies))
 	distances = [ (candidate_indcies[di[0]],di[1]) for di in enumerate(distances)]
 	distances.sort(key=lambda x:x[1] )
 	return distances[:K]
 
 def refineLocal(query_cdb,candidates):
-	print "orig candidates: "+candidates
+	debug("orig candidates: "+candidates)
 	candidate_indcies = [int(s.split(":")[0]) for s in candidates.split() ]
 	if not candidate_indcies:
 		return []
@@ -599,8 +611,8 @@ def query(r,d,query_sdf,ref_iddb):
 		os.chdir(current_dir)
 
 		from shutil import rmtree
-		warning("NOT CLEANING UP")
-	#	rmtree(temp_dir)
+		#warning("NOT CLEANING UP")
+		rmtree(temp_dir)
 		
 		
 	except:
@@ -627,9 +639,16 @@ def clean(input, n, k):
 		info("removing %s" % i)
 		os.unlink(i)
 		
-def init(input_db):
+def init(input_db,m):
 	if not os.path.isdir("data"):
 		os.mkdir("data")
+	if m is not None and m:
+		f=file(localConfig,"w")
+		f.write("DB2DB_DISTANCE = '"+DB2DB_DISTANCE+"'\n")
+		f.write("DB_SUBSET = '"+DB_SUBSET+"'\n")
+		f.write("DB_BUILDER = '"+DB_BUILDER+"'\n")
+		f.close()
+
 	chemdb=os.path.join("data","chem.db")	
 	if not os.path.isfile(chemdb):
 		t,numCompounds = createQueryCdb(input_db,chemdb)
@@ -671,7 +690,7 @@ if __name__ == '__main__':
 
 
 	if opts.initdb is not None:
-		init(opts.initdb)
+		init(opts.initdb,opts.m)
 		sys.exit(0)
 
 	if opts.r is None or opts.d is None:
