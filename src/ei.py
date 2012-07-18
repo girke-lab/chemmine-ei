@@ -223,15 +223,26 @@ def eucsearch(record1, record2, output):
 
 def gen_chemical_search_results():
 	
-	data=os.path.join("..","data")
-	results = os.path.join(data,"chemical-search.results.gz")
-	if not os.path.isfile(results):
-		check_call("ei-db_search -id %s %s %s  50000 | gzip > %s" % 
-				( os.path.join(data,"chem.db"),
-				  os.path.join(data,"main.iddb"),
-				  os.path.join(data,"test_query.iddb"),
-				  results),
-				shell=True)
+	from gzip import GzipFile as zfile
+	if not os.path.isfile(CHEMICAL_SEARCH_RESULTS):
+		f = zfile(CHEMICAL_SEARCH_RESULTS,"w")
+		distances = runDb2Db(
+				  os.path.join(DATADIR,"chem.db"),
+				  os.path.join(DATADIR,"test_query.iddb"),
+				  os.path.join(DATADIR,"main.iddb"))
+		f.write("\n".join(
+			[" ".join(
+				[ "%d:%f" % pair for pair in
+					bestCandidates(queryDist,None,50000) ]) 
+			for queryDist in distances]))
+		f.close()
+				  
+		#check_call("ei-db_search -id %s %s %s  50000 | gzip > %s" % 
+				#( os.path.join(DATADIR,"chem.db"),
+				  #os.path.join(DATADIR,"main.iddb"),
+				  #os.path.join(DATADIR,"test_query.iddb"),
+				  #CHEMICAL_SEARCH_RESULTS),
+				#shell=True)
 
 def accuracy(n, k):
 	"""perform evaluation to see how embedding works"""
@@ -483,33 +494,42 @@ def lshSearchBatch(matrix_file,solverResult):
 
 def distToCandidates(candidate_indcies,query_db):
 	"""return a matrix of distances, queries are rows, candidates are columns"""
-	debug( "writing candidates: "+str(candidate_indcies))
-	f = file("candidates.iddb","w")
+	if candidate_indcies == None:
+		debug( "writing candidates: "+str(candidate_indcies))
+		target_file="candidates.db"
+		f = file("candidates.iddb","w")
 	
-	for index in sorted(candidate_indcies):
-		f.write("%d\n" % (index))
-	f.close()
+		for index in sorted(candidate_indcies):
+			f.write("%d\n" % (index))
+		f.close()
 
-	info("call db_subset")
-	check_call([DB_SUBSET,CDB,"candidates.iddb","candidates.db"])
+		info("call db_subset")
+		check_call([DB_SUBSET,CDB,"candidates.iddb",target_db])
+	else:
+		target_db = CDB
+	return runDb2Db(query_db,target_db)
+
+def runDb2Db(*args):
 	info("call db2db_distance")
-	subp = Popen( [DB2DB_DISTANCE,query_db,"candidates.db"],stdout=PIPE)
-	#subp = Popen( [DB2DB_DISTANCE,query_db,"candidates.db"])
+	subp = Popen( [DB2DB_DISTANCE]+list(args),stdout=PIPE)
 	t=[ [float(value) for value in line.strip().split()] for line in subp.stdout.read().splitlines()]
-	info("done reading: "+str(t))
+	#debug("done reading: "+str(t))
 	return t
 
-def bestCandidates(distances,candidate_indcies):
+def bestCandidates(distances,candidate_indcies,num_neighbors=K):
 	"""takes a one dimentional distance array and candidates indcies. 
 		returns (candidate_index, distance) tuples"""
-	debug( "distances: "+str(distances))
-	debug("candidates: "+str(candidate_indcies))
+	#debug( "distances: "+str(distances))
+	if candidate_indcies == None:
+		candidate_indcies = range(1,cdbsize()+1)
+		#debug("candidates: "+str(candidate_indcies))
+		
 	distances = [ (candidate_indcies[di[0]],di[1]) for di in enumerate(distances)]
 	distances.sort(key=lambda x:x[1] )
-	return distances[:K]
+	return distances[:num_neighbors]
 
 def refineLocal(query_cdb,candidates):
-	debug("orig candidates: "+candidates)
+	#debug("orig candidates: "+candidates)
 	candidate_indcies = [int(s.split(":")[0]) for s in candidates.split() ]
 	if not candidate_indcies:
 		return []

@@ -46,63 +46,29 @@ HOW TO USE
       In addition to the normal EI binaries, this will also install ChemmineR in R, 
       if selected, and a python package called 'descriptors'.
 
-
-    3 You will need to have your compound database ready to run EI. Copy your
-      compound database to folder named 'data'. You may also just create a
-      symbolic link to your compound database in the data folder instead. Make
-      sure the name is chem.db. If you are using atom-pair similarity, you can
-      create it using the following command (assuming EIROOT has been set to
-      the root of the EI folder):
-
-        $ cd $EIROOT/data
-        $ ei-db_builder my.sdf chem.db
-
-      ei-db_build might complain if your SDF does not follow the SDF
+    3 An initial compound database must be created with the following command:
+        $ ei.py --init my.sdf
+      SDF is supported by default. Other formats can be supported through customization,
+      see the below section. It might complain if your SDF does not follow the SDF
       specification. If this happens, try use OpenBabel to convert it to SMILES
-      and back to SDF.
+      and back to SDF. This will create  a folder called 'data'. Ei.py should always be
+      executed in the folder containing this directory (ie, the parent directory of "data").
 
-    4 Create the <iddb> named main.iddb in the data folder. If your compound
-      database has 1,000 compounds, this file is a 1,000-line text file, each
-      line contains a number, from 1 up to 1,000. You may create it using the
-      following command:
-        
-        $ cd $EIROOT/data
-        $ seq 1000 > main.iddb
     
-    5 Check ~/.eirc and make appropriate changes. One important setting is
+    4 Check ~/.eirc and make appropriate changes. One important setting is
       whether to use qsub. If you do not have access to qsub-style job queue,
       set the 'processor' value to 'bash' to run the job locally.
 
-    6 Invoke ei.py with two required arguments, the number of reference
+      If you want to set variables for just the local directory, you can modify 
+      data/eirc, which will be read after ~/.eirc and override any variables
+      set there.
+
+    5 Invoke ei.py with two required arguments, the number of reference
       compounds and the number of dimensions. For example:
 
-        $ cd $EIROOT
-        $ python ei.py -r 300 -d 100 
-        No test queries exists. Will create one with 1000 queries
-        checking database size...
-        !!!!! PLEASE GENERATE THE CHEMICAL SEARCH RESULT !!!!!
-        !!!!! EXAMPLE:                                   !!!!!
-              db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz
-        
-      As you can see, ei.py creates 1000 random queries that will later be
-      used to evaluate embedding results in similarity search tests. It
-      reminds you to create the reference search results. In this case, create
-      reference search results if you have not done it. This only needs to be
-      done once for each new test_query.iddb. We provided binary tool to
-      perform similarity search for atom-pair-based similarity. For example,
-      in case of atom-pair similarity, create the reference:
+        $ ei.py -r 300 -d 100 
 
-        $ ../bin/db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz
-
-      If you use custom similarity measures other than atom pair, then you
-      must write a tool to perform similarity search. It will work as long as
-      your similarity search is presented in the same format: each line lists
-      search result for one query; each line lists the sequence number and the
-      distance for most similar compounds. See
-      example-data/chemical-search.results.gz for an example.
-
-      When you are done making the the reference search result, press any key
-      to let ei.py continue its work. It will be verbose and keep updating you
+      Ei.py will be verbose and keep updating you
       with what it is currently busy with. For example, you might see
 
         checking database size...
@@ -145,7 +111,11 @@ HOW TO USE
         4220730 lines processed in 1.4071 seconds
         4198824 lines processed in 0.063864 seconds
       
-      ei.py will then perform automatic performance evaluation by testing the
+    6 To evaluate the performance you an run:
+
+         $ ei.py -r 300 -d 100 accuracy
+
+      Ei.py will then perform a performance evaluation by testing the
       embedding results in similarity search. The way this works is by
       approximating 1,000 random similarity searches (determined by
       data/test_queries.iddb) by nearest neighbor search using the coordinates
@@ -165,7 +135,7 @@ HOW TO USE
       columns are different k values. You will be able to pick an appropriate
       relaxation ratio for the k values you are interested in.
 
-    6 If ei.py crashes or gets terminated for any reason and you need to rerun
+    7 If ei.py crashes or gets terminated for any reason and you need to rerun
       it, it will try to reuse data only if you invoke the existing-input
       mode. The existing-input mode is started by adding the *.cdb file in the
       run-*-* folder. For example:
@@ -181,11 +151,11 @@ HOW TO USE
       reference compounds and restart the embedding process. This is useful
       when you need to try a new set of reference compounds.
 
-    7 The embedding result is the file matrix.<R>.<D>, where <R> is the number
+    8 The embedding result is the file matrix.<R>.<D>, where <R> is the number
       of references and <D> is the number of dimensions. In the above example,
       the output would be run-300-100/matrix.300.100.
 
-    8 (Only available if you have lshkit built on your system) 
+    9 (Only available if you have lshkit built on your system) 
       ei.py will not automatically test the LSH-assisted search. To
       automatically test the performance of LSH-assisted search, run
 
@@ -195,7 +165,7 @@ HOW TO USE
       recall values. Each line corresponds to one test query.
 
       LSH search performance is highly sensitive to your LSH parameter. The
-      default parameter is listed in cofig.py
+      default parameter is listed in ~/.eirc
 
         lsh_param = " -W 1.39564 -M 19 -L 30 -K 600 -S 30 -T 30 "
 
@@ -245,7 +215,7 @@ CUSTOMIZATION
 
     EI allows you to plug in your own similarity measurement. In order to do
     this, you will have to provide an implementation for the following
-    functions in binary or script form.
+    programs in binary or script form.
 
     There are two ways to tell EI about your own measures. The first is to set the 
     full path of each binary in the configuration file (.eirc) using the variables
@@ -254,7 +224,9 @@ CUSTOMIZATION
     like ei-db2db_distance.my_measure, where the first part is one of the below 3 
     binaries and the second part is the name of your measure. Then you can call
     ei.py and ode.py with "-m my_measure". This method will be used below, but
-    either method will work.
+    either method will work. When you run ei.py --init -m my_measure ..., the 
+    measure used will be stored in the data/eirc file so that future operations 
+    automatically use the correct programs.
     
     ei-db2db_distance
 
@@ -295,6 +267,6 @@ CUSTOMIZATION
 
     db_subset must support the following syntax
     
-        db_subset.my_measure orignal.db index.file output.db
+        db_subset.my_measure original.db index.file output.db
     
-    Please note that indieces in index.file are 1-based.
+    Please note that indices in index.file are 1-based.

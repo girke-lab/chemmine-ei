@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
 			if (not ifs.good()) break;
 			desc_query.clear();
 			db.at(qid - 1, desc_query);
-			std::cout << desc_query.size() << std::endl;
+			//std::cout << desc_query.size() << std::endl;
 			t.start();
 			results.clear();
 			if (id_file) db.enable_mask();
