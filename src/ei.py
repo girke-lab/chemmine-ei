@@ -226,16 +226,32 @@ def gen_chemical_search_results():
 	from gzip import GzipFile as zfile
 	if not os.path.isfile(CHEMICAL_SEARCH_RESULTS):
 		f = zfile(CHEMICAL_SEARCH_RESULTS,"w")
-		distances = runDb2Db(
+
+		subp = Popen( [DB2DB_DISTANCE,
 				  os.path.join(DATADIR,"chem.db"),
 				  os.path.join(DATADIR,"test_query.iddb"),
-				  os.path.join(DATADIR,"main.iddb"))
-		f.write("\n".join(
-			[" ".join(
-				[ "%d:%f" % pair for pair in
-					bestCandidates(queryDist,None,50000) ]) 
-			for queryDist in distances]))
+				  os.path.join(DATADIR,"main.iddb") ],stdout=PIPE)
+
+		for line in subp.stdout:
+			f.write(" ".join(["%d:%f" % pair for pair in 
+				bestCandidates([float(value) for value in 
+					line.strip().split()],None,50000)])+"\n")
 		f.close()
+
+
+#		t=[ [float(value) for value in line.strip().split()] for line in subp.stdout.read().splitlines()]
+
+
+#		distances = runDb2Db(
+#				  os.path.join(DATADIR,"chem.db"),
+#				  os.path.join(DATADIR,"test_query.iddb"),
+#				  os.path.join(DATADIR,"main.iddb"))
+#		f.write("\n".join(
+#			[" ".join(
+#				[ "%d:%f" % pair for pair in
+#					bestCandidates(queryDist,None,50000) ]) 
+#			for queryDist in distances]))
+#		f.close()
 				  
 		#check_call("ei-db_search -id %s %s %s  50000 | gzip > %s" % 
 				#( os.path.join(DATADIR,"chem.db"),

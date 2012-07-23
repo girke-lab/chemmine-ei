@@ -239,33 +239,28 @@ CUSTOMIZATION
     where chem.db is the path to <bindb> in, for example, the /data folder,
     1.iddb is the first <iddb> and 2.iddb is the second <iddb> (see above for
     definition of <bindb> and <iddb>). Your program must generate a distance
-    matrix for these two databases. Name your program as
+    matrix for these two databases. The output should be lines of whitespace separated
+    numbers. Each line should contain the distances of the first element of
+    the first db against each member of the second db.  Name your program as
     db2db_distance.my_measure and then you can invoke EI as, for example, 
 
-        python ei.py -r 300 -d 100 -m my_measure
+        $ ei.py -r 300 -d 100 -m my_measure
     
     to use your similarity measure.
 
     ei-db_builder
 
-    This program takes one compound in whatever format you want to support and
-    generate database format you want to support. This is only used in
-    on-demand embedding, and therefore will be used in parsing one compound
-    only. It is up to you if you want to support more than one compounds. The
-    syntax you need to support is:
+    This program takes compounds in whatever format you want to support and
+    generates a database in the format you want to support. The syntax you 
+    need to support is:
 
-        db_builder.my_measure input.compound output.db
+        db_builder.my_measure input.compounds output.db
 
     ei-db_subset
 
     This program takes the database format you support and a 1-based index file
-    and generate a sub-database for compounds listed in the index file. This is
-    also only used in on-demand embedding. If you do not want to provide this
-    program, make sure before you invoke on-demand embedding, a sub database
-    for the reference compounds have already been generated somehow and have a
-    name that is expected by the on-demand embedding program. 
-
-    db_subset must support the following syntax
+    and generate a sub-database for compounds listed in the index file. 
+    Db_subset must support the following syntax
     
         db_subset.my_measure original.db index.file output.db
     
