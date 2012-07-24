@@ -58,7 +58,7 @@ n_sample_queries = 1000
 
 # processor through what? use 'qsub' if you have access to cluster or use
 # 'bash' for local processing
-processor = 'bash'
+processor = 'ei-qsub'
 
 K=600 # number of nearest neighbors in embedded space
 

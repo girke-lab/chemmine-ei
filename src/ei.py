@@ -330,8 +330,11 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 				cmd = "cat %s >> %s" % (mds_file, of)
 				os_run(cmd)
 				job = '%s-%s.sh' % (job_tmpl, cntr)
-				cmd = "echo 'cd %s;%s %s' > %s" % (
-					os.path.abspath(os.path.curdir), COORDTOOL, of, job)
+				jf=file(job,"w")
+				jf.write("#!/bin/bash\ncd %s\n%s %s\n" % (
+					os.path.abspath(os.path.curdir), COORDTOOL, of))
+				jf.close()
+				#cmd = "echo 'cd %s;%s %s' > %s" % (
 				jobs.append(job)
 				inputs.append(of)
 				os_run(cmd)
@@ -351,7 +354,7 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 					os_run(post_action + " " + job+" 2> "+job+".e")
 				else:
 					os_run(post_action + " " + job)
-			if post_action == 'qsub':
+			if 'qsub' in post_action:
 				wait_qsub(job_tmpl)
 			# merge results
 			coord_file = "coord.%s-%s" % (n, k)

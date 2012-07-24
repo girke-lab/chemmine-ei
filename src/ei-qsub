@@ -1,0 +1,10 @@
+#!/bin/sh
+CMD=$1
+shift 1
+
+mv $CMD $CMD.tmp
+echo  '#!/bin/bash\nsource /etc/profile.d/modules.sh; module load ei/1.0;'|cat - $CMD.tmp > $CMD
+rm -f $CMD.tmp
+qsub $CMD $@
+
+
