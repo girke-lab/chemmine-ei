@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import logging
 from logging import info, warning, error, debug, critical, root, NOTSET
 import sys
 import os
@@ -19,7 +20,7 @@ from eutils.lshsearch import LSHSearcher
 from eutils.refineserver import Refiner
 
 
-root.setLevel(NOTSET)
+root.setLevel(logging.WARNING)
 os_run = OS_Runner()
 
 BINDIR = "" 
@@ -120,7 +121,7 @@ def dist_mat(dbfile, outfile=None):
 		return outfile
 	cmd = "%s %s %s %s > %s" % (DB2DB_DISTANCE, CDB, dbfile, dbfile,
 		outfile)
-	print("dist cmd: "+cmd)
+	debug("dist cmd: "+cmd)
 	os_run(cmd, msg='cannot build distance matrix')
 	return outfile
 
@@ -510,23 +511,23 @@ def lshSearchBatch(matrix_file,solverResult):
 
 def distToCandidates(candidate_indcies,query_db):
 	"""return a matrix of distances, queries are rows, candidates are columns"""
-	if candidate_indcies == None:
+	if candidate_indcies != None:
 		debug( "writing candidates: "+str(candidate_indcies))
-		target_file="candidates.db"
+		target_db="candidates.db"
 		f = file("candidates.iddb","w")
 	
 		for index in sorted(candidate_indcies):
 			f.write("%d\n" % (index))
 		f.close()
 
-		info("call db_subset")
+		debug("call db_subset")
 		check_call([DB_SUBSET,CDB,"candidates.iddb",target_db])
 	else:
 		target_db = CDB
 	return runDb2Db(query_db,target_db)
 
 def runDb2Db(*args):
-	info("call db2db_distance")
+	debug("call db2db_distance")
 	subp = Popen( [DB2DB_DISTANCE]+list(args),stdout=PIPE)
 	t=[ [float(value) for value in line.strip().split()] for line in subp.stdout.read().splitlines()]
 	#debug("done reading: "+str(t))
@@ -535,10 +536,10 @@ def runDb2Db(*args):
 def bestCandidates(distances,candidate_indcies,num_neighbors=K):
 	"""takes a one dimentional distance array and candidates indcies. 
 		returns (candidate_index, distance) tuples"""
-	#debug( "distances: "+str(distances))
+	debug( "distances: "+str(distances))
 	if candidate_indcies == None:
 		candidate_indcies = range(1,cdbsize()+1)
-		#debug("candidates: "+str(candidate_indcies))
+	debug("candidates: "+str(candidate_indcies))
 		
 	distances = [ (candidate_indcies[di[0]],di[1]) for di in enumerate(distances)]
 	distances.sort(key=lambda x:x[1] )
@@ -551,6 +552,7 @@ def refineLocal(query_cdb,candidates):
 		return []
 	return bestCandidates( distToCandidates(candidate_indcies,query_cdb)[0], candidate_indcies)
 
+#not used
 def refine(query_cdb,candidates):
 	f = file("candidates.data",'w')
 	f.write(candidates)
@@ -570,6 +572,7 @@ def okResult(output):
 	else:
 		raise StandardError("no results found. output: "+output)
 
+#not used
 def refineBatch(query_cdb):
 	t = time()
 
@@ -678,7 +681,7 @@ def clean(input, n, k):
 def init(input_db,m):
 	if not os.path.isdir("data"):
 		os.mkdir("data")
-	if m is not None and m:
+	if m is not None and m and not os.path.isfile(localConfig):
 		f=file(localConfig,"w")
 		f.write("DB2DB_DISTANCE = '"+DB2DB_DISTANCE+"'\n")
 		f.write("DB_SUBSET = '"+DB_SUBSET+"'\n")
@@ -713,11 +716,18 @@ if __name__ == '__main__':
 	p.add_option("-m", help="similarity measure to use", dest="m")
 	p.add_option("-q", help="query", dest="q")
 	p.add_option("-x", help="reference cdb file", dest="x")
+	p.add_option("-v", help="verbose",action="store_true", dest="v")
+	p.add_option("--vv", help="more verbose",action="store_true", dest="vv")
 	p.add_option("--dry-run", help="dry run", dest="dry", action="store_true",
 		default=False)
 	p.add_option("-s", "--slice", help="number of puzzles per job", dest="s")
 	p.add_option("--init", help="create initial database", dest="initdb")
 	opts, args = p.parse_args()
+	
+	if opts.v:
+		root.setLevel(logging.INFO)
+	if opts.vv:
+		root.setLevel(logging.DEBUG)
 
 	if opts.m is not None and opts.m:
 		DB2DB_DISTANCE = os.path.join(BINDIR, "%s.%s" % (DB2DB_DISTANCE,opts.m))
