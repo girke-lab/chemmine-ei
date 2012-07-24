@@ -334,10 +334,8 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 				jf.write("#!/bin/bash\ncd %s\n%s %s\n" % (
 					os.path.abspath(os.path.curdir), COORDTOOL, of))
 				jf.close()
-				#cmd = "echo 'cd %s;%s %s' > %s" % (
 				jobs.append(job)
 				inputs.append(of)
-				os_run(cmd)
 				f = file(of, 'a')
 				prev_f = f
 			f.write(line)
@@ -378,8 +376,8 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 #	# perform euclidean search
 #	eucsearch(r1, r2, "eucsearch.%s-%s" % (n, k))
 
-	if input:
-		clean(input[:-3], n, k)
+#	if input:
+#		clean(input[:-3], n, k)
 
 # don't test by default
 #	# do accuracy test
