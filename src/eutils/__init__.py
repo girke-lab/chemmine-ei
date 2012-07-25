@@ -69,9 +69,9 @@ lsh_param = " -W 1.39564 -M 19 -L 30  -T 30 "
 		out.close()
 	return configFile
 
-def time_function(fun,*args):
+def time_function(fun,*args,**args2):
 	t = time()
-	result = fun(*args)
+	result = fun(*args,**args2)
 	return (time() - t, result)
 
 
@@ -510,7 +510,7 @@ def gen_subdb(ref_db_path, measure,db_writer,main_cdb):
     ref_real_db = ref_db_path + '.db'
     from stat import ST_SIZE
     if os.path.isfile(ref_real_db) and os.stat(ref_real_db)[ST_SIZE]:
-        sys.stderr.write("Reusing database " + ref_real_db)
+        elog.info("Reusing database " + ref_real_db)
     else:
         if measure: db_writer += ('.' + measure)
         os_run('%s %s %s %s' % (db_writer,main_cdb, ref_db_path, ref_real_db), 

@@ -36,7 +36,6 @@ INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
 COORDTOOL = os.path.join(BINDIR, "ei-coord")
 INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch")
 SINGLE_SEARCH = os.path.join(BINDIR,"ei-single_search")
-DB_ISEARCH = os.path.join(BINDIR,"ei-db_isearch")
 K = 600
 
 execfile(getConfig())
@@ -376,8 +375,8 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 #	# perform euclidean search
 #	eucsearch(r1, r2, "eucsearch.%s-%s" % (n, k))
 
-#	if input:
-#		clean(input[:-3], n, k)
+	if input:
+		clean(input[:-3], n, k)
 
 # don't test by default
 #	# do accuracy test
@@ -447,39 +446,44 @@ def lshSearch(matrix_file,solverResult):
 	subp = Popen("%s %s -D %s -C coords.in " % (SINGLE_SEARCH, lsh_param,matrix_file), shell=True, stdout=PIPE)
 
 	return okResult(subp.stdout.read())
-def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
+def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
 
 	query_dist="query.dist"
 	query_cdb="query.cdb"
 	query_sdf="query.sdf"
-	query_name_file="query.cdb.names"
+	query_name_file="query.cdb.targetNames"
 	puzzle_file="puzzle"
 	candidate_file="candidates.data"
+
+	queries_cdb="queries.cdb"
 
 	createPuzzleFile(r,d,coord_file,puzzle_file)
 
 	parsing_time = 0
-	dist_time,comparer = time_function(DBComparer,ref_db)
+	refine_time = 0
+	#dist_time,comparer = time_function(DBComparer,ref_db)
 	coord_time,solver = time_function(CoordinateSolver,puzzle_file)
 	lsh_time,lshsearcher = time_function(LSHSearcher,matrix_file,lsh_param)
-	refine_time,refiner = time_function(Refiner,CDB,K)
+	#refine_time,refiner = time_function(Refiner,CDB,K)
 
-	debug("names: "+str(names))
-	for i,current_query in enumerate(sdf_iter(queries)):
-		#write current query to file and convert to a cdb. will create a names file as well
-		f = file(query_sdf,'w')
-		f.write(current_query)
+
+	debug("targetNames: "+str(targetNames))
+	parsing_time += time_function(createQueryCdb,queries,queries_cdb)[0]
+
+	queryNames = [name.strip() for name in file(queries_cdb+".names")]
+	debug("queryNames: "+str(queryNames))
+
+	dist_time,subp = time_function(Popen, [DB2DB_DISTANCE,queries_cdb,ref_db ],stdout=PIPE)
+
+	queryIndex=0
+	for line in subp.stdout:
+		queryIndex += 1
+
+		debug("query dist: "+line)
+		f=file(query_dist,"w")
+		f.write(line)
 		f.close()
-		parsing_time += time_function(createQueryCdb,query_sdf,query_cdb)[0]
 
-		#read the name of this query
-		f=file(query_name_file,'r')
-		name=f.readline().rstrip()
-		f.close()
-		info("=============== "+name+" =====================")
-
-		#perform search
-		dist_time += time_function(comparer.compare,query_cdb,query_dist)[0]
 		t,solverResult = time_function(solver.solve,query_dist)
 		coord_time += t
 		solverResult = solverResult.strip()
@@ -488,12 +492,50 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,names ):
 		lsh_time += t
 		lshResult = lshResult.strip()
 
-		info("lshResult %d: %s" % (i,lshResult))
+		info("lshResult %d: %s" % (queryIndex-1,lshResult))
 
-		distances = refineLocal(query_cdb,lshResult)
+		f=file("query.iddb","w")
+		f.write(str(queryIndex)+"\n")
+		f.close()
+		check_call([DB_SUBSET,queries_cdb,"query.iddb",query_cdb])
+		t,distances = time_function(refineLocal,query_cdb,lshResult)
+		refine_time+=t
 
 		for candidate_index,dist in distances:
-			outf.write("%s\t%s\t%s\n" %(name,names[candidate_index],dist))
+			outf.write("%s\t%s\t%s\n" %(queryNames[queryIndex-1],targetNames[candidate_index-1],dist))
+	
+
+
+#	for i,current_query in enumerate(sdf_iter(queries)):
+#		#write current query to file and convert to a cdb. will create a targetNames file as well
+#		f = file(query_sdf,'w')
+#		f.write(current_query)
+#		f.close()
+#		parsing_time += time_function(createQueryCdb,query_sdf,query_cdb)[0]
+#
+#		#read the name of this query
+#		f=file(query_name_file,'r')
+#		name=f.readline().rstrip()
+#		f.close()
+#		info("=============== "+name+" =====================")
+#
+#		#perform search
+#		dist_time += time_function(comparer.compare,query_cdb,query_dist)[0]
+#
+#		t,solverResult = time_function(solver.solve,query_dist)
+#		coord_time += t
+#		solverResult = solverResult.strip()
+#
+#		t,lshResult = time_function(lshsearcher.search,solverResult)
+#		lsh_time += t
+#		lshResult = lshResult.strip()
+#
+#		info("lshResult %d: %s" % (i,lshResult))
+#
+#		distances = refineLocal(query_cdb,lshResult)
+#
+#		for candidate_index,dist in distances:
+#			outf.write("%s\t%s\t%s\n" %(name,targetNames[candidate_index],dist))
 	
 	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
 				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
@@ -553,17 +595,6 @@ def refineLocal(query_cdb,candidates):
 		return []
 	return bestCandidates( distToCandidates(candidate_indcies,query_cdb)[0], candidate_indcies)
 
-#not used
-def refine(query_cdb,candidates):
-	f = file("candidates.data",'w')
-	f.write(candidates)
-	f.close()
-	info("candidates: "+candidates)
-	subp = Popen( [DB_ISEARCH,CDB,str(K)],stdin=PIPE,stdout=PIPE)
-	subp.stdin.write(query_cdb+" candidates.data\n")
-	subp.stdin.close()
-	return okResult(subp.stdout.read())
-
 def okResult(output):
 	#info("output: "+output)
 	result=None
@@ -572,17 +603,6 @@ def okResult(output):
 		return m.group(1)
 	else:
 		raise StandardError("no results found. output: "+output)
-
-#not used
-def refineBatch(query_cdb):
-	t = time()
-
-	refiner = Refiner(CDB,K)
-	#os_run("cp "+query_cdb+" query.fp_cdb")	
-	refineResult = refiner.refine("%s %s" %(query_cdb,"candidates.data"));
-	assert refineResult
-
-	return (time() - t,refineResult)
 
 def query(r,d,query_sdf,ref_iddb):
 

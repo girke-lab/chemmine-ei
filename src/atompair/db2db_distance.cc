@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
   if (argc != 4 and argc != 3) {
     std::cerr << "Usage: " << argv[0] << " chem.db 1.iddb 2.iddb" << std::endl;
     std::cerr << "       " << argv[0] << " chem.db chem2.db" << std::endl;
-    std::cerr << "        1.iddb and 2.iddb are <iddb>s. Are indices inside are considered to be 1-based" << std::endl;
+    std::cerr << "        1.iddb and 2.iddb are <iddb>s. All indices inside are considered to be 1-based" << std::endl;
     exit(1);
   }
 

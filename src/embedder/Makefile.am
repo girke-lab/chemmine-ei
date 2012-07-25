@@ -7,9 +7,10 @@ AM_CXXFLAGS = -mtune=nocona -O3  -fomit-frame-pointer -funroll-loops -mfpmath=ss
 #AM_LDFLAGS = -static
 LIBS = -lm -lf2c  
 
-bin_PROGRAMS = coord icoord coord_server
+bin_PROGRAMS = coord coord_server
 
 coord_SOURCES = coord.cc $(SRC)
-icoord_SOURCES = icoord.cc $(SRC)
-icoord_LDADD = -lreadline
 coord_server_SOURCES = coord_server.cc $(SRC)
+
+#icoord_SOURCES = icoord.cc $(SRC)
+#icoord_LDADD = -lreadline

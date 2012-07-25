@@ -4,10 +4,11 @@ SRC = recordfile.cc search.cc ../atompair/desc.cc ../atompair/formats.cc ../atom
 AM_CXXFLAGS = -O3 -mtune=nocona -D_REFINE_ -I ../atompair #-g
 AM_LDFLAGS = -static
 
-bin_PROGRAMS = rnn knn knn-self euclid_search self split
-rnn_SOURCES = $(SRC) rnn.cc
-knn_SOURCES = $(SRC) knn.cc
-knn_self_SOURCES = $(SRC) knn-self.cc
+bin_PROGRAMS = euclid_search
 euclid_search_SOURCES = $(SRC) scan.cc
-self_SOURCES = $(SRC) self.cc
-split_SOURCES = $(SRC) split.cc
+
+#rnn_SOURCES = $(SRC) rnn.cc
+#knn_SOURCES = $(SRC) knn.cc
+#knn_self_SOURCES = $(SRC) knn-self.cc
+#self_SOURCES = $(SRC) self.cc
+#split_SOURCES = $(SRC) split.cc

@@ -10,7 +10,9 @@ sys.path.append('eutils/fp')
 #sys.path.append('/home/ycao/dev/optim.2')
 #sys.path.append('/home/ycao/dev/lsh-2/build/bin')
 #sys.path.append('/home/ycao/dev/descriptor')
-from fpcdb import create_db
+
+#deprecated
+#from fpcdb import create_db
 from coord import CoordinateSolver
 from fpdbcompare import DBComparer
 #_dir_ = os.path.dirname(os.path.abspath(__file__))
