@@ -50,11 +50,6 @@ int read_line(ifstream &ifs, int size, double *d)
 		}
 	}
 
-	//cerr << "(II) " << "read 1 line of puzzle: ";
-	//for (int i = 0; i < size and i < 3; i ++) 
-	//	cerr << d[i] << " ";
-	//cerr << "..." << endl;
-
 	return 1;
 }
 

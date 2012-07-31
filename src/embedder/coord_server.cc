@@ -25,7 +25,7 @@ int read_head(ifstream &ifs, int &k, int &m, double* &p)
 		cerr << "(EE) " << "I/O failed when reading k and m" << endl;
 		return 0;
 	}
-	cout << "(II) " << "k = " << k << " m = " << m << endl;
+	cerr << "(II) " << "k = " << k << " m = " << m << endl;
 
 	// alloc space
 	p = new double[m*k];
@@ -40,10 +40,12 @@ int read_head(ifstream &ifs, int &k, int &m, double* &p)
 			}
 		}
 
-	cout << "(II) " << "Finish reading p" << endl;
+	cerr<< "(II) " << "Finish reading p" << endl;
 	return 1;
 }
 
+
+/*
 char* f_readline(std::ifstream & ifs)
 {
 	static char linebuf[LINE_BUF_LIMIT];
@@ -99,10 +101,32 @@ int read_line(int size, double *d)
 
 	return 1;
 }
+*/
+int read_line(istream &ifs, int size, double *d)
+{
+	double _d;
+	for (int i = 0; i < size; i ++) {
+		ifs >> _d; d[i] = _d;
+		
+		if (ifs.fail() or ifs.eof()) {
+			if (ifs.eof() and i == 0) {
+				//cerr << endl << "(II) " << "reaching the end, now stop and exit" << endl;
+				return 0;
+			}else if(ifs.bad()){
+				cerr<<endl<<"(II) stream went bad"<<endl;
+			} else {
+				cerr << "(EE) " << "I/O failed when reading d, i = " << i << endl;
+				throw i;
+			}
+		}
+		
+	}
+	//cerr<<"done reading"<<endl;
 
+	return 1;
+}
 int main(int argc, char* argv[])
 {
-	signal(SIGINT, on_sig);
 #ifdef _TIMER_
 	Timer t;
 #endif
@@ -116,7 +140,7 @@ int main(int argc, char* argv[])
 		cerr << "(EE) " << "Cannot open " << argv[1] << endl;
 		return 1;
 	}
-	cout << "(II) " << "file opened" << endl;
+	cerr<< "(II) " << "file opened" << endl;
 	int k, m;
 	double *p;
 	if (read_head(ifs, k, m, p) == 0) {
@@ -131,25 +155,23 @@ int main(int argc, char* argv[])
 	int line_id = 0;
 	double *d = new double[m];
 	doublereal *x = new doublereal[k];
-	std::cerr << ">>";
-	std::cerr.flush();
 	while (true) {
-		pause();
-		sleep(1);
-		if (read_line(m, d) == 0) continue;
+		if (read_line(cin,m, d) == 0) 
+			break;
 #ifdef _TIMER_
 		t.start();
 #endif
 		s.optim(x, d);
 #ifdef _TIMER_
 		t.pause();
-		cerr << "Time: " << t.read() << " seconds" << endl;
 #endif
-		cout << "OK:";
 		for (int i = 0; i < k; i ++)
 			cout << x[i] << " ";
 		cout << endl;
 	}
+#ifdef _TIMER_
+	cerr << "Time: " << t.read() << " seconds" << endl;
+#endif
 
 	delete d, x;
 	return 0;

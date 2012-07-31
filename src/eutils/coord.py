@@ -4,11 +4,8 @@ Calculating coordinate from distances to references
 
 import os
 import sys
-from pexpect import spawn, TIMEOUT
+from subprocess import Popen, PIPE
 bin =  'ei-coord_server'
-exchange_fp = "/tmp/__coord_server.in"
-from time import time
-from signal import SIGINT
 
 class CoordinateSolverStartupError(Exception):
 	pass
@@ -20,52 +17,28 @@ class CoordinateSolver(object):
 	"""The fingerprint calculator wrapper class"""
 	def __init__(self, reference):
 		"""start the process"""
-		self.cmd = bin + " " + reference
+		self.reference=reference
 		self.start()
 	
 	def start(self):
 		try:
-			self.child = spawn(self.cmd)
-			#self.child.logfile_read = sys.stderr
-			self.child.expect_exact('>>', timeout=40)
-		except TIMEOUT:
-			try: self.child.terminate(force=True)
+			self.child = Popen([bin,self.reference],stdin=PIPE,stdout=PIPE)
+		except Exception as e :
+			print "error: "+str(e)
+			try: self.child.kill()
 			except: pass
-			sys.stderr.write("Error: Cannot start icoord\n")
+			sys.stderr.write("Error: Cannot start %s\n"%bin)
 			raise CoordinateSolverStartupError
 	
 	def close(self):
-		self.child.close(force=True)
+		self.child.kill()
 	
-	def tell(self, line):
-		f = file(exchange_fp, 'w')
-		if not line.endswith('\n'):
-			line += '\n'
-		f.write(line)
-		self.child.kill(SIGINT)
-		f.close()
-
 	def solve(self, line):
-		if not self.child.isalive():
+		if self.child.poll():
 			self.start()
 
-		start = time()
-		self.tell(line)
-		start = time()
-		index = self.child.expect_exact(['OK:', 'Input: File I/O failed when reading first line', TIMEOUT])
-		if index == 0:
-			fp = self.child.readline()
-			return fp
-		elif index == 1:
-			print "before: "+self.child.before
-			print "after: "+self.child.after
-			raise SolverError
-		elif index == 2:
-			self.close()
-			self.start()
-			raise SolverError
-		else:
-			self.close()
-			self.start()
-			raise SolverError
-
+		self.child.stdin.write(line+"\n")
+		fp = self.child.stdout.readline()
+		if self.child.poll():
+			raise SolverError("return code: %d" % self.child.returncode())
+		return fp

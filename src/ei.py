@@ -15,9 +15,7 @@ from traceback import print_exc
 from eutils import OS_Runner, STORED, DISCARDED, getConfig,gen_subdb, time_function
 from eutils.sdfiterator import sdf_iter
 from eutils.coord import CoordinateSolver
-from eutils.fpdbcompare import DBComparer
 from eutils.lshsearch import LSHSearcher
-from eutils.refineserver import Refiner
 
 
 root.setLevel(logging.WARNING)
@@ -33,7 +31,8 @@ EUCSEARCHTOOL = os.path.join(BINDIR, "ei-euclid_search")
 EVALUATOR = os.path.join(BINDIR, "ei-evaluator")
 COORD_TO_BINARY = os.path.join(BINDIR, "ei-bin_formatter")
 INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
-COORDTOOL = os.path.join(BINDIR, "ei-coord")
+#COORDTOOL = os.path.join(BINDIR, "ei-coord")
+COORDSERVER = os.path.join(BINDIR, "ei-coord_server")
 INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch")
 SINGLE_SEARCH = os.path.join(BINDIR,"ei-single_search")
 K = 600
@@ -85,12 +84,6 @@ def subset_db(n, cdb=IDDB, outfile="ref.iddb", base=1):
 		for q in queries: f.write("%d\n" % q)
 		f.close()
 		queries = set(queries)
-#		error("!!!!! PLEASE GENERATE THE CHEMICAL SEARCH RESULT !!!!!")
-#		error("!!!!! EXAMPLE:                                   !!!!!")
-#		error("      ei-db_search -id chem.db main.iddb test_query.iddb 50000 | gzip > chemical-search.results.gz")
-#		error(" ")
-#		error("Please press any key to continue or CTRL-C to exit")
-#		sys.stdin.read()
 	all = set(range(base, cdbsize() + base))
 	assert queries.issubset(all)
 	ref = random.sample(all.difference(queries), n)
@@ -307,35 +300,39 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 
 		# perform mds to get coordinate for reference compounds
 		mds_file = mds(dist_mat(input), k)
-
+		mds_with_dims = "mds_with_dims"
+		f=file(mds_with_dims,"w")
+		f.write("%d %d\n" % (k, n))
+		f.close()
+		os_run("cat %s >> %s" % (mds_file, mds_with_dims))
 		# second half of the puzzle
-		puzzle_file = distances(IDDB, input)
+		dist_file = distances(IDDB, input)
 
 		# build the puzzle file
-		pz = file(puzzle_file)
+		d = file(dist_file)
 		cntr = 0
 		jobs = []
 		inputs = []
 		job_tmpl = 'job-%s' % input[:3]
 		prev_f = None
-		for i, line in enumerate(pz):
+		for i, line in enumerate(d):
 			if i % per_file == 0:
 				cntr += 1
 				of = "%s-%s-%s" % (n, k, cntr)
 				if prev_f: prev_f.close()
-				f = file(of, 'w')
-				f.write("%d %d\n" % (k, n))
-				f.close()
-				cmd = "cat %s >> %s" % (mds_file, of)
-				os_run(cmd)
+				#f = file(of, 'w')
+				#f.write("%d %d\n" % (k, n))
+				#f.close()
+				#cmd = "cat %s >> %s" % (mds_file, of)
+				#os_run(cmd)
 				job = '%s-%s.sh' % (job_tmpl, cntr)
 				jf=file(job,"w")
-				jf.write("#!/bin/bash\ncd %s\n%s %s\n" % (
-					os.path.abspath(os.path.curdir), COORDTOOL, of))
+				jf.write("#!/bin/bash\ncd %s\n%s %s < %s > %s.out\n" % (
+					os.path.abspath(os.path.curdir), COORDSERVER,mds_with_dims, of,of))
 				jf.close()
 				jobs.append(job)
 				inputs.append(of)
-				f = file(of, 'a')
+				f = file(of, 'w')
 				prev_f = f
 			f.write(line)
 		f.close()
@@ -371,16 +368,8 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 	r1 = binarize_coord(coord_file, "matrix.%s-%s" % (n,k), k)
 	r2 = binarize_coord(coord_file2, "matrix.query.%s-%s" % (n,k), k)
 
-# don't test by default
-#	# perform euclidean search
-#	eucsearch(r1, r2, "eucsearch.%s-%s" % (n, k))
-
 	if input:
-		clean(input[:-3], n, k)
-
-# don't test by default
-#	# do accuracy test
-#	accuracy(n, k)
+		clean(input[:-3], n, k,mds_with_dims)
 
 def createQueryCdb(query_sdf,query_cdb):
 	t = time()
@@ -396,27 +385,17 @@ def createQueryCdb(query_sdf,query_cdb):
 
 	return (time() - t,num_compounds)
 
-def createDistanceMatrixBatch(ref_db,query_cdb,query_dist):
-	t = time()
-
-	comparer = DBComparer(ref_db)
-	comparer.compare(query_cdb,query_dist)
-	assert os.stat(query_dist)[ST_SIZE] != 0
-	return time() - t
 
 def solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file):
 
 	createPuzzleFile(r,d,coord_file,puzzle_file)
 
-	os_run("%s %s %s >> %s" % (DB2DB_DISTANCE, query_cdb, ref_db, puzzle_file),
-           msg="cannot compare input to reference database")
-
-	os_run("%(cmd)s %(inp)s" % dict(cmd=COORDTOOL, inp=puzzle_file), msg="Cannot run embedder")
-	if os.path.getsize(puzzle_file+".out") == 0:
-		warning("empty "+puzzle_file+".out")
-	f = file(puzzle_file + '.out')
-	x = f.read()
-	f.close()
+	solver = CoordinateSolver(puzzle_file)
+	subp = Popen([DB2DB_DISTANCE, query_cdb, ref_db ],stdout=PIPE)
+	x=""
+	for line in subp.stdout:
+		x+=solver.solve(line)
+	
 	info("puzzle: "+x)
 	return x
 
@@ -427,14 +406,6 @@ def createPuzzleFile(r,d,coord_file,puzzle_file):
 
 	os_run("cat %s >> %s" % (coord_file,puzzle_file))
 
-def solvePuzzleBatch(r,d,query_dist,coord_file,puzzle_file):
-	t = time()
-	createPuzzleFile(r,d,coord_file,puzzle_file)
-	solver = CoordinateSolver(puzzle_file)
-	solverResult = solver.solve(query_dist).strip()
-	assert solverResult
-
-	return (time() - t,solverResult)
 
 def lshSearch(matrix_file,solverResult):
 	if not solverResult:
@@ -461,11 +432,10 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
 
 	parsing_time = 0
 	refine_time = 0
-	#dist_time,comparer = time_function(DBComparer,ref_db)
 	coord_time,solver = time_function(CoordinateSolver,puzzle_file)
 	lsh_time,lshsearcher = time_function(LSHSearcher,matrix_file,lsh_param)
-	#refine_time,refiner = time_function(Refiner,CDB,K)
 
+	#coord_time,solverp = time_function(Popen,["ei-coord_server",puzzle_file],stdin=PIPE,stdout=PIPE)
 
 	debug("targetNames: "+str(targetNames))
 	parsing_time += time_function(createQueryCdb,queries,queries_cdb)[0]
@@ -479,14 +449,20 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
 	for line in subp.stdout:
 		queryIndex += 1
 
-		debug("query dist: "+line)
-		f=file(query_dist,"w")
-		f.write(line)
-		f.close()
+		#debug("query dist: "+line)
+		#f=file(query_dist,"w")
+		#f.write(line)
+		#f.close()
 
-		t,solverResult = time_function(solver.solve,query_dist)
+#		solverp.stdin.write(line+"\n")
+#		solverResult = solverp.stdout.readline()
+#		debug("solverResult: "+solverResult)
+#		assert solverResult
+
+		t,solverResult = time_function(solver.solve,line)
 		coord_time += t
-		solverResult = solverResult.strip()
+		assert solverResult
+		debug("solverResult: "+solverResult)
 
 		t,lshResult = time_function(lshsearcher.search,solverResult)
 		lsh_time += t
@@ -498,7 +474,7 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
 		f.write(str(queryIndex)+"\n")
 		f.close()
 		check_call([DB_SUBSET,queries_cdb,"query.iddb",query_cdb])
-		t,distances = time_function(refineLocal,query_cdb,lshResult)
+		t,distances = time_function(refine,query_cdb,lshResult)
 		refine_time+=t
 
 		for candidate_index,dist in distances:
@@ -532,25 +508,13 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
 #
 #		info("lshResult %d: %s" % (i,lshResult))
 #
-#		distances = refineLocal(query_cdb,lshResult)
+#		distances = refine(query_cdb,lshResult)
 #
 #		for candidate_index,dist in distances:
 #			outf.write("%s\t%s\t%s\n" %(name,targetNames[candidate_index],dist))
 	
 	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
 				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
-
-def lshSearchBatch(matrix_file,solverResult):
-	t = time()
-
-	lshsearcher = LSHSearcher(matrix_file,lsh_param)
-	lshResult = lshsearcher.search(solverResult).strip()
-	assert lshResult
-
-	f = file("candidates.data",'w')
-	f.write(lshResult)
-	f.close()
-	return time() - t
 
 def distToCandidates(candidate_indcies,query_db):
 	"""return a matrix of distances, queries are rows, candidates are columns"""
@@ -588,7 +552,7 @@ def bestCandidates(distances,candidate_indcies,num_neighbors=K):
 	distances.sort(key=lambda x:x[1] )
 	return distances[:num_neighbors]
 
-def refineLocal(query_cdb,candidates):
+def refine(query_cdb,candidates):
 	#debug("orig candidates: "+candidates)
 	candidate_indcies = [int(s.split(":")[0]) for s in candidates.split() ]
 	if not candidate_indcies:
@@ -637,28 +601,11 @@ def query(r,d,query_sdf,ref_iddb):
 		os.chdir(temp_dir)
 		if num_compounds > 1:
 			batchQuery(f,r,d,ref_db,query_sdf,coord_file,matrix_file,names)
-			
-
-			
-			#dist_time = createDistanceMatrixBatch(ref_db,query_cdb,query_dist)
-			#coord_time,solverResult = solvePuzzleBatch(r,d,query_dist,coord_file,puzzle_file)
-			#lsh_time = lshSearchBatch(matrix_file,solverResult)
-			#refine_time,refineResult = refineBatch(query_cdb)
-			#sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
-				#(parsing_time, dist_time + coord_time, lsh_time, refine_time))
-			#f.write('# %s %s %s %s\n' % 
-				#(parsing_time, coord_time, lsh_time, refine_time))
 		else:
 			query_dist = os.path.join(temp_dir,query_base+".dist")
 			puzzle_file = os.path.join(temp_dir,"puzzle")
 
-			#refineResult = refine(query_cdb,lshSearch(matrix_file,solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
-			#for pair in refineResult.split():
-				#seq_id, dist = pair.split(':')
-				#cid = names[int(seq_id)-1]
-				#f.write('%s %s\n' %(cid,dist))
-
-			refineResult = refineLocal(query_cdb,lshSearch(matrix_file,solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
+			refineResult = refine(query_cdb,lshSearch(matrix_file,solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
 			for seq_id,dist in refineResult:
 				f.write('%s %s\n' %(names[int(seq_id)-1],dist))
 
@@ -686,7 +633,7 @@ def time_and_result(line):
 		time = 0
 	return (time,line)
 
-def clean(input, n, k):
+def clean(input, n, k,*other):
 	info("cleaning up files")
 	for i in glob.glob('%s.*' % input):
 		info("removing %s" % i)
@@ -697,6 +644,8 @@ def clean(input, n, k):
 			os.unlink(i)
 	for i in glob.glob('%s-%s-*' % (n, k)):
 		info("removing %s" % i)
+		os.unlink(i)
+	for i in *other:
 		os.unlink(i)
 		
 def init(input_db,m):
