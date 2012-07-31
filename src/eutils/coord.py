@@ -27,18 +27,22 @@ class CoordinateSolver(object):
 			print "error: "+str(e)
 			try: self.child.kill()
 			except: pass
-			sys.stderr.write("Error: Cannot start %s\n"%bin)
-			raise CoordinateSolverStartupError
+			raise CoordinateSolverStartupError("Cannot start %s\n"%bin)
 	
 	def close(self):
 		self.child.kill()
 	
 	def solve(self, line):
-		if self.child.poll():
+		if self.child.poll() is not None:
+			print("restarting "+bin)
 			self.start()
 
-		self.child.stdin.write(line+"\n")
-		fp = self.child.stdout.readline()
-		if self.child.poll():
-			raise SolverError("return code: %d" % self.child.returncode())
+		try:
+			self.child.stdin.write(line)
+			fp = self.child.stdout.readline().strip()
+		except IOError as e:
+			raise SolverError("IO error: "+str(e))
+
+		if self.child.poll() is not None and self.child.returncode != 0:
+			raise SolverError("return code: %d" % self.child.returncode)
 		return fp

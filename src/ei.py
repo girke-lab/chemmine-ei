@@ -320,11 +320,6 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 				cntr += 1
 				of = "%s-%s-%s" % (n, k, cntr)
 				if prev_f: prev_f.close()
-				#f = file(of, 'w')
-				#f.write("%d %d\n" % (k, n))
-				#f.close()
-				#cmd = "cat %s >> %s" % (mds_file, of)
-				#os_run(cmd)
 				job = '%s-%s.sh' % (job_tmpl, cntr)
 				jf=file(job,"w")
 				jf.write("#!/bin/bash\ncd %s\n%s %s < %s > %s.out\n" % (
@@ -417,15 +412,10 @@ def lshSearch(matrix_file,solverResult):
 	subp = Popen("%s %s -D %s -C coords.in " % (SINGLE_SEARCH, lsh_param,matrix_file), shell=True, stdout=PIPE)
 
 	return okResult(subp.stdout.read())
-def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
+def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames, embedOnly=False ):
 
-	query_dist="query.dist"
 	query_cdb="query.cdb"
-	query_sdf="query.sdf"
-	query_name_file="query.cdb.targetNames"
 	puzzle_file="puzzle"
-	candidate_file="candidates.data"
-
 	queries_cdb="queries.cdb"
 
 	createPuzzleFile(r,d,coord_file,puzzle_file)
@@ -433,14 +423,16 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
 	parsing_time = 0
 	refine_time = 0
 	coord_time,solver = time_function(CoordinateSolver,puzzle_file)
-	lsh_time,lshsearcher = time_function(LSHSearcher,matrix_file,lsh_param)
+	if not embedOnly:
+		lsh_time,lshsearcher = time_function(LSHSearcher,matrix_file,lsh_param)
+	else:
+		lsh_time=0
 
-	#coord_time,solverp = time_function(Popen,["ei-coord_server",puzzle_file],stdin=PIPE,stdout=PIPE)
+
+	parsing_time += time_function(createQueryCdb,queries,queries_cdb)[0]
+	queryNames = [name.strip() for name in file(queries_cdb+".names")]
 
 	debug("targetNames: "+str(targetNames))
-	parsing_time += time_function(createQueryCdb,queries,queries_cdb)[0]
-
-	queryNames = [name.strip() for name in file(queries_cdb+".names")]
 	debug("queryNames: "+str(queryNames))
 
 	dist_time,subp = time_function(Popen, [DB2DB_DISTANCE,queries_cdb,ref_db ],stdout=PIPE)
@@ -449,20 +441,13 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
 	for line in subp.stdout:
 		queryIndex += 1
 
-		#debug("query dist: "+line)
-		#f=file(query_dist,"w")
-		#f.write(line)
-		#f.close()
-
-#		solverp.stdin.write(line+"\n")
-#		solverResult = solverp.stdout.readline()
-#		debug("solverResult: "+solverResult)
-#		assert solverResult
-
 		t,solverResult = time_function(solver.solve,line)
 		coord_time += t
-		assert solverResult
 		debug("solverResult: "+solverResult)
+
+		if embedOnly:
+			print solverResult
+			continue
 
 		t,lshResult = time_function(lshsearcher.search,solverResult)
 		lsh_time += t
@@ -479,39 +464,6 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames ):
 
 		for candidate_index,dist in distances:
 			outf.write("%s\t%s\t%s\n" %(queryNames[queryIndex-1],targetNames[candidate_index-1],dist))
-	
-
-
-#	for i,current_query in enumerate(sdf_iter(queries)):
-#		#write current query to file and convert to a cdb. will create a targetNames file as well
-#		f = file(query_sdf,'w')
-#		f.write(current_query)
-#		f.close()
-#		parsing_time += time_function(createQueryCdb,query_sdf,query_cdb)[0]
-#
-#		#read the name of this query
-#		f=file(query_name_file,'r')
-#		name=f.readline().rstrip()
-#		f.close()
-#		info("=============== "+name+" =====================")
-#
-#		#perform search
-#		dist_time += time_function(comparer.compare,query_cdb,query_dist)[0]
-#
-#		t,solverResult = time_function(solver.solve,query_dist)
-#		coord_time += t
-#		solverResult = solverResult.strip()
-#
-#		t,lshResult = time_function(lshsearcher.search,solverResult)
-#		lsh_time += t
-#		lshResult = lshResult.strip()
-#
-#		info("lshResult %d: %s" % (i,lshResult))
-#
-#		distances = refine(query_cdb,lshResult)
-#
-#		for candidate_index,dist in distances:
-#			outf.write("%s\t%s\t%s\n" %(name,targetNames[candidate_index],dist))
 	
 	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
 				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
@@ -568,7 +520,7 @@ def okResult(output):
 	else:
 		raise StandardError("no results found. output: "+output)
 
-def query(r,d,query_sdf,ref_iddb):
+def query(r,d,query_sdf,ref_iddb,embedOnly=False):
 
 	current_dir = os.path.abspath(".")
 	query_sdf = os.path.join(current_dir,query_sdf)
@@ -599,8 +551,8 @@ def query(r,d,query_sdf,ref_iddb):
 		f = file(query_base+".out",'w')
 
 		os.chdir(temp_dir)
-		if num_compounds > 1:
-			batchQuery(f,r,d,ref_db,query_sdf,coord_file,matrix_file,names)
+		if embedOnly  or num_compounds > 1:
+			batchQuery(f,r,d,ref_db,query_sdf,coord_file,matrix_file,names,embedOnly)
 		else:
 			query_dist = os.path.join(temp_dir,query_base+".dist")
 			puzzle_file = os.path.join(temp_dir,"puzzle")
@@ -645,7 +597,7 @@ def clean(input, n, k,*other):
 	for i in glob.glob('%s-%s-*' % (n, k)):
 		info("removing %s" % i)
 		os.unlink(i)
-	for i in *other:
+	for i in other:
 		os.unlink(i)
 		
 def init(input_db,m):
@@ -692,6 +644,8 @@ if __name__ == '__main__':
 		default=False)
 	p.add_option("-s", "--slice", help="number of puzzles per job", dest="s")
 	p.add_option("--init", help="create initial database", dest="initdb")
+	p.add_option("--embed", help="print out embedded coordinates of query",
+		action="store_true", dest="embed")
 	opts, args = p.parse_args()
 	
 	if opts.v:
@@ -699,13 +653,13 @@ if __name__ == '__main__':
 	if opts.vv:
 		root.setLevel(logging.DEBUG)
 
-	if opts.m is not None and opts.m:
+	if opts.m:
 		DB2DB_DISTANCE = os.path.join(BINDIR, "%s.%s" % (DB2DB_DISTANCE,opts.m))
 		DB_SUBSET = os.path.join(BINDIR,"%s.%s" % (DB_SUBSET,opts.m))
 		DB_BUILDER = os.path.join(BINDIR,"%s.%s" % (DB_BUILDER,opts.m))
 
 
-	if opts.initdb is not None:
+	if opts.initdb:
 		init(opts.initdb,opts.m)
 		sys.exit(0)
 
@@ -725,8 +679,10 @@ if __name__ == '__main__':
 
 	check_data_exists()
 
+	#if opts.embed and opts.q and opts.x:
+		#query(r,d,opts.q,opts.x,True)
 	if opts.q and opts.x:
-		query(r,d,opts.q,opts.x)
+		query(r,d,opts.q,opts.x,opts.embed)
 	elif len(args) == 0:
 		work_dir = 'run-%s-%s' % (r, d)
 		os_run("mkdir -p %s" % work_dir)

@@ -1,4 +1,3 @@
-// based on icoord.cc
 #include <stdlib.h>
 #include <fstream>
 #include <iostream>
@@ -7,15 +6,8 @@
 #endif
 #include "solver.h"
 #include <string.h>
-#include <signal.h>
-#define LINE_BUF_LIMIT 1048576
 using namespace std;
-const char* exchange_fp = "/tmp/__coord_server.in";
 
-void on_sig(int status)
-{
-	return;
-}
 
 int read_head(ifstream &ifs, int &k, int &m, double* &p)
 {
@@ -44,69 +36,13 @@ int read_head(ifstream &ifs, int &k, int &m, double* &p)
 	return 1;
 }
 
-
-/*
-char* f_readline(std::ifstream & ifs)
-{
-	static char linebuf[LINE_BUF_LIMIT];
-	ifs.getline(linebuf, LINE_BUF_LIMIT);
-	if (strlen(linebuf) == LINE_BUF_LIMIT - 1) {
-		std::cerr << "Input: line way too long" << std::endl;
-		return NULL;
-	}
-
-	if (ifs.eof()) {
-		return NULL;
-	}
-
-	if (ifs.fail()) {
-		std::cerr << "Input: I/O error" << std::endl;
-		return NULL;
-	}
-
-	return linebuf;
-}
-
-
-int read_line(int size, double *d)
-{
-	double _d;
-	char* line = NULL;
-
-	std::ifstream ifs;
-	ifs.open(exchange_fp, std::ios::in);
-	line = f_readline(ifs);
-	ifs.close();
-
-	ifs.open(line, std::ios::in);
-	line = f_readline(ifs);
-	ifs.close();
-
-	if (line == NULL) {
-		cerr << "Input: File I/O failed when reading first line" << endl;
-		return 0;
-	}
-
-	char* str = strtok(line, " ");
-	for (int i = 0; i < size; i ++) {
-		if (str == NULL) {
-			cerr << "Input: File I/O failed when reading d, i = " << i << endl;
-			return 0;
-		}
-		_d = atof(str);
-		d[i] = _d;
-		if (i < size - 1)
-			str = strtok(NULL, " ");
-	}
-
-	return 1;
-}
-*/
 int read_line(istream &ifs, int size, double *d)
 {
 	double _d;
 	for (int i = 0; i < size; i ++) {
 		ifs >> _d; d[i] = _d;
+
+//		cerr<<"read "<<d[i]<<","<<i<<endl;
 		
 		if (ifs.fail() or ifs.eof()) {
 			if (ifs.eof() and i == 0) {
