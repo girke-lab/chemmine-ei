@@ -98,3 +98,8 @@ src/lshkit/tools/search_server
 src/lshkit/tools/single_search
 src/lshkit/tools/txt2bin
 
+src/lshkit/tools/fitdata
+src/lshkit/tools/mplsh-predict
+src/lshkit/tools/mplsh-tune
+src/lshkit/tools/scan
+
