@@ -31,9 +31,9 @@ EUCSEARCHTOOL = os.path.join(BINDIR, "ei-euclid_search")
 EVALUATOR = os.path.join(BINDIR, "ei-evaluator")
 COORD_TO_BINARY = os.path.join(BINDIR, "ei-bin_formatter")
 INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
-#COORDTOOL = os.path.join(BINDIR, "ei-coord")
 COORDSERVER = os.path.join(BINDIR, "ei-coord_server")
-INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch")
+#INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch")
+INDEXED_SEARCH = os.path.join(BINDIR, "ei-single_search")
 SINGLE_SEARCH = os.path.join(BINDIR,"ei-single_search")
 K = 600
 
@@ -231,28 +231,6 @@ def gen_chemical_search_results():
 					line.strip().split()],None,50000)])+"\n")
 		f.close()
 
-
-#		t=[ [float(value) for value in line.strip().split()] for line in subp.stdout.read().splitlines()]
-
-
-#		distances = runDb2Db(
-#				  os.path.join(DATADIR,"chem.db"),
-#				  os.path.join(DATADIR,"test_query.iddb"),
-#				  os.path.join(DATADIR,"main.iddb"))
-#		f.write("\n".join(
-#			[" ".join(
-#				[ "%d:%f" % pair for pair in
-#					bestCandidates(queryDist,None,50000) ]) 
-#			for queryDist in distances]))
-#		f.close()
-				  
-		#check_call("ei-db_search -id %s %s %s  50000 | gzip > %s" % 
-				#( os.path.join(DATADIR,"chem.db"),
-				  #os.path.join(DATADIR,"main.iddb"),
-				  #os.path.join(DATADIR,"test_query.iddb"),
-				  #CHEMICAL_SEARCH_RESULTS),
-				#shell=True)
-
 def accuracy(n, k):
 	"""perform evaluation to see how embedding works"""
 	gen_chemical_search_results()
@@ -261,7 +239,47 @@ def accuracy(n, k):
 			CHEMICAL_SEARCH_RESULTS, n, k)
 	os_run(cmd)
 
-def indexed_search(record, output="indexed.gz",
+def indexed_search(matrix_file,coord_file, coord_query_file,output="indexed.gz",
+		evaluation_out="indexed.performance"):
+	"""perform indexed search"""
+	info("running indexed search")
+	# create subset from TEST_QUERIES
+	# select TEST_QUERIES from matrix file (matrix_file)
+	# find neighbors using lshServer
+	# refine results
+	# compare with gen_chemial_search_results
+
+	def doTest():
+		from gzip import GzipFile as zfile
+		test_queries_indicies =  [int(value)-1 for value in file(TEST_QUERIES)]
+		lshsearcher = LSHSearcher(matrix_file,lsh_param)
+		out = zfile(output,"w")
+		line_num=0
+		for query_coords in file(coord_query_file):
+			info("query_coords( "+str(test_queries_indicies[line_num])+"): "+query_coords)
+			candidates = lshsearcher.search(query_coords)
+			query_iddb=file("query.iddb","w")
+			query_iddb.write("%d\n" % test_queries_indicies[line_num])
+			query_iddb.close()
+			results = refine(QueryIDDB("query.iddb"),candidates)
+			out.write(" ".join(["%d:%f" % pair for pair in results])+"\n")
+			line_num+=1
+		out.close()
+
+	test_time = time_function(doTest)[0]
+
+
+	info( "total time: %.1f" % test_time )
+	cmd = "echo %s > index.search.timing" % test_time 
+	os_run(cmd)
+
+	gen_chemical_search_results()
+	cmd = "%s %s %s > %s" % (INDEXED_SEARCH_EVALUATOR, 
+			CHEMICAL_SEARCH_RESULTS, output, evaluation_out)
+	os_run(cmd)
+	return output
+
+def indexed_search_orig(record, output="indexed.gz",
 		evaluation_out="indexed.performance"):
 	"""perform indexed search"""
 	info("running indexed search")
@@ -286,8 +304,8 @@ def indexed_search(record, output="indexed.gz",
 
 def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 	"""take an input reference sdf, and get the coordinates
-	   n = sample size
-	   k = dimensionality
+	   n = sample size (r)
+	   k = dimensionality (d)
 	"""
 	if not coord_ready:
 		if not input:
@@ -302,7 +320,7 @@ def main(n, k, per_file=20000, input=None, post_action=None, coord_ready=False):
 		mds_file = mds(dist_mat(input), k)
 		mds_with_dims = "mds_with_dims"
 		f=file(mds_with_dims,"w")
-		f.write("%d %d\n" % (k, n))
+		f.write("%d %d\n" % (k, n)) #(d,r)
 		f.close()
 		os_run("cat %s >> %s" % (mds_file, mds_with_dims))
 		# second half of the puzzle
@@ -405,7 +423,7 @@ def createPuzzleFile(r,d,coord_file,puzzle_file):
 def lshSearch(matrix_file,solverResult):
 	if not solverResult:
 		warning("no solver result")
-	f = file("coords.in","w")
+	f = file("coords.in","w") # query coordinates
 	f.write(solverResult)
 	f.close()
 
@@ -459,7 +477,7 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames, embed
 		f.write(str(queryIndex)+"\n")
 		f.close()
 		check_call([DB_SUBSET,queries_cdb,"query.iddb",query_cdb])
-		t,distances = time_function(refine,query_cdb,lshResult)
+		t,distances = time_function(refine,QueryFile(query_cdb),lshResult)
 		refine_time+=t
 
 		for candidate_index,dist in distances:
@@ -468,7 +486,16 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames, embed
 	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
 				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
 
-def distToCandidates(candidate_indcies,query_db):
+
+class QuerySpecifier:
+	def __init__(self,data):
+		self.data=data
+class QueryFile(QuerySpecifier):
+	pass
+class QueryIDDB(QuerySpecifier):
+	pass
+
+def distToCandidates(candidate_indcies,query_spec):
 	"""return a matrix of distances, queries are rows, candidates are columns"""
 	if candidate_indcies != None:
 		debug( "writing candidates: "+str(candidate_indcies))
@@ -479,11 +506,19 @@ def distToCandidates(candidate_indcies,query_db):
 			f.write("%d\n" % (index))
 		f.close()
 
-		debug("call db_subset")
-		check_call([DB_SUBSET,CDB,"candidates.iddb",target_db])
+		if isinstance(query_spec,QueryFile):
+			debug("call db_subset")
+			check_call([DB_SUBSET,CDB,"candidates.iddb",target_db])
+			return runDb2Db(query_spec.data,target_db)
+		elif isinstance(query_spec,QueryIDDB):
+			return runDb2Db(CDB,query_spec.data,"candidates.iddb")
 	else:
-		target_db = CDB
-	return runDb2Db(query_db,target_db)
+		if isinstance(query_spec,QueryFile):
+			return runDb2Db(query_spec.data,CDB)
+		elif isinstance(query_spec,QueryIDDB):
+			return runDb2Db(CDB,query_spec.data,IDDB)
+		#target_db = CDB
+	#return runDb2Db(query_db,target_db)
 
 def runDb2Db(*args):
 	debug("call db2db_distance")
@@ -504,12 +539,12 @@ def bestCandidates(distances,candidate_indcies,num_neighbors=K):
 	distances.sort(key=lambda x:x[1] )
 	return distances[:num_neighbors]
 
-def refine(query_cdb,candidates):
+def refine(query_spec,candidates):
 	#debug("orig candidates: "+candidates)
 	candidate_indcies = [int(s.split(":")[0]) for s in candidates.split() ]
 	if not candidate_indcies:
 		return []
-	return bestCandidates( distToCandidates(candidate_indcies,query_cdb)[0], candidate_indcies)
+	return bestCandidates( distToCandidates(candidate_indcies,query_spec)[0], candidate_indcies)
 
 def okResult(output):
 	#info("output: "+output)
@@ -554,14 +589,13 @@ def query(r,d,query_sdf,ref_iddb,embedOnly=False):
 		if embedOnly  or num_compounds > 1:
 			batchQuery(f,r,d,ref_db,query_sdf,coord_file,matrix_file,names,embedOnly)
 		else:
-			query_dist = os.path.join(temp_dir,query_base+".dist")
 			puzzle_file = os.path.join(temp_dir,"puzzle")
 
-			refineResult = refine(query_cdb,lshSearch(matrix_file,solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
+			refineResult = refine(QueryFile(query_cdb),
+										 lshSearch(matrix_file,
+													  solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
 			for seq_id,dist in refineResult:
 				f.write('%s %s\n' %(names[int(seq_id)-1],dist))
-
-
 
 			info("refine result: "+str(refineResult))
 
@@ -706,7 +740,7 @@ if __name__ == '__main__':
 		work_dir = 'run-%s-%s' % (r, d)
 		if work_dir != os.path.basename(os.path.curdir):
 			os.chdir(work_dir)
-		indexed_search('matrix.%d-%d' % (r, d))
+		indexed_search('matrix.%d-%d' % (r, d),'coord.%d-%d' % (r, d),'coord.query.%d-%d' % (r, d))
 
 	elif len(args) == 1:
 		# use existing sub-database

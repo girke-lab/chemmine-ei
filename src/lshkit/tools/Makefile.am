@@ -9,7 +9,7 @@ LIBS += -llshkit -ldescriptors
 
 
 if BUILD_LSHKIT
-bin_PROGRAMS = fitdata mplsh-predict mplsh-tune scan search_server single_search 
+bin_PROGRAMS = fitdata mplsh-predict mplsh-tune scan search_server single_search
 fitdata_SOURCES= fitdata.cpp
 #isearch_SOURCES=isearch.cpp
 mplsh_predict_SOURCES= mplsh-predict.cpp

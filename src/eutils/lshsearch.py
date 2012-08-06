@@ -11,6 +11,7 @@ exchange_fp = 'coord.in'
 import signal
 from time import time
 from traceback import print_exc
+from logging import info, warning, error, debug, critical, root, NOTSET
 
 class LSHSearcherStartupError(Exception):
 	pass
@@ -23,6 +24,7 @@ class LSHSearcher(object):
 	def __init__(self, matrix,parameters):
 		"""start the process"""
 		self.cmd = "%s %s -D %s" % (bin,parameters,matrix)
+		debug(self.cmd)
 		self.start()
 	
 	def tell(self, msg):

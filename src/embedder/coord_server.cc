@@ -12,7 +12,7 @@ using namespace std;
 int read_head(ifstream &ifs, int &k, int &m, double* &p)
 {
 	// read 1st line
-	ifs >> k >> m;
+	ifs >> k >> m; // d r
 	if (ifs.fail() or ifs.eof()) {
 		cerr << "(EE) " << "I/O failed when reading k and m" << endl;
 		return 0;
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	cerr<< "(II) " << "file opened" << endl;
-	int k, m;
+	int k, m; //d,r
 	double *p;
 	if (read_head(ifs, k, m, p) == 0) {
 		cerr << "Error in reading header information" << endl;
