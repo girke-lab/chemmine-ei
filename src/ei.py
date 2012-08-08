@@ -258,16 +258,19 @@ def indexed_search(matrix_file,coord_file, coord_query_file,output="indexed.gz",
 		for query_coords in file(coord_query_file):
 			info("query_coords( "+str(test_queries_indicies[line_num])+"): "+query_coords)
 			candidates = lshsearcher.search(query_coords)
-			query_iddb=file("query.iddb","w")
+			query_iddb=file("iquery.iddb","w")
 			query_iddb.write("%d\n" % test_queries_indicies[line_num])
 			query_iddb.close()
-			results = refine(QueryIDDB("query.iddb"),candidates)
+			results = refine(QueryIDDB("iquery.iddb"),candidates)
+			os.unlink("iquery.iddb")
 			out.write(" ".join(["%d:%f" % pair for pair in results])+"\n")
 			line_num+=1
 		out.close()
 
 	test_time = time_function(doTest)[0]
 
+	#clean up stuff left by LSHServer
+	if os.path.isfile("coord.in"): os.unlink("coord.in") 
 
 	info( "total time: %.1f" % test_time )
 	cmd = "echo %s > index.search.timing" % test_time 
@@ -509,9 +512,12 @@ def distToCandidates(candidate_indcies,query_spec):
 		if isinstance(query_spec,QueryFile):
 			debug("call db_subset")
 			check_call([DB_SUBSET,CDB,"candidates.iddb",target_db])
+			os.unlink("candidates.iddb")
 			return runDb2Db(query_spec.data,target_db)
 		elif isinstance(query_spec,QueryIDDB):
-			return runDb2Db(CDB,query_spec.data,"candidates.iddb")
+			d = runDb2Db(CDB,query_spec.data,"candidates.iddb")
+			os.unlink("candidates.iddb")
+			return d
 	else:
 		if isinstance(query_spec,QueryFile):
 			return runDb2Db(query_spec.data,CDB)
@@ -661,11 +667,12 @@ if __name__ == '__main__':
 	per_file = 20000
 	import optparse
 	p = optparse.OptionParser(usage=
-		"usage: %prog [option] [[clean] sdfname]\n"
-		"       %prog [option] accuracy\n"
-		"       %prog [option] accuracy++\n"
+		"usage: %prog  --init compounds [-m measure]\n"
+		"       %prog  -r R -d D [options] [accuracy | indexed | clean sdfname]\n"
+		"       %prog --embed  -r R -d D [options]\n"
 		" accuracy: perform accuracy analysis only using existing data\n"
-		" accuracy++: pick up from the point coordiante calculation is done"
+		" indexed: perform accuracy analysis between indexed and non indexed results\n"
+		" clean:  remove all files starting with sdfname as well as a few other temp files"
 	)
 	p.add_option("-r", help="number of references", dest="r")
 	p.add_option("-d", help="number of dimensions", dest="d")
@@ -713,8 +720,6 @@ if __name__ == '__main__':
 
 	check_data_exists()
 
-	#if opts.embed and opts.q and opts.x:
-		#query(r,d,opts.q,opts.x,True)
 	if opts.q and opts.x:
 		query(r,d,opts.q,opts.x,opts.embed)
 	elif len(args) == 0:
@@ -728,29 +733,20 @@ if __name__ == '__main__':
 		if work_dir != os.path.basename(os.path.curdir):
 			os.chdir(work_dir)
 		accuracy(r, d)
-	elif len(args) == 1 and args[0] == "accuracy++":
-		# pick up from the point coordiate calculation is done
-		work_dir = 'run-%s-%s' % (r, d)
-		if work_dir != os.path.basename(os.path.curdir):
-			os.chdir(work_dir)
-		main(r, d, coord_ready=True)
-
 	elif len(args) == 1 and args[0] == "indexed":
 		# pick up from the point coordiate calculation is done
 		work_dir = 'run-%s-%s' % (r, d)
 		if work_dir != os.path.basename(os.path.curdir):
 			os.chdir(work_dir)
 		indexed_search('matrix.%d-%d' % (r, d),'coord.%d-%d' % (r, d),'coord.query.%d-%d' % (r, d))
-
 	elif len(args) == 1:
 		# use existing sub-database
 		work_dir = os.path.dirname(args[0])
 		input = os.path.basename(args[0])
 		if work_dir: os.chdir(work_dir)
 		main(r, d, input=input, per_file=per_file, post_action=post_action)
-	else:
+	elif len(args) == 2 and args[0] == "clean":
 		# comamnd is "clean some.sdf"
-		assert args[0] == 'clean'
 		work_dir = os.path.dirname(args[1])
 		input = os.path.basename(args[1])
 		if work_dir: os.chdir(work_dir)
