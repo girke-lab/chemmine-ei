@@ -32,8 +32,6 @@ EVALUATOR = os.path.join(BINDIR, "ei-evaluator")
 COORD_TO_BINARY = os.path.join(BINDIR, "ei-bin_formatter")
 INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
 COORDSERVER = os.path.join(BINDIR, "ei-coord_server")
-#INDEXED_SEARCH = os.path.join(BINDIR, "ei-isearch")
-INDEXED_SEARCH = os.path.join(BINDIR, "ei-single_search")
 SINGLE_SEARCH = os.path.join(BINDIR,"ei-single_search")
 K = 600
 
@@ -53,7 +51,6 @@ CHEMICAL_SEARCH_RESULTS = os.path.join(DATADIR, 'chemical-search.results.gz')
 MAX_EUCSEARCH_RESULTS = 50000
 
 lsh_param = "%s -K %d" % (lsh_param,K)
-INDEXED_SEARCH = INDEXED_SEARCH + " " + lsh_param + " -D %s -C " + CDB + " < " + TEST_QUERIES
 
 class _Cdbsize(object):
 	"""a callable that returns the database size and remembers it"""
@@ -274,29 +271,6 @@ def indexed_search(matrix_file,coord_file, coord_query_file,output="indexed.gz",
 
 	info( "total time: %.1f" % test_time )
 	cmd = "echo %s > index.search.timing" % test_time 
-	os_run(cmd)
-
-	gen_chemical_search_results()
-	cmd = "%s %s %s > %s" % (INDEXED_SEARCH_EVALUATOR, 
-			CHEMICAL_SEARCH_RESULTS, output, evaluation_out)
-	os_run(cmd)
-	return output
-
-def indexed_search_orig(record, output="indexed.gz",
-		evaluation_out="indexed.performance"):
-	"""perform indexed search"""
-	info("running indexed search")
-	cmd = INDEXED_SEARCH % record + " | gzip > " + output
-	info("cmd: "+cmd)
-	ret, stdout, stderr = os_run(cmd, stderr=STORED) 
-	elapse = 0
-	prompt = ">>Query time:"
-	for i in stderr.splitlines():
-		print i
-		if i.startswith(prompt):
-			elapse += float(i[len(prompt):].strip())
-	info( "total time: %.1f" % elapse )
-	cmd = "echo %s > index.search.timing" % elapse
 	os_run(cmd)
 
 	gen_chemical_search_results()

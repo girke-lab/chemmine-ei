@@ -18,5 +18,5 @@ Depends: ${shlibs:Depends}, ${misc:Depends},  python, mime-support, libdb4.8, fi
    libboost-thread1.42.0, python-pexpect, r-base, python-pexpect
 Suggests: openbabel
 Description: Fast search of large chemical compound sets
-See Y. Cao, T. Jiang, and T. Girke. Accelerated Similarity Searching and Clustering of Large
-Compound Sets by Geometric Embedding and Locality Sensitive Hashing.
+   See Y. Cao, T. Jiang, and T. Girke. Accelerated Similarity Searching and Clustering of Large
+   Compound Sets by Geometric Embedding and Locality Sensitive Hashing.
