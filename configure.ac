@@ -89,6 +89,7 @@ AC_FUNC_STRTOD
 AC_CHECK_FUNCS([floor ftruncate gettimeofday memset pow sqrt])
 
 AC_CONFIG_FILES([Makefile
+					  man/Makefile
 					  src/Makefile
                  src/atompair/Makefile
                  src/atompair/python/Makefile
@@ -101,5 +102,6 @@ AC_CONFIG_FILES([Makefile
 					  src/eutils/Makefile
 					  src/ei_fmcs/Makefile
                  src/matrix/Makefile])
+
 
 AC_OUTPUT

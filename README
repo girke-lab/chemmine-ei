@@ -140,12 +140,12 @@ HOW TO USE
       mode. The existing-input mode is started by adding the *.cdb file in the
       run-*-* folder. For example:
 	  	
-      $ python ei.py -r 300 -d 100 run-300-100/b0780f55853624ec274713648531e003.cdb
+      $ ei.py -r 300 -d 100 run-300-100/b0780f55853624ec274713648531e003.cdb
 	
       This will allow ei.py to find intermediate files and pick up from where
       it stopped. If you to not specify the *.cdb and run
 
-        $ python ei.py -r 300 -d 100
+        $ ei.py -r 300 -d 100
 
       again after crash, then it will generate a new set of compounds as
       reference compounds and restart the embedding process. This is useful
@@ -159,7 +159,7 @@ HOW TO USE
       ei.py will not automatically test the LSH-assisted search. To
       automatically test the performance of LSH-assisted search, run
 
-        $ python ei.py -r 300 -d 100 indexed
+        $ ei.py -r 300 -d 100 indexed
 
       The result will be in run-300-100/indexed.performance. It's a 1,000-line
       recall values. Each line corresponds to one test query.
