@@ -12,7 +12,7 @@ if BUILD_CHEMMINER
 all : $(SRCDIR)/r_wrap.cc ccsource
 
 $(SRCDIR)/r_wrap.cc : ../swig.i
-	mkdir $(MODULENAME)/R
+	mkdir -p $(MODULENAME)/R
 	$(SWIG) -c++ -I$(CCSOURCEDIR) -module $(MODULENAME) -o $(SRCDIR)/r_wrap.cc -r ../swig.i
 	mv $(SRCDIR)/$(MODULENAME).R $(PACKAGEFOLDER)/R/
 

@@ -15,8 +15,8 @@ AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
-AC_ARG_WITH([chemminer],AS_HELP_STRING([--with-chemminer],[Build and install ChemmineR R extension]))
-AS_IF([ test "x$with_chemminer" = "xyes"],[
+AC_ARG_WITH([chemminerpp],AS_HELP_STRING([--with-chemminerpp],[Build and install ChemmineRpp R extension]))
+AS_IF([ test "x$with_chemminerpp" = "xyes"],[
 	AC_PATH_PROG([R_PATH],[R])
 	if test  -z "$ac_cv_path_R_PATH"; then
 		echo "could not find R binary"
@@ -28,7 +28,7 @@ AS_IF([ test "x$with_chemminer" = "xyes"],[
 	 exit 1
 	fi
 ])
-AM_CONDITIONAL([BUILD_CHEMMINER], [test "x$with_chemminer" = "xyes"])
+AM_CONDITIONAL([BUILD_CHEMMINER], [test "x$with_chemminerpp" = "xyes"])
 
 
 AM_PATH_PYTHON([2.5])

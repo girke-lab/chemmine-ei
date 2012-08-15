@@ -1,1 +1,1 @@
-man_MANS = ei.py.1
+dist_man_MANS = ei.py.1
