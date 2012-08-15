@@ -1,0 +1,10 @@
+Package: eiR
+Type: Package
+Title: EI for R
+Version: 0.0.1
+Date: 2012-08-29
+Author: Kevin Horan
+Maintainer: Kevin Horan <khoran@cs.ucr.edu>
+#Suggests: ChemmineR
+Description:  fast compound searching
+License: GPL (>=2)

@@ -3,6 +3,7 @@
 *.d
 *.deps
 *.in
+*.swo
 
 src/atompair/compare
 src/atompair/db2db_distance

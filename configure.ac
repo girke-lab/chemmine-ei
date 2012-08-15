@@ -15,6 +15,22 @@ AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
+AC_ARG_WITH([eir],AS_HELP_STRING([--with-eir],[Build and install EI R extension]))
+AS_IF([ test "x$with_eir" = "xyes"],[
+	AC_PATH_PROG([R_PATH],[R])
+	if test  -z "$ac_cv_path_R_PATH"; then
+		echo "could not find R binary"
+		exit 1
+	fi
+	: ${R_HOME=`R RHOME`}
+	if test -z "${R_HOME}"; then
+	 echo "could not determine R_HOME"
+	 exit 1
+	fi
+])
+AM_CONDITIONAL([BUILD_EIR], [test "x$with_eir" = "xyes"])
+
+
 AC_ARG_WITH([chemminerpp],AS_HELP_STRING([--with-chemminerpp],[Build and install ChemmineRpp R extension]))
 AS_IF([ test "x$with_chemminerpp" = "xyes"],[
 	AC_PATH_PROG([R_PATH],[R])
@@ -101,6 +117,7 @@ AC_CONFIG_FILES([Makefile
                  src/lshkit/tools/Makefile
 					  src/eutils/Makefile
 					  src/ei_fmcs/Makefile
+					  src/ei_R/Makefile
                  src/matrix/Makefile])
 
 
