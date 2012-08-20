@@ -13,7 +13,7 @@ int batch_sdf_parse(const char* sdfile, const char* dbfile)
 	if (! ifs.good()) {
 		std::cerr << "Cannot open SDF file for reading. File is " << sdfile << std::endl;
 		ifs.close();
-		return 0;		
+		return -1;		
 	}
 
 	std::fstream ofs(dbfile, std::fstream::out);
@@ -21,7 +21,7 @@ int batch_sdf_parse(const char* sdfile, const char* dbfile)
 		std::cerr << "Cannot open database file for writing. File is " << dbfile << std::endl;
 		ifs.close();
 		ofs.close();
-		return 0;		
+		return -1;		
 	}
 
 	char cids_f[1024] = "";
@@ -35,7 +35,7 @@ int batch_sdf_parse(const char* sdfile, const char* dbfile)
 		ifs.close();
 		ofs.close();
 		cids_ofs.close();
-		return 0;		
+		return -1;		
 	}
 
 	ofs.write(HEADER, HEADER_SIZE);
@@ -60,7 +60,7 @@ int batch_sdf_parse(const char* sdfile, const char* dbfile)
 			} else if (io_stat == 0) {
 				std::cerr << "Error when writing to database file" << std::endl;
 				ifs.close(); ofs.close(); cids_ofs.close();
-				return 0;
+				return -1;
 			} else {
 				// write the name to the index file
 				cids_ofs << cid << std::endl;
@@ -82,7 +82,7 @@ int batch_sdf_parse(const char* sdfile, const char* dbfile)
 	} else {
 		std::cerr << "Error when reading line " << line_cntr << std::endl;
 		ifs.close(); ofs.close(); cids_ofs.close();
-		return 0;
+		return -1;
 	}
 	
 	ifs.close(); ofs.close(); cids_ofs.close();
@@ -92,7 +92,7 @@ int batch_sdf_parse(const char* sdfile, const char* dbfile)
 	SimpleDB db;
 	if (not db.open(dbfile)) {
 		std::cerr << "Error when opening the database file" << std::endl;
-		return 0;
+		return -1;
 	}
 	std::vector<unsigned int> desc;
 	cntr = 0;
@@ -101,10 +101,10 @@ int batch_sdf_parse(const char* sdfile, const char* dbfile)
 	if (db.status() != SIMPLEDB_END) {
 		std::cerr << "Error when verifying the database file" << std::endl;
 		db.close();
-		return 0;
+		return -1;
 	}
 	db.close();
-	return 1;
+	return cntr;
 }
 
 #ifdef _BUILD_DB_BUILD_
@@ -115,6 +115,6 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	
-	return 1 - batch_sdf_parse(argv[1], argv[2]);
+	return batch_sdf_parse(argv[1], argv[2]) == -1;
 }
 #endif

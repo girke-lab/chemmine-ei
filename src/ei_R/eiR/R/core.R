@@ -4,7 +4,7 @@ db_builder.atompair <- function(input,output)
 eiInit <- function(compoundDb,measure=NA,db_builder = db_builder.atompair)
 {
 	cat("eiInit")
-	if(!file.exists("main"))
+	if(!file.exists("data"))
 		dir.create("data")
 
 	#if(!is.na(measure)){
@@ -14,7 +14,7 @@ eiInit <- function(compoundDb,measure=NA,db_builder = db_builder.atompair)
 	if(!file.exists(chemdb)){
 		numCompounds = db_builder(compoundDb,chemdb)
 		mainIddb = file.path("data","main.iddb")
-		write.table(1:numCompounds,mainIddb)
+		write.table(1:numCompounds,mainIddb,quote=FALSE,col.names=FALSE,row.names=FALSE)
 
 	}
 

@@ -1,12 +1,14 @@
 
-cat("testing stuff 123")
+library(RUnit)
 library(eiR)
 
-data(example_compounds)
-ls()
 
-cat(paste(example_compounds,collapse="\n"),file="example_compounds.sdf")
-eiInit("example_compounds.sdf")
+path = if(Sys.getenv("RCMDCHECK")=="FALSE"){ 
+         file.path("eiR","inst","runit")
+       }else{
+         file.path(.path.package(package="eiR"),"runit")
+      }
 
-
-cat("done testing")
+testsuite <- defineTestSuite("eiR tests", dirs = path)
+testResult <- runTestSuite(testsuite)
+printTextProtocol(testResult)
