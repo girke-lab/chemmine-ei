@@ -14,3 +14,7 @@ test.eiInit <- function() {
 }
 
 
+test.eiMakeDb <- function() {
+
+   eiMakeDb(50,40);
+}

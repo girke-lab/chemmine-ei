@@ -1,2 +1,2 @@
 useDynLib(eiR)
-export("eiInit","db_builder.atompair","batch_sdf_parse")
+export("eiInit","eiMakeDb")

@@ -1,12 +1,24 @@
 PACKAGEFOLDER = eiR
 SRCDIR = $(PACKAGEFOLDER)/src
-CXXFLAGS +=  -fPIC
+CXXFLAGS +=  -fPIC -DNO_MAIN
+
+AM_CFLAGS =  -fPIC -DNO_MAIN
+AM_CPPFLAGS =  -fPIC -DNO_MAIN
+AM_CXXPFLAGS =  -fPIC -DNO_MAIN
+
+PKG_CPPFLAGS =  -fPIC -DNO_MAIN
+PKG_CXXFLAGS =  -fPIC -DNO_MAIN
+PKG_CFLAGS =  -fPIC -DNO_MAIN
+
+
 MODULENAME = eiR
 CCSOURCEDIR = ../atompair
-CCSOURCES = $(CCSOURCEDIR)/molecule.cc $(CCSOURCEDIR)/formats.cc $(CCSOURCEDIR)/desc.cc $(CCSOURCEDIR)/similarity.cc $(CCSOURCEDIR)/simpledb.cc $(CCSOURCEDIR)/search.cc $(CCSOURCEDIR)/profiling.cc $(CCSOURCEDIR)/db_build.h $(CCSOURCEDIR)/debug.h $(CCSOURCEDIR)/desc.h $(CCSOURCEDIR)/molecule.h $(CCSOURCEDIR)/profiling.h $(CCSOURCEDIR)/script.h $(CCSOURCEDIR)/search.h $(CCSOURCEDIR)/simpledb.h $(CCSOURCEDIR)/db_build.cc
+CCSOURCES = $(CCSOURCEDIR)/molecule.cc $(CCSOURCEDIR)/formats.cc $(CCSOURCEDIR)/desc.cc $(CCSOURCEDIR)/similarity.cc $(CCSOURCEDIR)/simpledb.cc $(CCSOURCEDIR)/search.cc $(CCSOURCEDIR)/profiling.cc $(CCSOURCEDIR)/db_build.h $(CCSOURCEDIR)/debug.h $(CCSOURCEDIR)/desc.h $(CCSOURCEDIR)/molecule.h $(CCSOURCEDIR)/profiling.h $(CCSOURCEDIR)/script.h $(CCSOURCEDIR)/search.h $(CCSOURCEDIR)/simpledb.h $(CCSOURCEDIR)/db_build.cc $(CCSOURCEDIR)/db2db_distance.cc ../matrix/format.cc
 EXTRA_DIST = $(MODULENAME)/DESCRIPTION $(MODULENAME)/NAMESPACE $(MODULENAME)/README  $(MODULENAME)/src/Makevars
 
 LOCAL_INST=~/testing
+
+
 
 if BUILD_EIR
 all : $(SRCDIR)/r_wrap.cpp ccsource
@@ -20,18 +32,18 @@ ccsource : $(CCSOURCES)
 	cp -a $(CCSOURCES) $(SRCDIR)
 
 check: all
-	$(R_PATH) CMD check $(PACKAGEFOLDER)
+	MAKEFLAGS="CXXFLAGS=-DNO_MAIN" $(R_PATH) CMD check $(PACKAGEFOLDER)
 test: all local
 	export RCMDCHECK=FALSE; \
 	export R_LIBS_USER=$(LOCAL_INST); \
-	${R_PATH} --vanilla --slave < eiR/tests/test.R
+	MAKEFLAGS="CXXFLAGS=-DNO_MAIN" ${R_PATH} --vanilla --slave < eiR/tests/test.R
 
 
 local: all
-	$(R_PATH) CMD INSTALL -l $(LOCAL_INST) $(PACKAGEFOLDER)
+	 MAKEFLAGS="CXXFLAGS=-DNO_MAIN" $(R_PATH) CMD INSTALL -l $(LOCAL_INST) $(PACKAGEFOLDER)
 
 install : all
-	$(R_PATH) CMD INSTALL $(PACKAGEFOLDER)
+	MAKEFLAGS="CXXFLAGS=-DNO_MAIN" $(R_PATH) CMD INSTALL $(PACKAGEFOLDER)
 endif
 
 

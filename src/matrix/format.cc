@@ -32,14 +32,11 @@ void verify(const char* fp, int dim)
 	ofs.close();
 }
 
-int main(int argc, char* argv[])
+int binaryCoord(char *inFile,char *outFile,int dim)
 {
-	if (argc != 4) {usage(argv[0]); return 1;}
-	unsigned int dim = atoi(argv[3]);
-	assert(dim);
-	std::fstream ifs, ofs;
-	ifs.open(argv[1], std::ios::in);
-	ofs.open(argv[2], std::ios::out);
+   std::fstream ifs, ofs;
+	ifs.open(inFile, std::ios::in);
+	ofs.open(outFile, std::ios::out);
 	assert(ifs.good());
 	assert(ofs.good());
 
@@ -51,8 +48,6 @@ int main(int argc, char* argv[])
 	ofs.write((const char*) h, sizeof(h));
 	assert(ofs.good());
 
-	Timer t;
-	t.start();
 	float d;
 	unsigned int cnt = 0;
 	while (ifs.good()) {
@@ -72,10 +67,23 @@ int main(int argc, char* argv[])
 	ofs.close();
 	ifs.close();
 
-	//verify(argv[2], dim);
+   return cnt;
+}
+#ifndef NO_MAIN
+int main(int argc, char* argv[])
+{
+	if (argc != 4) {usage(argv[0]); return 1;}
+	unsigned int dim = atoi(argv[3]);
+	assert(dim);
+
+	Timer t;
+	t.start();
+   int cnt = binaryCoord(argv[1],argv[2],dim);
+   //verify(argv[2], dim);
 	std::cerr << cnt << " lines processed in " << t.pause() << " seconds"
 		<< std::endl;
 
 	return 0;
 
 }
+#endif
