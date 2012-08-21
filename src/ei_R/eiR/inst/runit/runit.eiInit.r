@@ -15,6 +15,26 @@ test.eiInit <- function() {
 
 
 test.eiMakeDb <- function() {
+   options(warn=2)
+   r<- 50
+   d<- 40
+   runDir<-paste("run",r,d,sep="-")
+   eiMakeDb(r,d);
 
-   eiMakeDb(50,40);
+   checkMatrix <- function(pattern,x,y){
+      matches<-dir(runDir,pattern=pattern,full.names=T)
+      checkEquals(length(matches),1)
+      file <- matches[1]
+      checkTrue(file.info(file)$size>0)
+      checkEquals(dim(read.table(file)),c(x,y))
+   }
+   checkMatrix(".cdb$",r,1)
+   checkMatrix(".cdb.distmat$",r,r)
+   checkMatrix(".cdb.distmat.coord$",r,d)
+   checkMatrix(".cdb.distances$",122,r)
+}
+
+test.aaaaa.cleanup<- function(){
+   junk <- c("data","example_compounds.sdf","run-50-40")
+   unlink(junk,recursive=T)
 }

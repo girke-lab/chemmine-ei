@@ -13,6 +13,9 @@ cdbSize <- function() {
 		cdbCachedSize = length(readLines(file.path("data",Main)))
 	cdbCachedSize
 }
+embedCoord <- function(s,len,coords) {
+	.Call("embedCoord",s,as.integer(len),as.double(coords))
+}
 
 db_builder.atompair <- function(input,output)
 	batch_sdf_parse(input,output)
@@ -67,6 +70,7 @@ eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
 	selfDistFile <- paste(refIddb,"distmat",sep=".")
 	coordFile <- paste(selfDistFile,"coord",sep=".")
 	ref2AllDistFile <- paste(refIddb,"distances",sep=".")
+	embeddedFile <- sprintf("coord.%d-%d",r,d)
 
 	#embed references in d dimensional space 
 	coords <- if(file.exists(coordFile)){
@@ -90,6 +94,30 @@ eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
 		db2dbDistance(file.path("data",ChemDb),iddb1=file.path("data",Main),iddb2=refIddb,file=ref2AllDistFile)
 	
 	#each job needs: R, D, coords, a chunk of distance data
+	cat("getting solver\n")
+	solver <- getSolver(r,d,coords)	
+	distConn <- file(ref2AllDistFile,"r")
+	embedConn <- file(embeddedFile,"w")
+	cat("have solver\n")
+	while(length(line <- readLines(distConn, 1)) > 0) 
+	#while(length(line <- read.table(distConn, nrows=1)[1,]) > 0) 
+	{
+		#line <- read.table(distConn, nrows=1)[1,]
+		#cat("hi\n")
+		dist <- as.numeric(unlist(strsplit(line," ")))
+		#cat("hi 2\n")
+		embedded <- embedCoord(solver,d,dist)
+		#cat("hi 3\n")
+		write.table(embedded,file=embedConn,row.names=F,col.names=F)
+		#cat("hi 4\n")
+	}
+	close(embedConn)
+	close(distConn)
+   warnings()
+
+	matrixFile <- sprintf("matrix.%d-%d",r,d)
+	binaryCoord(embeddedFile,matrixFile,d)
+
 
 	#output: coord.r-d, coord.query.r-d: subset wth only testQueries
 	#binarize coords
