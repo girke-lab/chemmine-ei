@@ -18,8 +18,10 @@ test.eiMakeDb <- function() {
    options(warn=2)
    r<- 50
    d<- 40
+   j=4
    runDir<-paste("run",r,d,sep="-")
-   eiMakeDb(r,d);
+   t=system.time(eiMakeDb(r,d,numJobs=j));
+   cat(sprintf("Time: %f\n",t))
 
    checkMatrix <- function(pattern,x,y){
       matches<-dir(runDir,pattern=pattern,full.names=T)
@@ -32,6 +34,10 @@ test.eiMakeDb <- function() {
    checkMatrix(".cdb.distmat$",r,r)
    checkMatrix(".cdb.distmat.coord$",r,d)
    checkMatrix(".cdb.distances$",122,r)
+   checkMatrix(sprintf("coord.%d-%d",r,d),122,d)
+   checkTrue(file.info(file.path(runDir,sprintf("matrix.%d-%d",r,d)))$size>0)
+   Map(function(x)
+      checkTrue(!file.exists(file.path(runDir,paste(r,d,x,sep="-")))),1:j)
 }
 
 test.aaaaa.cleanup<- function(){

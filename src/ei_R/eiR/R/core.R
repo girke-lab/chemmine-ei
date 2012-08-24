@@ -16,6 +16,9 @@ cdbSize <- function() {
 embedCoord <- function(s,len,coords) {
 	.Call("embedCoord",s,as.integer(len),as.double(coords))
 }
+embedCoordTest <- function(r,d,refCoords,coords) {
+	.Call("embedCoordTest",as.integer(r),as.integer(d),as.double(refCoords),as.double(coords))
+}
 
 db_builder.atompair <- function(input,output)
 	batch_sdf_parse(input,output)
@@ -54,23 +57,26 @@ eiInit <- function(compoundDb,measure=NA,db_builder = db_builder.atompair)
 }
 
 eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
-									dir=".",refIddb=NA)
+									dir=".",refIddb=NA,numJobs=1)
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
 	if(!file.exists(workDir))
 		dir.create(workDir)
 
+	queryIds=NA
 	#get reference compounds
 	if(is.na(refIddb)){
 		prefix<- paste(sample(c(0:9,letters),32,replace=TRUE),collapse="")
 		refIddb=file.path(workDir,paste(prefix,"cdb",sep="."))
-		genRefs(r,numSamples,refIddb)
+		queryIds=genRefs(r,numSamples,refIddb)
 	}
+	if(is.na(queryIds[1]))
+		queryIds=readIddb(file.path("data",TestQueries))
 	
 	selfDistFile <- paste(refIddb,"distmat",sep=".")
 	coordFile <- paste(selfDistFile,"coord",sep=".")
 	ref2AllDistFile <- paste(refIddb,"distances",sep=".")
-	embeddedFile <- sprintf("coord.%d-%d",r,d)
+	embeddedFile <- file.path(workDir,sprintf("coord.%d-%d",r,d))
 
 	#embed references in d dimensional space 
 	coords <- if(file.exists(coordFile)){
@@ -94,33 +100,30 @@ eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
 		db2dbDistance(file.path("data",ChemDb),iddb1=file.path("data",Main),iddb2=refIddb,file=ref2AllDistFile)
 	
 	#each job needs: R, D, coords, a chunk of distance data
-	cat("getting solver\n")
 	solver <- getSolver(r,d,coords)	
 	distConn <- file(ref2AllDistFile,"r")
-	embedConn <- file(embeddedFile,"w")
-	cat("have solver\n")
-	while(length(line <- readLines(distConn, 1)) > 0) 
-	#while(length(line <- read.table(distConn, nrows=1)[1,]) > 0) 
-	{
-		#line <- read.table(distConn, nrows=1)[1,]
-		#cat("hi\n")
-		dist <- as.numeric(unlist(strsplit(line," ")))
-		#cat("hi 2\n")
-		embedded <- embedCoord(solver,d,dist)
-		#cat("hi 3\n")
-		write.table(embedded,file=embedConn,row.names=F,col.names=F)
-		#cat("hi 4\n")
-	}
-	close(embedConn)
-	close(distConn)
-   warnings()
 
-	matrixFile <- sprintf("matrix.%d-%d",r,d)
+	jobSize = cdbSize() / numJobs + 1 #make last job short
+	for(i in 1:numJobs){
+		cat(sprintf("job %d\n",i))
+		lines <- strsplit(readLines(distConn,jobSize),"\\s+")
+		outName <- file.path(workDir,paste(r,d,i,sep="-"))
+		result = sapply(lines,function(x) embedCoord(solver,d,as.numeric(x)))
+		write.table(t(result),file=outName,row.names=F,col.names=F)
+	}
+	system(paste("cat",
+					 paste(Map(function(x) file.path(workDir,paste(r,d,x,sep="-")),1:4),collapse=" "),
+					 ">",embeddedFile))
+	Map(function(x) unlink(file.path(workDir,paste(r,d,x,sep="-"))),1:4)
+
+
+	close(distConn)
+
+	matrixFile <- file.path(workDir,sprintf("matrix.%d-%d",r,d))
 	binaryCoord(embeddedFile,matrixFile,d)
 
 
 	#output: coord.r-d, coord.query.r-d: subset wth only testQueries
-	#binarize coords
 
 }
 writeIddb <- function(data, file)
@@ -144,6 +147,7 @@ genRefs <- function(n,numSamples,refFile)
 		}
 	refIds = sort(sample(setdiff(mainIds,queryIds),n))
 	writeIddb(refIds,refFile)
+	queryIds
 }
 
 
