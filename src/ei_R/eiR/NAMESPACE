@@ -1,2 +1,2 @@
 useDynLib(eiR)
-export("eiInit","eiMakeDb")
+export("eiInit","eiMakeDb","embedCoord")

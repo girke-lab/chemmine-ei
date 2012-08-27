@@ -1,5 +1,6 @@
 
 library(eiR)
+library(snow)
 
 test.eiInit <- function() {
    data(example_compounds)
@@ -13,6 +14,31 @@ test.eiInit <- function() {
    checkEquals(length(i),122)
 }
 
+#test.snow = function() {
+#   options(warn=2)
+#   options(error=traceback)
+#   j=4
+#
+#   f=function(i) {
+#      library(eiR)
+#			#.Call("embedCoord",4,as.integer(3),as.double(1:5))
+#			embedCoord(5,2,1:5)
+#			t(sapply(1:d,function(x) x*x))
+#         3
+#		}
+#   serFile=file("fun","w")
+#   serialize(f,serFile)
+#   close(serFile)
+#   serFile=file("fun","r")
+#   f2=unserialize(serFile)
+#   checkEquals(f,f2)
+#
+#
+#   #cl=makeCluster(j,type="SOCK",outfile="")
+#   #clusterApply(cl,1:length(cl),function(x) x*2)
+#   #clusterApply(cl,1:length(cl),f)
+#   #cat(paste(result,collapse=" "))
+#}
 
 test.eiMakeDb <- function() {
    options(warn=2)
@@ -20,7 +46,7 @@ test.eiMakeDb <- function() {
    d<- 40
    j=4
    runDir<-paste("run",r,d,sep="-")
-   t=system.time(eiMakeDb(r,d,numJobs=j));
+   t=system.time(eiMakeDb(r,d,cl=makeCluster(j,type="SOCK",outfile="node.out")))
    cat(sprintf("Time: %f\n",t))
 
    checkMatrix <- function(pattern,x,y){

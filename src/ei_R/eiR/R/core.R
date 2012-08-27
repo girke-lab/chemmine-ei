@@ -1,5 +1,7 @@
 
 library(tools)
+library(snow)
+library(snowfall)
 
 TestQueries = "test_query.iddb"
 ChemDb = "chem.db"
@@ -57,7 +59,7 @@ eiInit <- function(compoundDb,measure=NA,db_builder = db_builder.atompair)
 }
 
 eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
-									dir=".",refIddb=NA,numJobs=1)
+									dir=".",refIddb=NA,cl=makeCluster(1,type="SOCK"))
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
 	if(!file.exists(workDir))
@@ -103,14 +105,55 @@ eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
 	solver <- getSolver(r,d,coords)	
 	distConn <- file(ref2AllDistFile,"r")
 
-	jobSize = cdbSize() / numJobs + 1 #make last job short
-	for(i in 1:numJobs){
-		cat(sprintf("job %d\n",i))
-		lines <- strsplit(readLines(distConn,jobSize),"\\s+")
-		outName <- file.path(workDir,paste(r,d,i,sep="-"))
-		result = sapply(lines,function(x) embedCoord(solver,d,as.numeric(x)))
-		write.table(t(result),file=outName,row.names=F,col.names=F)
-	}
+	jobSize = cdbSize() / length(cl) + 1 #make last job short
+	dataBlocks = Map(function(x)
+		strsplit(readLines(distConn,jobSize),"\\s+"),1:length(cl))
+#	clusterApply(cl,1:length(cl), function(x) {
+#		sprintf("job %d\n",x)
+#		write.table(1:10,file="test")
+#	})
+ #  options(warn=2)
+ #  options(error=traceback)
+	clusterApply(cl,1:length(cl), 
+		function(i) {
+			#library(snowfall)
+			#sfLibrary(eiR)
+			#dyn.load("/home/khoran/testing/eiR/libs/eiR.so")
+#			library(eiR)
+#kj			tryCatch({
+#kj				print("helloo")
+#kj				solver <- getSolver(r,d,coords)	
+#kj				print("helloo2")
+#kj				e=embedCoord(solver,d,1:d)
+#kj				write.table(t(e),file=file.path(workDir,paste(r,d,i,sep="-")),
+#kj					row.names=F,col.names=F)
+#kj				print(e)
+#kj				#.Call("embedCoord",solver,as.integer(d),as.double(1:d))
+#kj				print("helloo3")
+#kj				t(sapply(1:d,function(x) x*x))
+#kj				print("helloo4")
+#kj			},warning=function(w){
+#kj				print("Danger Will Robison!")
+#kj				print(w)
+#kj			},error=function(e){
+#kj				print("Error!")
+#kj				print(e)
+#kj			},finally={print("finally!") })
+#kj			print("helloo5")
+#kj			return(4)
+					#embedCoord(5,d,as.numeric(x))))
+			solver <- getSolver(r,d,coords)	
+			write.table(
+				t(sapply(dataBlocks[[i]],function(x) 
+					embedCoord(solver,d,as.numeric(x)))),
+				file=file.path(workDir,paste(r,d,i,sep="-")),
+				row.names=F,col.names=F)
+		})
+
+	#for(i in 1:numJobs){
+		#lines <- strsplit(readLines(distConn,jobSize),"\\s+")
+		#outName <- 		result = 
+	#}
 	system(paste("cat",
 					 paste(Map(function(x) file.path(workDir,paste(r,d,x,sep="-")),1:4),collapse=" "),
 					 ">",embeddedFile))
