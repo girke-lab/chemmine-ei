@@ -558,7 +558,9 @@ def query(r,d,query_sdf,ref_iddb,embedOnly=False):
 	coord_file = ref_iddb+".distmat.coord"
 
 	try:
+		#TODO move this to non-batch branch and check
 		parsing_time,num_compounds = createQueryCdb(query_sdf,query_cdb)
+
 		info("found %s compounds" % num_compounds)
 		ref_db = gen_subdb(ref_iddb,None,DB_SUBSET,CDB)
 		names = [i.strip() for i in file(CDB+".names")]
@@ -567,13 +569,15 @@ def query(r,d,query_sdf,ref_iddb,embedOnly=False):
 
 		os.chdir(temp_dir)
 		if embedOnly  or num_compounds > 1:
-			batchQuery(f,r,d,ref_db,query_sdf,coord_file,matrix_file,names,embedOnly)
+			batchQuery(f,r,d,ref_db,query_sdf,
+					coord_file,matrix_file,names,embedOnly)
 		else:
 			puzzle_file = os.path.join(temp_dir,"puzzle")
 
 			refineResult = refine(QueryFile(query_cdb),
 										 lshSearch(matrix_file,
-													  solvePuzzle(r,d,ref_db,query_cdb,coord_file,puzzle_file)))
+													  solvePuzzle(r,d,ref_db,query_cdb,
+														  coord_file,puzzle_file)))
 			for seq_id,dist in refineResult:
 				f.write('%s %s\n' %(names[int(seq_id)-1],dist))
 

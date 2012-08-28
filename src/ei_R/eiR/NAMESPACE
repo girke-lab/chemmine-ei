@@ -1,2 +1,2 @@
 useDynLib(eiR)
-export("eiInit","eiMakeDb","embedCoord")
+export("eiInit","eiMakeDb","eiQuery","getSolver")

@@ -5,45 +5,24 @@
 #include <iostream>
 #include <iterator>
 #include <cstring>
-int main(int argc, char *argv[])
+#include "helpers.h"
+
+
+int db_subset(char* dbFile, char* iddbFile, char* outputFile)
 {
-  if (argc != 4) {
-    std::cerr << "Usage: " << argv[0] << " chem.db index.file sub.cdb" << std::endl;
-    std::cerr << "        indices in index.file are 1-based" << std::endl;
-    exit(1);
-  }
+   IndexedDB db;
+   std::vector<unsigned int> ids;
+   if(openDb(dbFile,db)) return 1;
+   if(openIddb(iddbFile,ids)) return 1;
 
-  IndexedDB db;
-  if (db.open(argv[1]) == 0) {
-    std::cerr << "Cannot load database " << argv[1] << std::endl;
-    return 1;
-  }
 
-	std::vector<unsigned int> ids;
-	std::fstream f;
-	f.open(argv[2], std::iostream::in);
+   std::fstream f;
+	f.open(outputFile, std::iostream::out);
 	if (! f.good()) {
-		std::cerr << "Cannot load index file " << argv[2] << std::endl;
-		return 1;
-	}
-	unsigned int i;
-	f >> i;
-	while (f.good()) {
-		if (i == 0) {
-			std::cerr << "indices must be 1-based!" << std::endl;
-			return 1;
-		}
-		ids.push_back(i - 1);
-		f >> i;
-	}
-	f.close();
-
-	f.open(argv[3], std::iostream::out);
-	if (! f.good()) {
-		std::cerr << "Cannot open " << argv[3] << " for write." << std::endl;
+		std::cerr << "Cannot open " << outputFile << " for write." << std::endl;
 		return 1;
 	} else {
-		std::cerr << "Opening " << argv[3] << " for write." << std::endl;
+		std::cerr << "Opening " << outputFile<< " for write." << std::endl;
 	}
 
 	f.write(HEADER, HEADER_SIZE);
@@ -54,8 +33,20 @@ int main(int argc, char *argv[])
 		db.at(ids[i], cmp);
 		serialize(cmp, f);
 	}
-  db.close();
+   db.close();
 
-	std::cerr << "Wrote " << ids.size() << " entries." << std::endl;
-  return 0;
+   std::cerr << "Wrote " << ids.size() << " entries." << std::endl;
+   return 0;
 }
+
+#ifndef NO_MAIN
+int main(int argc, char *argv[])
+{
+  if (argc != 4) {
+    std::cerr << "Usage: " << argv[0] << " chem.db index.file sub.cdb" << std::endl;
+    std::cerr << "        indices in index.file are 1-based" << std::endl;
+    exit(1);
+  }
+  return db_subset(argv[1],argv[2],argv[3]);
+}
+#endif

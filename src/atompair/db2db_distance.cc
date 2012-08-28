@@ -5,52 +5,18 @@
 #include <iostream>
 #include <iterator>
 #include <cstring>
-
-
-
+#include "helpers.h"
+using namespace std;
 
 
 int db2db_distance(char *dbFile, char *iddb1File,char *iddb2File,std::ostream &ofs)
 {
   IndexedDB db;
-  if (db.open(dbFile) == 0) {
-    std::cerr << "Cannot load database " << dbFile << std::endl;
-    return 1;
-  }
   std::vector<unsigned int> iddb1, iddb2;
-  std::fstream f;
-  f.open(iddb1File, std::iostream::in);
-  if (! f.good()) {
-     std::cerr << "Cannot load iddb " << iddb1File << std::endl;
-     return 1;
-  }
-  unsigned int i;
-  f >> i;
-  while (f.good()) {
-     if (i == 0) {
-        std::cerr << "indices must be 1-based!" << std::endl;
-        return 1;
-     }
-     iddb1.push_back(i - 1);
-     f >> i;
-  }
-  f.close();
 
-  f.open(iddb2File, std::iostream::in);
-  if (! f.good()) {
-     std::cerr << "Cannot load iddb " << iddb2File << std::endl;
-     return 1;
-  }
-  f >> i;
-  while (f.good()) {
-     if (i == 0) {
-        std::cerr << "indices must be 1-based!" << std::endl;
-        return 1;
-     }
-     iddb2.push_back(i - 1);
-     f >> i;
-  }
-  f.close();
+  if(openDb(dbFile,db)) return 1;
+  if(openIddb(iddb1File,iddb1)) return 1;
+  if(openIddb(iddb2File,iddb2)) return 1;
 
   std::vector<unsigned int> cmp1;
   std::vector<unsigned int> cmp2;
@@ -71,15 +37,10 @@ int db2db_distance(char *dbFile, char *iddb1File,char *iddb2File,std::ostream &o
 int db2db_distance(char *dbFile, char *db2File,std::ostream &ofs)
 {
   IndexedDB db;
-  if (db.open(dbFile) == 0) {
-    std::cerr << "Cannot load database " << dbFile << std::endl;
-    return 1;
-  }
   IndexedDB db2;
-  if (db2.open(db2File) == 0) {
-     std::cerr << "Cannot load database " << db2File << std::endl;
-     return 1;
-  }
+
+  if(openDb(dbFile,db)) return 1;
+  if(openDb(db2File,db2)) return 1;
 
   std::vector<unsigned int> cmp1;
   std::vector<unsigned int> cmp2;

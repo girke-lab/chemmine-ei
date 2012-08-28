@@ -5,7 +5,7 @@ LIBS = -lm -lf2c
 
 MODULENAME = eiR
 CCSOURCEDIR = ../atompair
-CCSOURCES = $(CCSOURCEDIR)/molecule.cc $(CCSOURCEDIR)/formats.cc $(CCSOURCEDIR)/desc.cc $(CCSOURCEDIR)/similarity.cc $(CCSOURCEDIR)/simpledb.cc $(CCSOURCEDIR)/search.cc $(CCSOURCEDIR)/profiling.cc $(CCSOURCEDIR)/db_build.h $(CCSOURCEDIR)/debug.h $(CCSOURCEDIR)/desc.h $(CCSOURCEDIR)/molecule.h $(CCSOURCEDIR)/profiling.h $(CCSOURCEDIR)/script.h $(CCSOURCEDIR)/search.h $(CCSOURCEDIR)/simpledb.h $(CCSOURCEDIR)/db_build.cc $(CCSOURCEDIR)/db2db_distance.cc ../matrix/format.cc ../embedder/embedCoords.cc ../embedder/solver.cc ../embedder/solver.h ../embedder/routines.c ../embedder/config.h 
+CCSOURCES = $(CCSOURCEDIR)/molecule.cc $(CCSOURCEDIR)/formats.cc $(CCSOURCEDIR)/desc.cc $(CCSOURCEDIR)/similarity.cc $(CCSOURCEDIR)/simpledb.cc $(CCSOURCEDIR)/search.cc $(CCSOURCEDIR)/profiling.cc $(CCSOURCEDIR)/db_build.h $(CCSOURCEDIR)/debug.h $(CCSOURCEDIR)/desc.h $(CCSOURCEDIR)/molecule.h $(CCSOURCEDIR)/profiling.h $(CCSOURCEDIR)/script.h $(CCSOURCEDIR)/search.h $(CCSOURCEDIR)/simpledb.h $(CCSOURCEDIR)/db_build.cc $(CCSOURCEDIR)/db2db_distance.cc ../matrix/format.cc ../embedder/embedCoords.cc ../embedder/solver.cc ../embedder/solver.h ../embedder/routines.c ../embedder/config.h ../atompair/db2db_distance_r.cc ../atompair/helpers.h ../atompair/helpers.cc ../atompair/db_subset.cc
 EXTRA_DIST = $(MODULENAME)/DESCRIPTION $(MODULENAME)/NAMESPACE $(MODULENAME)/README  $(MODULENAME)/src/Makevars
 
 LOCAL_INST=~/testing

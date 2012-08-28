@@ -1,7 +1,7 @@
 
 program_transform_name = s&^&ei-&
 SUBDIRS = python R
-SRC = molecule.cc formats.cc desc.cc similarity.cc simpledb.cc search.cc profiling.cc db_build.h debug.h desc.h molecule.h profiling.h script.h search.h simpledb.h
+SRC = molecule.cc formats.cc desc.cc similarity.cc simpledb.cc search.cc profiling.cc db_build.h debug.h desc.h molecule.h profiling.h script.h search.h simpledb.h helpers.cc
 
 AM_CXXFLAGS = -g -Wall -fPIC -D_BUILD_DB_BUILD_ -DPRELOAD_DATABASE -O3 -mtune=nocona #-DDEBUG
 LIBS =    -lreadline -static
