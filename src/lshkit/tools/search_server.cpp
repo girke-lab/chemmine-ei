@@ -283,10 +283,10 @@ int main (int argc, char *argv[])
 			}
 			if (not vector_ok) continue;
 
-		unsigned cnt;
-      Topk<unsigned> topk;
-		float maxValue = std::numeric_limits<float>::max();
-      TopkScanner<FloatMatrix::Accessor, metric::l2sqr<float> > query(accessor, l2sqr, k, R);
+         unsigned cnt;
+         Topk<unsigned> topk;
+         float maxValue = std::numeric_limits<float>::max();
+         TopkScanner<FloatMatrix::Accessor, metric::l2sqr<float> > query(accessor, l2sqr, k, R);
 			topk.reset(k);
 			query.reset(query_vec);
 			t.start();

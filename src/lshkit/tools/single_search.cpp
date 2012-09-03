@@ -141,7 +141,6 @@ int main (int argc, char *argv[])
     unsigned M, L, H;
     unsigned Q, K, T;
     bool use_index = false; // load the index from a file
-    bool do_refine = false; // whether to perform refinement step
     unsigned skip = 0;
 
     vector<unsigned> queries;

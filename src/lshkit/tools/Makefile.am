@@ -2,9 +2,9 @@ include ../Makefile.inc
 
 program_transform_name = s&^&ei-&
 
-AM_CXXFLAGS+= -I../include
+AM_CXXFLAGS+= -I../include -fPIC
 AM_LDFLAGS = -L../src  -L../../atompair 
-LIBS += -llshkit -ldescriptors
+LIBS += -llshkit -ldescriptors 
 #SRC = fitdata.cpp isearch.cpp mplsh.cpp mplsh-predict.cpp mplsh-tune.cpp scan.cpp search.cpp searchp.cpp search_server.cpp
 
 
