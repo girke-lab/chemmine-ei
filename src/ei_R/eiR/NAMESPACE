@@ -1,2 +1,2 @@
 useDynLib(eiR)
-export("eiInit","eiMakeDb","eiQuery","getSolver","lshsearch")
+export("eiInit","eiMakeDb","eiQuery","getSolver")

@@ -16,12 +16,15 @@ cdbSize <- function() {
 		cdbCachedSize = length(readLines(Main))
 	cdbCachedSize
 }
-embedCoord <- function(s,len,coords) {
+embedCoord <- function(s,len,coords) 
 	.Call("embedCoord",s,as.integer(len),as.double(coords))
-}
-embedCoordTest <- function(r,d,refCoords,coords) {
+
+embedCoordTest <- function(r,d,refCoords,coords) 
 	.Call("embedCoordTest",as.integer(r),as.integer(d),as.double(refCoords),as.double(coords))
-}
+
+lshsearch <- function(queries,matrixFile,R) 
+	.Call("lshsearch",queries,as.character(matrixFile),as.double(R))
+
 
 db_builder.atompair <- function(input,output)
 	batch_sdf_parse(input,output)
@@ -166,6 +169,7 @@ eiQuery <- function(r,d,refIddb,queryFile,
 	dbBuilder=db_builder.atompair,dbSubset=db_subset.atompair)
 {
 		tmpDir=tempdir()
+		workDir=file.path(dir,paste("run",r,d,sep="-"))
 		queryDb = file.path(tmpDir,"query.db")
 		refDb = refDb(refIddb,dbSubset)
 		query2RefDistFile = file.path(tmpDir,"query2refs.dist")
@@ -180,11 +184,15 @@ eiQuery <- function(r,d,refIddb,queryFile,
 		coordFile=paste(refIddb,"distmat","coord",sep=".")
 		coords = as.matrix(read.table(coordFile))
 		solver = getSolver(r,d,coords)
-		embedded = t(apply(query2RefDists,c(1),
+		embeddedQueries = t(apply(query2RefDists,c(1),
 			function(x) embedCoord(solver,d,x)))
 # end embedding
 
-		print(embedded)
+		print(embeddedQueries)
+		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
+		neighbors = lshsearch(t(embeddedQueries),matrixFile, 0)
+	#	print(neighbors)
+
 
 
 		unlink(tmpDir,recursive=T)

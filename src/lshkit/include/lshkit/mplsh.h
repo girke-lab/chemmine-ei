@@ -179,8 +179,6 @@ public:
     ProbeSequenceTemplates(unsigned max_M, unsigned max_T)
         : std::vector<ProbeSequence>(max_M + 1)
     {
-		printf("mark 7\n");
-		printf("maxM: %d, maxT: %d\n",max_M,max_T);
         for (unsigned i = 1; i <= max_M; ++i)
         {
             GenProbeSequenceTemplate(at(i), i, max_T);

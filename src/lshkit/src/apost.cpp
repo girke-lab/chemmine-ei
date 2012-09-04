@@ -261,17 +261,16 @@ struct PrC {
     }
 };
 
-struct Probe {
+struct ApostProbe {
     std::vector<unsigned> off;
     unsigned last;
     float pr;
     const std::vector<unsigned> *range;
 
-    Probe () {
+    ApostProbe () {
         BOOST_VERIFY(0);
     }
-
-    Probe (const std::vector<unsigned> *range_):
+    ApostProbe (const std::vector<unsigned> *range_):
         off(range_->size()),
         last(0),
         range(range_)
@@ -312,7 +311,7 @@ struct Probe {
         off[last]++;
     }
 
-    friend bool operator < (const Probe &p1, const Probe &p2) {
+    friend bool operator < (const ApostProbe &p1, const ApostProbe &p2) {
         return p1.pr < p2.pr;
     }
 
@@ -406,8 +405,8 @@ void APostModel::genProbeSequence (const APostLsh &lsh,
     }
 
 
-    std::vector<Probe> heap;
-    heap.push_back(Probe(&range));
+    std::vector<ApostProbe> heap;
+    heap.push_back(ApostProbe(&range));
 
     heap.back().setPr(pl);
     float pr = heap.back().pr;
@@ -425,7 +424,7 @@ void APostModel::genProbeSequence (const APostLsh &lsh,
         if (heap.empty()) break;
 
         pop_heap(heap.begin(), heap.end());
-        Probe p = heap.back();
+        ApostProbe p = heap.back();
         heap.pop_back();
 
         seq->push_back(p.hash(lsh, pl));

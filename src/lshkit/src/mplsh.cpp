@@ -54,42 +54,30 @@ namespace lshkit
 
     void GenProbeSequenceTemplate (ProbeSequence &seq, unsigned M, unsigned T)
     {
-		printf("mark 1\n");
         ProbeSequence scores;
         GenExpectScores(scores, M);
         assert(T > 0);
 
-		printf("mark 2\n");
         std::priority_queue<Probe, std::vector<Probe>, ProbeGT> heap;
         Probe init;
         init.mask = init.shift = 0;
         init.score = 0;
         init.reserve = 0;
-		printf("mark 3\n");
         heap.push(init);
-		printf("mark 4\n");
 
         seq.clear();
-		printf("mark 5\n");
 
         for (;;)
         {
-		printf("mark 51\n");
             if (heap.empty()) break;
-		printf("mark 52\n");
             seq.push_back(heap.top());
-		printf("mark 53\n");
             if (seq.size() == T) break;
-		printf("mark 54\n");
 
             Probe shift = heap.top();
-		printf("mark 541\n");
             heap.pop();
-		printf("mark 55\n");
 
             for (unsigned next = shift.reserve; next < 2 * M; ++next)
             {
-		printf("mark 56\n");
                 if (!shift.conflict(scores[next]))
                 {
                     Probe tmp = shift + scores[next];
@@ -98,7 +86,6 @@ namespace lshkit
                 }
             }
         }
-		printf("mark 6\n");
     }
 
     void MultiProbeLsh::genProbeSequence (Domain obj, std::vector<unsigned>
