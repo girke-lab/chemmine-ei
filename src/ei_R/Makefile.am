@@ -1,12 +1,11 @@
 PACKAGEFOLDER = eiR
 SRCDIR = $(PACKAGEFOLDER)/src
 CXXFLAGS +=  -fPIC -DNO_MAIN -I../../../lshkit/include
-LIBS = -lm -lf2c  -lgsl -lgslcblas -ggdb
+LIBS = -lm -lf2c   -L../../../lshkit/src -Wl,--whole-archive  -llshkit  -Wl,--no-whole-archive -lgsl -lgslcblas -O1
  #$(BOOST_PROGRAM_OPTIONS_LIB) $(BOOST_THREAD_LIB)  -lm -ldb  -lgsl -lgslcblas
 MODULENAME = eiR
 CCSOURCEDIR = ../atompair
-LSH_SRC = ../lshkit/src/apost.cpp ../lshkit/src/char_bit_cnt.cpp  ../lshkit/src/mplsh.cpp   ../lshkit/src/mplsh-model.cpp
-CCSOURCES = $(CCSOURCEDIR)/molecule.cc $(CCSOURCEDIR)/formats.cc $(CCSOURCEDIR)/desc.cc $(CCSOURCEDIR)/similarity.cc $(CCSOURCEDIR)/simpledb.cc $(CCSOURCEDIR)/search.cc $(CCSOURCEDIR)/profiling.cc $(CCSOURCEDIR)/db_build.h $(CCSOURCEDIR)/debug.h $(CCSOURCEDIR)/desc.h $(CCSOURCEDIR)/molecule.h $(CCSOURCEDIR)/profiling.h $(CCSOURCEDIR)/script.h $(CCSOURCEDIR)/search.h $(CCSOURCEDIR)/simpledb.h $(CCSOURCEDIR)/db_build.cc $(CCSOURCEDIR)/db2db_distance.cc ../matrix/format.cc ../embedder/embedCoords.cc ../embedder/solver.cc ../embedder/solver.h ../embedder/routines.c ../embedder/config.h ../atompair/db2db_distance_r.cc ../atompair/helpers.h ../atompair/helpers.cc ../atompair/db_subset.cc ../lshkit/tools/search_r.cpp $(LSH_SRC)
+CCSOURCES = $(CCSOURCEDIR)/molecule.cc $(CCSOURCEDIR)/formats.cc $(CCSOURCEDIR)/desc.cc $(CCSOURCEDIR)/similarity.cc $(CCSOURCEDIR)/simpledb.cc $(CCSOURCEDIR)/search.cc $(CCSOURCEDIR)/profiling.cc $(CCSOURCEDIR)/db_build.h $(CCSOURCEDIR)/debug.h $(CCSOURCEDIR)/desc.h $(CCSOURCEDIR)/molecule.h $(CCSOURCEDIR)/profiling.h $(CCSOURCEDIR)/script.h $(CCSOURCEDIR)/search.h $(CCSOURCEDIR)/simpledb.h $(CCSOURCEDIR)/db_build.cc $(CCSOURCEDIR)/db2db_distance.cc ../matrix/format.cc ../embedder/embedCoords.cc ../embedder/solver.cc ../embedder/solver.h ../embedder/routines.c ../embedder/config.h ../atompair/db2db_distance_r.cc ../atompair/helpers.h ../atompair/helpers.cc ../atompair/db_subset.cc ../lshkit/tools/search_r.cpp 
 EXTRA_DIST = $(MODULENAME)/DESCRIPTION $(MODULENAME)/NAMESPACE $(MODULENAME)/README  $(MODULENAME)/src/Makevars
 
 LOCAL_INST=~/testing

@@ -515,7 +515,8 @@ def bestCandidates(distances,candidate_indcies,num_neighbors=K):
 		candidate_indcies = range(1,cdbsize()+1)
 	debug("candidates: "+str(candidate_indcies))
 		
-	distances = [ (candidate_indcies[di[0]],di[1]) for di in enumerate(distances)]
+	distances = [ (candidate_indcies[di[0]],di[1]) 
+			for di in enumerate(distances)]
 	distances.sort(key=lambda x:x[1] )
 	return distances[:num_neighbors]
 

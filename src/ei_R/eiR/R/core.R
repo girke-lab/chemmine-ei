@@ -22,6 +22,7 @@ embedCoord <- function(s,len,coords)
 embedCoordTest <- function(r,d,refCoords,coords) 
 	.Call("embedCoordTest",as.integer(r),as.integer(d),as.double(refCoords),as.double(coords))
 
+# requires one query per column, not per row
 lshsearch <- function(queries,matrixFile,R) 
 	.Call("lshsearch",queries,as.character(matrixFile),as.double(R))
 
@@ -184,15 +185,19 @@ eiQuery <- function(r,d,refIddb,queryFile,
 		coordFile=paste(refIddb,"distmat","coord",sep=".")
 		coords = as.matrix(read.table(coordFile))
 		solver = getSolver(r,d,coords)
-		embeddedQueries = t(apply(query2RefDists,c(1),
-			function(x) embedCoord(solver,d,x)))
+		embeddedQueries = apply(query2RefDists,c(1),
+			function(x) embedCoord(solver,d,x))
 # end embedding
 
 		print(embeddedQueries)
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
-		neighbors = lshsearch(t(embeddedQueries),matrixFile, 0)
-	#	print(neighbors)
+		neighbors = lshsearch(embeddedQueries,matrixFile, 0)
+		print("q1:")
+		print(neighbors[1,,])
+		print("q2:")
+		print(neighbors[2,,])
 
+		#compute distance between each query and its candidates	
 
 
 		unlink(tmpDir,recursive=T)

@@ -58,7 +58,7 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP Rin )
    unsigned H = 1017881;
    unsigned M = 1;
    unsigned L = 1;
-   unsigned K = 600;
+   unsigned K = 20;
    unsigned T = 1;
 
    //float R = REAL(Rin)[0] >= 1? REAL(Rin)[0] * REAL(Rin)[0] : REAL(Rin)[0];
@@ -80,19 +80,18 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP Rin )
    Rprintf("numQueries: %d, querySize: %d\n",numQueries,querySize);
    SEXP result;
    PROTECT(result = alloc3DArray(REALSXP,numQueries,K,2));
-   float *queryPtr=(float *)REAL(queries);
-   double *queryPtr2=REAL(queries);
+   float *queryPtr = new float[querySize];
    
 
-   //for(int i=0; i < numQueries; i++)
-   for(int i=0; i < 1; i++)
+   int k=0;
+   for(int i=0; i < numQueries; i++)
    {
       Rprintf("query %d:\n",i);
-      for(int j=0;j<querySize;j++)
-         //Rprintf("%f ",REAL(queries)[j]);
-         Rprintf("%f ",queryPtr[j]);
+      for(int j=0;j<querySize;j++){
+         queryPtr[j]=(float)REAL(queries)[k++];
+         //Rprintf("%f ",queryPtr[j]);
+      }
       Rprintf("\n");
-      continue;
 
       unsigned cnt;
       Topk<unsigned> topk;
@@ -104,23 +103,28 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP Rin )
       
       index.query(queryPtr, T, query);
       topk.swap(query.topk());
-      queryPtr+=querySize;
 
 
-      for (unsigned j = 0; j < K; j ++)
-         Rprintf("%d:%f ",topk[j].key,topk[j].dist);
-      Rprintf("\n");
+      //for (unsigned j = 0; j < K; j ++)
+      //   if(topk[j].dist != maxValue)
+      //      Rprintf("%d:%f ",topk[j].key,topk[j].dist);
+      //Rprintf("\n");
 
       for(unsigned j = 0; j < K; j++)
       {
-         REAL(result)[j*2+i*numQueries] = topk[j].key;
-         if(topk[j].dist != maxValue)
-            REAL(result)[j*2+i*numQueries+1] = topk[j].dist;
-         else
-            REAL(result)[j*2+i*numQueries+1] = 0;
+         int index=j*numQueries+i;  //for key
+         int index2=(K+j)*numQueries+i; // for value
+         if(topk[j].dist != maxValue){
+            REAL(result)[index]   = topk[j].key;
+            REAL(result)[index2] = topk[j].dist;
+         }else{
+            REAL(result)[index]   = -1;
+            REAL(result)[index2] = -1;
+         }
       }
 
    }
+   delete queryPtr;
    UNPROTECT(1);
    return result;
 }
