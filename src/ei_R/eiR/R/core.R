@@ -9,6 +9,7 @@ ChemDb = file.path(DataDir,"chem.db")
 Main = file.path(DataDir,"main.iddb")
 #numSamples=1000
 numSamples=20
+K=20
 
 cdbCachedSize=NA
 cdbSize <- function() {
@@ -23,58 +24,57 @@ embedCoordTest <- function(r,d,refCoords,coords)
 	.Call("embedCoordTest",as.integer(r),as.integer(d),as.double(refCoords),as.double(coords))
 
 # requires one query per column, not per row
-lshsearch <- function(queries,matrixFile,R) 
-	.Call("lshsearch",queries,as.character(matrixFile),as.double(R))
+lshsearch <- function(queries,matrixFile,
+	W=NA,H=NA,M=NA,L=NA,K=NA,T=NA,R=NA) 
+	.Call("lshsearch",queries,as.character(matrixFile),
+		as.double(W),as.integer(H),as.integer(M),as.integer(L),
+		as.integer(K),as.integer(T), as.double(R))
 
-
-db_builder.atompair <- function(input,output)
-	batch_sdf_parse(input,output)
-db_subset.atompair = function(db,iddb,output)
-	db_subset(db,iddb,output)
-
-db2db_distance.atompair <- function(db,db2=NA,iddb1=NA,iddb2=NA,file=NA)
-{
-	if(!is.na(file)){
-		if(is.na(db2) && ! is.na(iddb1) && ! is.na(iddb2)){
-			cat(" iddb files to file\n")
-			db2db_distance2file(db,iddb1,iddb2,file)
-		}else if(!is.na(db2) &&  is.na(iddb1) &&  is.na(iddb2)){
-			cat("2 real dbs to file\n")
-			db2db_distance2file(db,db2,file)
+atompairMeasure = list(
+	dbBuilder = function(input,output)
+		batch_sdf_parse(input,output),
+	dbSubset = function(db,iddb,output)
+		db_subset(db,iddb,output),
+	db2dbDistance = function(db,db2=NA,iddb1=NA,iddb2=NA,file=NA)
+	{
+		if(!is.na(file)){
+			if(is.na(db2) && ! is.na(iddb1) && ! is.na(iddb2)){
+				cat(" iddb files to file\n")
+				db2db_distance2file(db,iddb1,iddb2,file)
+			}else if(!is.na(db2) &&  is.na(iddb1) &&  is.na(iddb2)){
+				cat("2 real dbs to file\n")
+				db2db_distance2file(db,db2,file)
+			}else{
+				stop("bad argument list\n")
+			}
 		}else{
-			stop("bad argument list\n")
-		}
-	}else{
-		if(is.na(db2) && ! is.na(iddb1) && ! is.na(iddb2)){
-			cat(" iddb files\n")
-			return(.Call("db2db_distance_iddb",as.character(db),as.character(iddb1),as.character(iddb2)))
-		}else if(!is.na(db2) &&  is.na(iddb1) &&  is.na(iddb2)){
-			cat("2 real dbs\n")
-			return(.Call("db2db_distance_db",as.character(db),as.character(db2)))
-		}else{
-			stop("bad argument list\n")
+			if(is.na(db2) && ! is.na(iddb1) && ! is.na(iddb2)){
+				cat(" iddb files\n")
+				return(.Call("db2db_distance_iddb",as.character(db),as.character(iddb1),as.character(iddb2)))
+			}else if(!is.na(db2) &&  is.na(iddb1) &&  is.na(iddb2)){
+				cat("2 real dbs\n")
+				return(.Call("db2db_distance_db",as.character(db),as.character(db2)))
+			}else{
+				stop("bad argument list\n")
+			}
 		}
 	}
-}
+)
 
-
-eiInit <- function(compoundDb,measure=NA,dbBuilder = db_builder.atompair)
+eiInit <- function(compoundDb,measure=atompairMeasure)
 {
 	cat("eiInit")
 	if(!file.exists("data"))
 		dir.create("data")
 
-	#if(!is.na(measure)){
-		##write in config file
-	#}
 	if(!file.exists(ChemDb)){
-		numCompounds = dbBuilder(compoundDb,ChemDb)
+		numCompounds = measure$dbBuilder(compoundDb,ChemDb)
 		writeIddb(1:numCompounds,Main)
 
 	}
 }
 
-eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
+eiMakeDb <- function(r,d,measure=atompairMeasure,
 									dir=".",refIddb=NA,cl=makeCluster(1,type="SOCK"))
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
@@ -104,7 +104,7 @@ eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
 		#compute pairwise distances for all references
 		if(! file.exists(selfDistFile)){
 			cat("generateding selfDistFile\n")
-			db2dbDistance(ChemDb,iddb1=refIddb,iddb2=refIddb,file=selfDistFile)
+			measure$db2dbDistance(ChemDb,iddb1=refIddb,iddb2=refIddb,file=selfDistFile)
 		}
 		selfDist<-read.table(selfDistFile)
 
@@ -116,7 +116,7 @@ eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
 
 	#compute dist between refs and all compounds
 	if(!file.exists(ref2AllDistFile))
-		db2dbDistance(ChemDb,iddb1=Main,iddb2=refIddb,file=ref2AllDistFile)
+		measure$db2dbDistance(ChemDb,iddb1=Main,iddb2=refIddb,file=ref2AllDistFile)
 	
 	#each job needs: R, D, coords, a chunk of distance data
 	solver <- getSolver(r,d,coords)	
@@ -165,23 +165,21 @@ eiMakeDb <- function(r,d,db2dbDistance=db2db_distance.atompair,
 
 	return(file.path(workDir,sprintf("matrix.%d-%d",r,d)))
 }
-eiQuery <- function(r,d,refIddb,queryFile,
-	dir=".",db2dbDistance=db2db_distance.atompair,
-	dbBuilder=db_builder.atompair,dbSubset=db_subset.atompair)
+eiQuery <- function(r,d,refIddb,queryFile, dir=".",measure=atompairMeasure)
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
-		queryDb = file.path(tmpDir,"query.db")
-		refDb = refDb(refIddb,dbSubset)
+		queryDb = file.path(tmpDir,"queries.db")
+		refDb = refDb(refIddb,measure)
 		query2RefDistFile = file.path(tmpDir,"query2refs.dist")
 
-		numQueries = dbBuilder(queryFile,queryDb)
+		numQueries = measure$dbBuilder(queryFile,queryDb)
 
 		allNames = readLines(file.path(dir,paste(ChemDb,"names",sep=".")))
 		queryNames = readLines(paste(queryDb,"names",sep="."))
 
 # embedding
-		query2RefDists = db2dbDistance(queryDb,db2=refDb)
+		query2RefDists = measure$db2dbDistance(queryDb,db2=refDb)
 		coordFile=paste(refIddb,"distmat","coord",sep=".")
 		coords = as.matrix(read.table(coordFile))
 		solver = getSolver(r,d,coords)
@@ -191,16 +189,64 @@ eiQuery <- function(r,d,refIddb,queryFile,
 
 		print(embeddedQueries)
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
-		neighbors = lshsearch(embeddedQueries,matrixFile, 0)
+		neighbors = lshsearch(embeddedQueries,matrixFile,K=K )
 		print("q1:")
 		print(neighbors[1,,])
 		print("q2:")
 		print(neighbors[2,,])
 
 		#compute distance between each query and its candidates	
+		hits = Map(function(x) refine(neighbors[x,,],queryDb,x,K,measure,tmpDir),
+			1:numQueries)
+		print(hits)
+		results = data.frame(query=rep(NA,K*numQueries),
+								  target = rep(NA,K*numQueries),
+								  distance=rep(NA,K*numQueries))
+		i=1
+		lapply(1:numQueries,function(queryIndex)
+			lapply(1:K,function(hitIndex){
+				results[i,"query"]<<-queryNames[queryIndex]
+				results[i,"target"]<<-allNames[hits[[queryIndex]][hitIndex,1]]
+				results[i,"distance"]<<- hits[[queryIndex]][hitIndex,2]
+				i<<-i+1
+			}))
+	#	for(queryIndex in 1:numQueries){
+	#		for(hitIndex in 1:K){
+	#		}
+	#	}
+
+print(results)
+
+#		results=unlist(Map(function(queryIndex)
+#			Map(function(hitIndex){
+#				list(query = queryNames[queryIndex],
+#						target = allNames[hits[[queryIndex]][hitIndex,1]],
+#						distance = hits[[queryIndex]][hitIndex,2])
+#			},1:K), 1:numQueries),recursive=F)
+		return(results)
 
 
-		unlink(tmpDir,recursive=T)
+		#print(paste("removing ",tmpDir))
+		#unlink(tmpDir,recursive=T)
+}
+refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir)
+{
+	queryIddb=file.path(tmpDir,"query.iddb")
+	queryDb=file.path(tmpDir,"query.db")
+	candidatesIddb=file.path(tmpDir,"candidates.iddb")
+	candidatesDb=file.path(tmpDir,"candidates.db")
+
+	writeIddb(c(queryIndex),queryIddb)
+	measure$dbSubset(queriesCdb,queryIddb,queryDb)
+
+	writeIddb(lshNeighbors[,1],candidatesIddb)
+	measure$dbSubset(ChemDb,candidatesIddb,candidatesDb)
+
+	d=measure$db2dbDistance(queryDb,db2=candidatesDb)
+	print(str(d))
+	lshNeighbors[,2]=d #measure$db2dbDistance(queryDb,db2=candidatesDb)
+	limit = min(limit,length(lshNeighbors[,2]))
+	lshNeighbors[order(lshNeighbors[,2])[1:limit],]
 }
 writeIddb <- function(data, file)
 		write.table(data,file,quote=FALSE,col.names=FALSE,row.names=FALSE)
@@ -226,10 +272,10 @@ genRefs <- function(n,numSamples,refFile)
 	writeIddb(refIds,refFile)
 	queryIds
 }
-refDb <- function(refIddb,dbSubset,refDb=paste(refIddb,"db",sep="."))
+refDb <- function(refIddb,measure,refDb=paste(refIddb,"db",sep="."))
 {
 	if(!file.exists(refDb))
-		dbSubset(ChemDb,refIddb,refDb)
+		measure$dbSubset(ChemDb,refIddb,refDb)
 	return(refDb)
 }
 

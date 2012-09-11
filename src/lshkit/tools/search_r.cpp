@@ -7,7 +7,15 @@
 using namespace lshkit;
 
 extern "C" {
-   SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP Rin );
+   SEXP lshsearch(SEXP queries, SEXP matrixFile, 
+      SEXP Win, 
+      SEXP Hin, 
+      SEXP Min, 
+      SEXP Lin, 
+      SEXP Kin, 
+      SEXP Tin, 
+      SEXP Rin
+   );
 }
 
 typedef MultiProbeLshIndex<unsigned> Index;
@@ -51,18 +59,31 @@ int loadIndex(Index &index, FloatMatrix &data,
    }
    */
 }
-// add: W,M,T,L,K,H
-SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP Rin )
+int check(SEXP in,int deflt) {
+   return INTEGER(in)[0] == NA_INTEGER ? deflt : INTEGER(in)[0];
+}
+double check(SEXP in,double deflt) {
+   return ISNA(REAL(in)[0]) ? deflt : REAL(in)[0];
+}
+SEXP lshsearch(SEXP queries, SEXP matrixFile, 
+      SEXP Win, 
+      SEXP Hin, 
+      SEXP Min, 
+      SEXP Lin, 
+      SEXP Kin, 
+      SEXP Tin, 
+      SEXP Rin
+   )
 {
-   float W=1.0;
-   unsigned H = 1017881;
-   unsigned M = 1;
-   unsigned L = 1;
-   unsigned K = 20;
-   unsigned T = 1;
-
-   //float R = REAL(Rin)[0] >= 1? REAL(Rin)[0] * REAL(Rin)[0] : REAL(Rin)[0];
-   float R = std::numeric_limits<float>::max();
+   float W = check(Win,1.0);
+   unsigned H = check(Hin, 1017881 );
+   unsigned M = check(Min,1);
+   unsigned L = check(Lin,1);
+   unsigned K = check(Kin,600);
+   unsigned T = check(Tin,1);
+   float R = ISNA(REAL(Rin)[0])? std::numeric_limits<float>::max() : 
+                                 (float)(REAL(Rin)[0]*REAL(Rin)[0]);
+   Rprintf("W: %f H:%d M:%d L:%d K%d T:%d R:%f\n",W,H,M,L,K,T,R);
 
    FloatMatrix data(CHAR(STRING_ELT(matrixFile,0)));
 
@@ -86,12 +107,12 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP Rin )
    int k=0;
    for(int i=0; i < numQueries; i++)
    {
-      Rprintf("query %d:\n",i);
+      //Rprintf("query %d:\n",i);
       for(int j=0;j<querySize;j++){
          queryPtr[j]=(float)REAL(queries)[k++];
          //Rprintf("%f ",queryPtr[j]);
       }
-      Rprintf("\n");
+      //Rprintf("\n");
 
       unsigned cnt;
       Topk<unsigned> topk;
@@ -115,7 +136,7 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP Rin )
          int index=j*numQueries+i;  //for key
          int index2=(K+j)*numQueries+i; // for value
          if(topk[j].dist != maxValue){
-            REAL(result)[index]   = topk[j].key;
+            REAL(result)[index]   = topk[j].key+1;
             REAL(result)[index2] = topk[j].dist;
          }else{
             REAL(result)[index]   = -1;

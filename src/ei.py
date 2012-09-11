@@ -458,7 +458,8 @@ def batchQuery(outf,r,d,ref_db,queries,coord_file,matrix_file,targetNames, embed
 		refine_time+=t
 
 		for candidate_index,dist in distances:
-			outf.write("%s\t%s\t%s\n" %(queryNames[queryIndex-1],targetNames[candidate_index-1],dist))
+			outf.write("%s\t%s\t%s\n" % 
+					(queryNames[queryIndex-1],targetNames[candidate_index-1],dist))
 	
 	sys.stderr.write('timing: parsing=%s embedding=%s lsh=%s refine=%s \n' %
 				(parsing_time, dist_time + coord_time, lsh_time, refine_time))
