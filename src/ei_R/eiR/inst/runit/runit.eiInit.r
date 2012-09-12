@@ -33,7 +33,10 @@ test.ca.eiQuery <- function(){
    matches<-dir(runDir,pattern=".cdb$",full.names=T)
    checkEquals(length(matches),1)
    refIddb = matches[1]
-   eiQuery(r,d,refIddb,"example_queries.sdf")
+   results = eiQuery(r,d,refIddb,"example_queries.sdf",K=15)
+   checkTrue(length(results$distance) != 0)
+   checkTrue(all(results$distance <= 1))
+   checkEquals(results$distance[1],0)
 }
 test.ba.eiMakeDb <- function() {
 
@@ -58,7 +61,7 @@ test.ba.eiMakeDb <- function() {
       Map(function(x)
          checkTrue(!file.exists(file.path(runDir,paste("q",r,d,x,sep="-")))),1:j)
    }
-   t=system.time(eiMakeDb(r,d,cl=makeCluster(j,type="SOCK",outfile="")))
+   t=system.time(eiMakeDb(r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile="")))
    runChecks()
    print(t)
    #system.time(eiMakeDb(r,d,cl=makeCluster(j,type="SOCK",outfile="")))

@@ -3,13 +3,12 @@ library(tools)
 library(snow)
 library(snowfall)
 
+#not yet configurable
+#TODO: do they need to be?
 TestQueries = "test_query.iddb"
 DataDir = "data"
 ChemDb = file.path(DataDir,"chem.db")
 Main = file.path(DataDir,"main.iddb")
-#numSamples=1000
-numSamples=20
-K=20
 
 cdbCachedSize=NA
 cdbSize <- function() {
@@ -75,7 +74,8 @@ eiInit <- function(compoundDb,measure=atompairMeasure)
 }
 
 eiMakeDb <- function(r,d,measure=atompairMeasure,
-									dir=".",refIddb=NA,cl=makeCluster(1,type="SOCK"))
+				dir=".",refIddb=NA,numSamples=cdbSize()*0.1,
+				cl=makeCluster(1,type="SOCK"))
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
 	if(!file.exists(workDir))
@@ -165,7 +165,9 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 
 	return(file.path(workDir,sprintf("matrix.%d-%d",r,d)))
 }
-eiQuery <- function(r,d,refIddb,queryFile, dir=".",measure=atompairMeasure)
+eiQuery <- function(r,d,refIddb,queryFile,
+		dir=".",measure=atompairMeasure,
+		K=6, W = 1.39564, M=19,L=10 ,T=30 )
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
@@ -178,18 +180,12 @@ eiQuery <- function(r,d,refIddb,queryFile, dir=".",measure=atompairMeasure)
 		allNames = readLines(file.path(dir,paste(ChemDb,"names",sep=".")))
 		queryNames = readLines(paste(queryDb,"names",sep="."))
 
-# embedding
-		query2RefDists = measure$db2dbDistance(queryDb,db2=refDb)
-		coordFile=paste(refIddb,"distmat","coord",sep=".")
-		coords = as.matrix(read.table(coordFile))
-		solver = getSolver(r,d,coords)
-		embeddedQueries = apply(query2RefDists,c(1),
-			function(x) embedCoord(solver,d,x))
-# end embedding
+		embeddedQueries = embedFromRefs(r,d,refIddb,measure,queryDb,db2=refDb)
+
 
 		print(embeddedQueries)
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
-		neighbors = lshsearch(embeddedQueries,matrixFile,K=K )
+		neighbors = lshsearch(embeddedQueries,matrixFile,K=K,W=W,M=M,L=L,T=T )
 		print("q1:")
 		print(neighbors[1,,])
 		print("q2:")
@@ -210,24 +206,25 @@ eiQuery <- function(r,d,refIddb,queryFile, dir=".",measure=atompairMeasure)
 				results[i,"distance"]<<- hits[[queryIndex]][hitIndex,2]
 				i<<-i+1
 			}))
-	#	for(queryIndex in 1:numQueries){
-	#		for(hitIndex in 1:K){
-	#		}
-	#	}
-
-print(results)
-
-#		results=unlist(Map(function(queryIndex)
-#			Map(function(hitIndex){
-#				list(query = queryNames[queryIndex],
-#						target = allNames[hits[[queryIndex]][hitIndex,1]],
-#						distance = hits[[queryIndex]][hitIndex,2])
-#			},1:K), 1:numQueries),recursive=F)
+		print(results)
 		return(results)
-
-
-		#print(paste("removing ",tmpDir))
-		#unlink(tmpDir,recursive=T)
+}
+#fetch coords from refIddb.distmat.coord and call embed
+embedFromRefs <- function(r,d,refIddb,measure,...)
+{
+		coordFile=paste(refIddb,"distmat","coord",sep=".")
+		coords = as.matrix(read.table(coordFile))
+		embed(r,d,coords,measure,...)
+}
+#take referenace coords, and args to compute distance matrix
+#return the emedding of each row in the matrix
+embed <- function(r,d,coords, measure,...)
+{
+		query2RefDists = measure$db2dbDistance(...)
+		solver = getSolver(r,d,coords)
+		embeddedQueries = apply(query2RefDists,c(1),
+			function(x) embedCoord(solver,d,x))
+#
 }
 refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir)
 {
