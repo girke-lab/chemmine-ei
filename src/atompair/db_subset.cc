@@ -20,9 +20,7 @@ int db_subset(char* dbFile, char* iddbFile, char* outputFile)
 	f.open(outputFile, std::iostream::out);
 	if (! f.good()) {
 		std::cerr << "Cannot open " << outputFile << " for write." << std::endl;
-		return 1;
-	} else {
-		std::cerr << "Opening " << outputFile<< " for write." << std::endl;
+		return -1;
 	}
 
 	f.write(HEADER, HEADER_SIZE);
@@ -35,8 +33,7 @@ int db_subset(char* dbFile, char* iddbFile, char* outputFile)
 	}
    db.close();
 
-   std::cerr << "Wrote " << ids.size() << " entries." << std::endl;
-   return 0;
+   return ids.size();
 }
 
 #ifndef NO_MAIN
@@ -47,6 +44,10 @@ int main(int argc, char *argv[])
     std::cerr << "        indices in index.file are 1-based" << std::endl;
     exit(1);
   }
-  return db_subset(argv[1],argv[2],argv[3]);
+  count = db_subset(argv[1],argv[2],argv[3]);
+  if(count < 0)
+     return -count;
+  std::cerr << "Wrote " << count << " entries." << std::endl;
+  return 0;
 }
 #endif

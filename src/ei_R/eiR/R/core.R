@@ -2,13 +2,22 @@
 library(tools)
 library(snow)
 library(snowfall)
+library(ChemmineR)
 
-#not yet configurable
-#TODO: do they need to be?
-TestQueries = "test_query.iddb"
 DataDir = "data"
+TestQueries = file.path(DataDir,"test_query.iddb")
+TestQueryResults=file.path(DataDir,"chemical-search.results")
 ChemDb = file.path(DataDir,"chem.db")
 Main = file.path(DataDir,"main.iddb")
+
+#default lsh parameters
+defK=6
+defW = 1.39564
+defM=19
+defL=10 
+defT=30 
+
+debug=T
 
 cdbCachedSize=NA
 cdbSize <- function() {
@@ -25,10 +34,12 @@ embedCoordTest <- function(r,d,refCoords,coords)
 # requires one query per column, not per row
 lshsearch <- function(queries,matrixFile,
 	W=NA,H=NA,M=NA,L=NA,K=NA,T=NA,R=NA) 
+{
+	print(c(W,H,M,L,K,T,R))
 	.Call("lshsearch",queries,as.character(matrixFile),
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
-
+}
 atompairMeasure = list(
 	dbBuilder = function(input,output)
 		batch_sdf_parse(input,output),
@@ -38,20 +49,20 @@ atompairMeasure = list(
 	{
 		if(!is.na(file)){
 			if(is.na(db2) && ! is.na(iddb1) && ! is.na(iddb2)){
-				cat(" iddb files to file\n")
+				#if(debug) print(" iddb files to file")
 				db2db_distance2file(db,iddb1,iddb2,file)
 			}else if(!is.na(db2) &&  is.na(iddb1) &&  is.na(iddb2)){
-				cat("2 real dbs to file\n")
+				#if(debug) print("2 real dbs to file")
 				db2db_distance2file(db,db2,file)
 			}else{
-				stop("bad argument list\n")
+				stop("bad argument list")
 			}
 		}else{
 			if(is.na(db2) && ! is.na(iddb1) && ! is.na(iddb2)){
-				cat(" iddb files\n")
+				#if(debug) print(" iddb files")
 				return(.Call("db2db_distance_iddb",as.character(db),as.character(iddb1),as.character(iddb2)))
 			}else if(!is.na(db2) &&  is.na(iddb1) &&  is.na(iddb2)){
-				cat("2 real dbs\n")
+				#if(debug) print("2 real dbs")
 				return(.Call("db2db_distance_db",as.character(db),as.character(db2)))
 			}else{
 				stop("bad argument list\n")
@@ -62,9 +73,9 @@ atompairMeasure = list(
 
 eiInit <- function(compoundDb,measure=atompairMeasure)
 {
-	cat("eiInit")
-	if(!file.exists("data"))
-		dir.create("data")
+	if(debug) print("eiInit")
+	if(!file.exists(DataDir))
+		dir.create(DataDir)
 
 	if(!file.exists(ChemDb)){
 		numCompounds = measure$dbBuilder(compoundDb,ChemDb)
@@ -89,7 +100,7 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 		queryIds=genRefs(r,numSamples,refIddb)
 	}
 	if(is.na(queryIds[1]))
-		queryIds=readIddb(file.path("data",TestQueries))
+		queryIds=readIddb(TestQueries)
 	
 	selfDistFile <- paste(refIddb,"distmat",sep=".")
 	coordFile <- paste(selfDistFile,"coord",sep=".")
@@ -103,7 +114,7 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 	}else{
 		#compute pairwise distances for all references
 		if(! file.exists(selfDistFile)){
-			cat("generateding selfDistFile\n")
+			print("generateding selfDistFile")
 			measure$db2dbDistance(ChemDb,iddb1=refIddb,iddb2=refIddb,file=selfDistFile)
 		}
 		selfDist<-read.table(selfDistFile)
@@ -167,7 +178,7 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 }
 eiQuery <- function(r,d,refIddb,queryFile,
 		dir=".",measure=atompairMeasure,
-		K=6, W = 1.39564, M=19,L=10 ,T=30 )
+		K=defK, W = defW, M=defM,L=defL ,T=defT )
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
@@ -175,26 +186,24 @@ eiQuery <- function(r,d,refIddb,queryFile,
 		refDb = refDb(refIddb,measure)
 		query2RefDistFile = file.path(tmpDir,"query2refs.dist")
 
+		#reformat query file
 		numQueries = measure$dbBuilder(queryFile,queryDb)
 
+		#read names
 		allNames = readLines(file.path(dir,paste(ChemDb,"names",sep=".")))
 		queryNames = readLines(paste(queryDb,"names",sep="."))
 
+		#embed queries in search space
 		embeddedQueries = embedFromRefs(r,d,refIddb,measure,queryDb,db2=refDb)
 
-
-		print(embeddedQueries)
+		#search for nearby compounds
+		if(debug) print(embeddedQueries)
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
-		neighbors = lshsearch(embeddedQueries,matrixFile,K=K,W=W,M=M,L=L,T=T )
-		print("q1:")
-		print(neighbors[1,,])
-		print("q2:")
-		print(neighbors[2,,])
+		hits = search(embeddedQueries,matrixFile,
+							queryDb,measure,K=K,W=W,M=M,L=L,T=T)
+		if(debug) print(hits)
 
-		#compute distance between each query and its candidates	
-		hits = Map(function(x) refine(neighbors[x,,],queryDb,x,K,measure,tmpDir),
-			1:numQueries)
-		print(hits)
+		#fetch names for queries and hits and put in a data frame
 		results = data.frame(query=rep(NA,K*numQueries),
 								  target = rep(NA,K*numQueries),
 								  distance=rep(NA,K*numQueries))
@@ -206,8 +215,18 @@ eiQuery <- function(r,d,refIddb,queryFile,
 				results[i,"distance"]<<- hits[[queryIndex]][hitIndex,2]
 				i<<-i+1
 			}))
-		print(results)
+		if(debug) print(results)
 		return(results)
+}
+#expects one query per column
+search <- function(queries,matrixFile,queryDb,measure,K,...)
+{
+		neighbors = lshsearch(queries,matrixFile,K=K,...)
+
+		tmpDir=tempdir()
+		#compute distance between each query and its candidates	
+		Map(function(x) refine(neighbors[x,,],queryDb,x,K,measure,tmpDir),
+			1:(dim(queries)[2]))
 }
 #fetch coords from refIddb.distmat.coord and call embed
 embedFromRefs <- function(r,d,refIddb,measure,...)
@@ -226,23 +245,27 @@ embed <- function(r,d,coords, measure,...)
 			function(x) embedCoord(solver,d,x))
 #
 }
-refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir)
+refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir=tempdir())
 {
 	queryIddb=file.path(tmpDir,"query.iddb")
 	queryDb=file.path(tmpDir,"query.db")
 	candidatesIddb=file.path(tmpDir,"candidates.iddb")
 	candidatesDb=file.path(tmpDir,"candidates.db")
 
+	queryIddb=file.path(tmpDir,"query.iddb")
 	writeIddb(c(queryIndex),queryIddb)
 	measure$dbSubset(queriesCdb,queryIddb,queryDb)
 
+	queryIddb=file.path(tmpDir,"query.iddb")
 	writeIddb(lshNeighbors[,1],candidatesIddb)
 	measure$dbSubset(ChemDb,candidatesIddb,candidatesDb)
 
+	queryIddb=file.path(tmpDir,"query.iddb")
 	d=measure$db2dbDistance(queryDb,db2=candidatesDb)
-	print(str(d))
+	#if(debug) print(str(d))
 	lshNeighbors[,2]=d #measure$db2dbDistance(queryDb,db2=candidatesDb)
 	limit = min(limit,length(lshNeighbors[,2]))
+	queryIddb=file.path(tmpDir,"query.iddb")
 	lshNeighbors[order(lshNeighbors[,2])[1:limit],]
 }
 writeIddb <- function(data, file)
@@ -256,7 +279,7 @@ readNames <- function(file) as.numeric(readLines(file))
 # testing
 genRefs <- function(n,numSamples,refFile)
 {
-	testQueryFile <-file.path("data",TestQueries)
+	testQueryFile <-TestQueries
 	mainIds <- readIddb(Main)
 	queryIds <- if(file.exists(testQueryFile)) {
 			readIddb(testQueryFile)
@@ -274,6 +297,48 @@ refDb <- function(refIddb,measure,refDb=paste(refIddb,"db",sep="."))
 	if(!file.exists(refDb))
 		measure$dbSubset(ChemDb,refIddb,refDb)
 	return(refDb)
+}
+genTestQueryResults <- function(measure)
+{
+	if(file.exists(TestQueryResults))
+		return()
+
+	out=file(TestQueryResults,"w")
+	d=measure$db2dbDistance(ChemDb,iddb1=TestQueries,iddb2=Main)
+	for(i in dim(d)[1])
+		cat(paste(
+				paste(1:dim(d)[2],d[i,],sep=":")[order(d[i,])[1:50000]],
+				collapse=" "),"\n",file=out)	
+	close(out)
+}
+eiPerformanceTest <- function(r,d,measure=atompairMeasure,
+	dir=".",K=defK, W = defW, M=defM,L=defL ,T=defT )
+{
+	workDir=file.path(dir,paste("run",r,d,sep="-"))
+	genTestQueryResults(measure)
+	eucsearch2file(file.path(workDir,sprintf("matrix.%s-%s",r,d)),
+				 file.path(workDir,sprintf("matrix.query.%s-%s",r,d)),
+				 50000,
+				 file.path(workDir,sprintf("eucsearch.%s-%s",r,d)))
+
+	#evaluator TestQueryResuts eucsearch-r-d recall
+
+	matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
+	coordQueryFile =file.path(workDir,sprintf("coord.query.%d-%d",r,d))
+
+	embeddedTestQueries = t(as.matrix(read.table(coordQueryFile)))
+	hits = search(embeddedTestQueries,matrixFile,
+						ChemDb,measure,K=K,W=W,M=M,L=L,T=T)
+	out=file(file.path(workDir,"indexed"),"w")
+	#if(debug) print(hits)
+	for(x in hits)
+		cat(paste(x[,1],x[,2],sep=":",collapse=" "),"\n",file=out)
+	close(out)
+
+	#indexed_evalutator TestQueryResults indexed indexed.performance
+
+	return(hits)
+	
 }
 
 

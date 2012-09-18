@@ -1,2 +1,2 @@
 useDynLib(eiR)
-export("eiInit","eiMakeDb","eiQuery","getSolver")
+export("eiInit","eiMakeDb","eiQuery","eiPerformanceTest")

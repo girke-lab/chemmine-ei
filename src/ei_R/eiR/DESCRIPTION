@@ -7,4 +7,6 @@ Author: Kevin Horan
 Maintainer: Kevin Horan <khoran@cs.ucr.edu>
 #Suggests: ChemmineR
 Description:  fast compound searching
-License: GPL (>=2)
+License: Artistic-2.0
+Depends: R (>= 2.10.0), ChemmineR
+Imports: snow, tools, snowfall, RUnit, methods

@@ -236,7 +236,7 @@ def accuracy(n, k):
 			CHEMICAL_SEARCH_RESULTS, n, k)
 	os_run(cmd)
 
-def indexed_search(matrix_file,coord_file, coord_query_file,output="indexed.gz",
+def indexed_search(matrix_file, coord_query_file,output="indexed.gz",
 		evaluation_out="indexed.performance"):
 	"""perform indexed search"""
 	info("running indexed search")
@@ -718,7 +718,7 @@ if __name__ == '__main__':
 		work_dir = 'run-%s-%s' % (r, d)
 		if work_dir != os.path.basename(os.path.curdir):
 			os.chdir(work_dir)
-		indexed_search('matrix.%d-%d' % (r, d),'coord.%d-%d' % (r, d),'coord.query.%d-%d' % (r, d))
+		indexed_search('matrix.%d-%d' % (r, d),'coord.query.%d-%d' % (r, d))
 	elif len(args) == 1:
 		# use existing sub-database
 		work_dir = os.path.dirname(args[0])
