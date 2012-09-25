@@ -83,7 +83,7 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile,
    unsigned T = check(Tin,1);
    float R = ISNA(REAL(Rin)[0])? std::numeric_limits<float>::max() : 
                                  (float)(REAL(Rin)[0]*REAL(Rin)[0]);
-   Rprintf("W: %f H:%d M:%d L:%d K:%d T:%d R:%f\n",W,H,M,L,K,T,R);
+   //Rprintf("W: %f H:%d M:%d L:%d K:%d T:%d R:%f\n",W,H,M,L,K,T,R);
 
    FloatMatrix data(CHAR(STRING_ELT(matrixFile,0)));
 
@@ -98,7 +98,7 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile,
    SEXP queryDim = getAttrib(queries,R_DimSymbol);
    int numQueries = INTEGER(queryDim)[1];
    int querySize = INTEGER(queryDim)[0];
-   Rprintf("numQueries: %d, querySize: %d\n",numQueries,querySize);
+   //Rprintf("numQueries: %d, querySize: %d\n",numQueries,querySize);
    SEXP result;
    PROTECT(result = alloc3DArray(REALSXP,numQueries,K,2));
    float *queryPtr = new float[querySize];

@@ -5,10 +5,11 @@
 }
 \description{
    Compares LSH search against euclidean search and non-indexed
-   nearest neighbor. TODO: CHECK THIS
+   nearest neighbor. %TODO: CHECK THIS
 }
 \usage{
-   eiPerformanceTest(r, d, measure = atompairMeasure, dir = ".", K = defK, W = defW, M = defM, L = defL, T = defT)
+   eiPerformanceTest(r, d, measure = atompairMeasure, dir = ".", 
+      K = 6, W = 1.39564, M = 19, L = 10, T = 30)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

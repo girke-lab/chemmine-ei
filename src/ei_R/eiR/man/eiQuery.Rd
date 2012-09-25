@@ -7,7 +7,8 @@
    Finds similar compounds for each query.
 }
 \usage{
-   eiQuery(r, d, refIddb, queries, dir = ".", measure = atompairMeasure, K = defK, W = defW, M = defM, L = defL, T = defT)
+   eiQuery(r, d, refIddb, queries, dir = ".", measure = atompairMeasure, 
+      K = 6, W = 1.39564, M = 19, L = 10, T = 30)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

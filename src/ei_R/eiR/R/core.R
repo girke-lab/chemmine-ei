@@ -35,7 +35,6 @@ embedCoordTest <- function(r,d,refCoords,coords)
 lshsearch <- function(queries,matrixFile,
 	W=NA,H=NA,M=NA,L=NA,K=NA,T=NA,R=NA) 
 {
-	print(c(W,H,M,L,K,T,R))
 	.Call("lshsearch",queries,as.character(matrixFile),
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
