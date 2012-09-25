@@ -1,14 +1,14 @@
 \name{eiMakeDb}
 \alias{eiMakeDb}
-%- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-%%  ~~function to do ... ~~
+   Create an embedded database
 }
 \description{
-%%  ~~ A concise (1-5 lines) description of what the function does. ~~
+   Uses the initalized compound data to create an embedded compound
+   databbase with \code{r} reference compounds in \code{d} dimensions.
 }
 \usage{
-eiMakeDb(r, d, measure = atompairMeasure, dir = ".", refIddb = NA, numSamples = cdbSize() * 0.1, cl = makeCluster(1, type = "SOCK"))
+   eiMakeDb(r, d, measure = atompairMeasure, dir = ".", refIddb = NA, numSamples = cdbSize() * 0.1, cl = makeCluster(1, type = "SOCK"))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -38,112 +38,32 @@ eiMakeDb(r, d, measure = atompairMeasure, dir = ".", refIddb = NA, numSamples = 
 %%  ~~ If necessary, more details than the description above ~~
 }
 \value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
-}
-\references{
-%% ~put references to the literature/web site here ~
+   No value is returned. Creates files in \code{dir} ("run-r-d" by
+   default).
 }
 \author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
+   Kevin Horan
 }
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
+   \code{\link{eiInit}}
+   \code{\link{eiPerformanceTest}}
+   \code{\link{eiQuery}}
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+   library(snow)
 
-## The function is currently defined as
-function (r, d, measure = atompairMeasure, dir = ".", refIddb = NA, 
-    numSamples = cdbSize() * 0.1, cl = makeCluster(1, type = "SOCK")) 
-{
-    workDir = file.path(dir, paste("run", r, d, sep = "-"))
-    if (!file.exists(workDir)) 
-        dir.create(workDir)
-    queryIds = NA
-    if (is.na(refIddb)) {
-        prefix <- paste(sample(c(0:9, letters), 32, replace = TRUE), 
-            collapse = "")
-        refIddb = file.path(workDir, paste(prefix, "cdb", sep = "."))
-        queryIds = genRefs(r, numSamples, refIddb)
-    }
-    if (is.na(queryIds[1])) 
-        queryIds = readIddb(TestQueries)
-    selfDistFile <- paste(refIddb, "distmat", sep = ".")
-    coordFile <- paste(selfDistFile, "coord", sep = ".")
-    ref2AllDistFile <- paste(refIddb, "distances", sep = ".")
-    embeddedFile <- file.path(workDir, sprintf("coord.\%d-\%d", 
-        r, d))
-    embeddedQueryFile <- file.path(workDir, sprintf("coord.query.\%d-\%d", 
-        r, d))
-    coords <- if (file.exists(coordFile)) {
-        table.read(coordsFile)
-    }
-    else {
-        if (!file.exists(selfDistFile)) {
-            print("generateding selfDistFile")
-            measure$db2dbDistance(ChemDb, iddb1 = refIddb, iddb2 = refIddb, 
-                file = selfDistFile)
-        }
-        selfDist <- read.table(selfDistFile)
-        coords <- cmdscale(selfDist, d)
-        write.table(coords, file = coordFile, row.names = F, 
-            col.names = F)
-        coords
-    }
-    if (!file.exists(ref2AllDistFile)) 
-        measure$db2dbDistance(ChemDb, iddb1 = Main, iddb2 = refIddb, 
-            file = ref2AllDistFile)
-    solver <- getSolver(r, d, coords)
-    distConn <- file(ref2AllDistFile, "r")
-    numJobs = length(cl)
-    jobSize = as.integer(cdbSize()/numJobs + 1)
-    dataBlocks = Map(function(x) strsplit(readLines(distConn, 
-        jobSize), "\\s+"), 1:numJobs)
-    clusterApply(cl, 1:numJobs, function(i) {
-        solver <- getSolver(r, d, coords)
-        data = sapply(dataBlocks[[i]], function(x) embedCoord(solver, 
-            d, as.numeric(x)))
-        write.table(t(data), file = file.path(workDir, paste(r, 
-            d, i, sep = "-")), row.names = F, col.names = F)
-        selected = queryIds[queryIds \%in\% ((i - 1) * jobSize + 
-            1):(i * jobSize)] - ((i - 1) * jobSize)
-        qd = if (length(selected) == 1) 
-            t(data[, selected])
-        else t(data)[selected, ]
-        write.table(qd, file = file.path(workDir, paste("q", 
-            r, d, i, sep = "-")), row.names = F, col.names = F)
-    })
-    close(distConn)
-    system(paste("cat", paste(Map(function(x) file.path(workDir, 
-        paste(r, d, x, sep = "-")), 1:numJobs), collapse = " "), 
-        ">", embeddedFile))
-    system(paste("cat", paste(Map(function(x) file.path(workDir, 
-        paste("q", r, d, x, sep = "-")), 1:numJobs), collapse = " "), 
-        ">", embeddedQueryFile))
-    Map(function(x) unlink(file.path(workDir, paste(r, d, x, 
-        sep = "-"))), 1:numJobs)
-    Map(function(x) unlink(file.path(workDir, paste("q", r, d, 
-        x, sep = "-"))), 1:numJobs)
-    binaryCoord(embeddedFile, file.path(workDir, sprintf("matrix.\%d-\%d", 
-        r, d)), d)
-    binaryCoord(embeddedQueryFile, file.path(workDir, sprintf("matrix.query.\%d-\%d", 
-        r, d)), d)
-    return(file.path(workDir, sprintf("matrix.\%d-\%d", r, d)))
-  }
+   r<- 50
+   d<- 40
+   j=1
+
+   #initialize 
+   data(sdfsample)
+   eiInit(sdfsample)
+
+   #create compound db
+   eiMakeDb(r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

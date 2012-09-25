@@ -1,14 +1,14 @@
 \name{eiInit}
 \alias{eiInit}
-%- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-%%  ~~function to do ... ~~
+   Initialize a compound database
 }
 \description{
-%%  ~~ A concise (1-5 lines) description of what the function does. ~~
+   Takes the raw compound database in whatever format the given
+   measure supports and creates a "data" directory.
 }
 \usage{
-eiInit(compoundDb, measure = atompairMeasure)
+   eiInit(compoundDb, measure = atompairMeasure)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -23,46 +23,23 @@ eiInit(compoundDb, measure = atompairMeasure)
 %%  ~~ If necessary, more details than the description above ~~
 }
 \value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
-}
-\references{
-%% ~put references to the literature/web site here ~
+   No value is returned. A directory called "data" will have been
+   created in the current working directory.
 }
 \author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
+   Kevin Horan
 }
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
+   \code{\link{eiMakeDb}}
+   \code{\link{eiPerformanceTest}}
+   \code{\link{eiQuery}}
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
-## The function is currently defined as
-function (compoundDb, measure = atompairMeasure) 
-{
-    if (debug) 
-        print("eiInit")
-    if (!file.exists(DataDir)) 
-        dir.create(DataDir)
-    if (!file.exists(ChemDb)) {
-        numCompounds = measure$dbBuilder(compoundDb, ChemDb)
-        writeIddb(1:numCompounds, Main)
-    }
-  }
+   data(sdfsample)
+   eiInit(sdfsample)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
+%\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     std::cerr << "        indices in index.file are 1-based" << std::endl;
     exit(1);
   }
-  count = db_subset(argv[1],argv[2],argv[3]);
+  int count = db_subset(argv[1],argv[2],argv[3]);
   if(count < 0)
      return -count;
   std::cerr << "Wrote " << count << " entries." << std::endl;

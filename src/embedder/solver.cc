@@ -90,6 +90,7 @@ int Solver::optim(doublereal *x, doublereal *d, doublereal factr,
 	char task[60] = "";
 	char buf[60] = "";
 	char csave[60] = "";
+   char start[]="START";
 	ftnlen task_len = 60;;
 	ftnlen csave_len = 60;
 	logical lsave[4];
@@ -104,7 +105,7 @@ int Solver::optim(doublereal *x, doublereal *d, doublereal factr,
 
 	init_values(x, l, u, nbd);
  
-	s_copy(task, "START", (ftnlen)60, (ftnlen)5);
+	s_copy(task, start, (ftnlen)60, (ftnlen)5);
 	while(1) {
 		setulb_(&n, &_m, x, l, u, nbd, &f, g, &factr, &pgtol, wa, iwa, task,
 				&iprint, csave, lsave, isave, dsave, task_len, csave_len);

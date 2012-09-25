@@ -17,7 +17,7 @@ defM=19
 defL=10 
 defT=30 
 
-debug=T
+debug=FALSE
 
 cdbCachedSize=NA
 cdbSize <- function() {
@@ -73,14 +73,12 @@ atompairMeasure = list(
 
 eiInit <- function(compoundDb,measure=atompairMeasure)
 {
-	if(debug) print("eiInit")
 	if(!file.exists(DataDir))
 		dir.create(DataDir)
 
 	if(!file.exists(ChemDb)){
-		numCompounds = measure$dbBuilder(compoundDb,ChemDb)
+		numCompounds = measure$dbBuilder(toSdfFile(compoundDb),ChemDb)
 		writeIddb(1:numCompounds,Main)
-
 	}
 }
 
@@ -110,11 +108,12 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 
 	#embed references in d dimensional space 
 	coords <- if(file.exists(coordFile)){
-		table.read(coordsFile)
+		message(paste("re-using coordfile",coordFile))
+		as.matrix(read.table(coordFile))
 	}else{
 		#compute pairwise distances for all references
 		if(! file.exists(selfDistFile)){
-			print("generateding selfDistFile")
+			message("generating selfDistFile")
 			measure$db2dbDistance(ChemDb,iddb1=refIddb,iddb2=refIddb,file=selfDistFile)
 		}
 		selfDist<-read.table(selfDistFile)
@@ -176,7 +175,7 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 
 	return(file.path(workDir,sprintf("matrix.%d-%d",r,d)))
 }
-eiQuery <- function(r,d,refIddb,queryFile,
+eiQuery <- function(r,d,refIddb,queries,
 		dir=".",measure=atompairMeasure,
 		K=defK, W = defW, M=defM,L=defL ,T=defT )
 {
@@ -186,6 +185,8 @@ eiQuery <- function(r,d,refIddb,queryFile,
 		refDb = refDb(refIddb,measure)
 		query2RefDistFile = file.path(tmpDir,"query2refs.dist")
 
+		queryFile=toSdfFile(queries)
+#		querySdfSet=toSdfSet(queries)
 		#reformat query file
 		numQueries = measure$dbBuilder(queryFile,queryDb)
 
@@ -203,17 +204,27 @@ eiQuery <- function(r,d,refIddb,queryFile,
 							queryDb,measure,K=K,W=W,M=M,L=L,T=T)
 		if(debug) print(hits)
 
+
+#		chemSdfSet = toSdfSet(ChemDb)
+#		results =lapply(1:numQueries,function(queryIndex){
+#				chemSdfSet[hits[[queryIndex]][,1]]
+#			}
+#		)
+
+		numHits=sum(sapply(hits,function(x) sum(x[,1]==-1)))
 		#fetch names for queries and hits and put in a data frame
-		results = data.frame(query=rep(NA,K*numQueries),
-								  target = rep(NA,K*numQueries),
-								  distance=rep(NA,K*numQueries))
+		results = data.frame(query=rep(NA,numHits),
+								  target = rep(NA,numHits),
+								  distance=rep(NA,numHits))
 		i=1
 		lapply(1:numQueries,function(queryIndex)
 			lapply(1:K,function(hitIndex){
-				results[i,"query"]<<-queryNames[queryIndex]
-				results[i,"target"]<<-allNames[hits[[queryIndex]][hitIndex,1]]
-				results[i,"distance"]<<- hits[[queryIndex]][hitIndex,2]
-				i<<-i+1
+				if(hits[[queryIndex]][hitIndex,1]!=-1){
+					results[i,"query"]<<-queryNames[queryIndex]
+					results[i,"target"]<<-allNames[hits[[queryIndex]][hitIndex,1]]
+					results[i,"distance"]<<- hits[[queryIndex]][hitIndex,2]
+					i<<-i+1
+				}
 			}))
 		if(debug) print(results)
 		return(results)
@@ -341,4 +352,35 @@ eiPerformanceTest <- function(r,d,measure=atompairMeasure,
 	
 }
 
+#if input is a file, do nothing.
+#if input is an SDFset, write it to a file and return the name
+#else cause an error
+toSdfFile <- function(input)
+{
+	tempName=input
+	if(class(input)[1] == "SDFset"){
+		tempName = tempfile()
+		origData=datablock(input)
+		datablock(input) = rep("",length(input))
+		write.SDF(input,tempName)
+		datablock(input)=origData
+	}
+	if(!is.character(tempName)){
+		stop("unknown type of input while trying to get an sdf file")
+	}
+
+	return(tempName)
+}
+
+#like toSdfFile, but return an SDFset
+toSdfSet <- function(input)
+{
+	sdfset = input
+	if(is.character(input)){
+		sdfset=read.SDFset(input)
+	}
+	if(class(sdfset)!="SDFset")
+		stop("unknown type of input while trying to get an SDFset")
+	return(sdfset)
+}
 
