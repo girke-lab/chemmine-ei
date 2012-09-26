@@ -17,7 +17,7 @@ defM=19
 defL=10 
 defT=30 
 
-debug=FALSE
+debug=TRUE
 
 cdbCachedSize=NA
 cdbSize <- function() {
@@ -182,7 +182,6 @@ eiQuery <- function(r,d,refIddb,queries,
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
 		queryDb = file.path(tmpDir,"queries.db")
 		refDb = refDb(refIddb,measure)
-		query2RefDistFile = file.path(tmpDir,"query2refs.dist")
 
 		queryFile=toSdfFile(queries)
 #		querySdfSet=toSdfSet(queries)
@@ -228,6 +227,32 @@ eiQuery <- function(r,d,refIddb,queries,
 		if(debug) print(results)
 		return(results)
 }
+#this won't work until we can append to ChemDb
+eiAdd <- function(r,d,refIddb,additions,dir=".",
+		measure=atompairMeasure)
+{
+		tmpDir=tempdir()
+		workDir=file.path(dir,paste("run",r,d,sep="-"))
+		additionsDb = file.path(tmpDir,"additions.db")
+
+		#reformat query file
+		measure$dbBuilder(toSdfFile(additions),additionsDb)
+		additionNames = readLines(paste(additionsDb,"names",sep="."))
+
+		#embed queries in search space
+		embeddedAdditions= embedFromRefs(r,d,refIddb,
+									measure,additionsDb,db2=refDb(refIddb,measure))
+		print(dim(embeddedAdditions))
+		print(embeddedAdditions)
+		embeddedFile <- file.path(workDir,sprintf("coord.%d-%d",r,d))
+
+		#add additions to existing coord and names files
+		write.table(t(embeddedAdditions),
+				file=embeddedFile, append=TRUE,row.names=F,col.names=F)
+		binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
+		write.table(additionNames,append=TRUE,row.names=F,col.names=F,
+				quote=F,file=file.path(dir,paste(ChemDb,"names",sep=".")))
+}
 #expects one query per column
 search <- function(queries,matrixFile,queryDb,measure,K,...)
 {
@@ -253,7 +278,6 @@ embed <- function(r,d,coords, measure,...)
 		solver = getSolver(r,d,coords)
 		embeddedQueries = apply(query2RefDists,c(1),
 			function(x) embedCoord(solver,d,x))
-#
 }
 refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir=tempdir())
 {
@@ -266,16 +290,13 @@ refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir=tempd
 	writeIddb(c(queryIndex),queryIddb)
 	measure$dbSubset(queriesCdb,queryIddb,queryDb)
 
-	queryIddb=file.path(tmpDir,"query.iddb")
 	writeIddb(lshNeighbors[,1],candidatesIddb)
 	measure$dbSubset(ChemDb,candidatesIddb,candidatesDb)
 
-	queryIddb=file.path(tmpDir,"query.iddb")
 	d=measure$db2dbDistance(queryDb,db2=candidatesDb)
 	#if(debug) print(str(d))
 	lshNeighbors[,2]=d #measure$db2dbDistance(queryDb,db2=candidatesDb)
 	limit = min(limit,length(lshNeighbors[,2]))
-	queryIddb=file.path(tmpDir,"query.iddb")
 	lshNeighbors[order(lshNeighbors[,2])[1:limit],]
 }
 writeIddb <- function(data, file)

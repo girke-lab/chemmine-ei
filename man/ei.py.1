@@ -107,9 +107,22 @@ The embedding result is the file matrix.<R>.<D>, where <R> is the number
 of references and <D> is the number of dimensions. In the above example,
 the output would be run-300-100/matrix.300.100.
 
+.SS Queries
+
+To find compounds similar to a query compound, or set of
+compounds, run:
+
+   $ ei.py -r 300 -d 100 -x run-50-40/622b9b62212ada93b4db72de6edd5618.cdb -q quries.sdf
+
+Here, -x is the IDDB file listing the reference compound indexes.
+It will generally be named with a unique prefix and end with
+".cdb". This will create a file called "quries.out" with the
+results. The name of the given query file will be used as a prefix
+for the name of the output file. There will be three columns, the
+query id, the target id, and the distance between them. 
 
 .SS Performance Evaluation
-To evaluate the performance you an run:
+To evaluate the performance you can run:
 
 	$ ei.py -r 300 -d 100 accuracy
 
@@ -150,7 +163,7 @@ follow instruction on
 
 	http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html
 
-To find the best values for these parameters
+to find the best values for these parameters.
 
 
 
@@ -183,10 +196,9 @@ Note that there is no requirement on what format <bindb> uses. EI does not
 utilize <bindb> directly. Instead, it passes the path to <bindb> to
 the program bin/db2db_distance. If you use your own custom similarity
 measure (see CUSTOMIZATION below), as long as your custom
-bin/db2db_distance program can understand <bindb>, then it is fine. If you
-hardcode the path to your own compound database in your custom
-bin/db2db_distance, you might not create a <bindb> at all. 
-    
+bin/db2db_distance program can understand <bindb>, then it is fine.    
+
+
 .SS CUSTOMIZATION
 
 EI allows you to plug in your own similarity measurement. In order to do

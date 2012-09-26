@@ -4,7 +4,7 @@
    Test the performance of LSH search
 }
 \description{
-   Compares LSH search against euclidean search and non-indexed
+   Compares LSH search against both exhustive euclidean search and non-indexed
    nearest neighbor. %TODO: CHECK THIS
 }
 \usage{

@@ -1,8 +1,5 @@
 PACKAGEFOLDER = eiR
 SRCDIR = $(PACKAGEFOLDER)/src
-#CXXFLAGS +=  -fPIC -DNO_MAIN -I../../../lshkit/include
-#LIBS = -lm -lf2c   -L../../../lshkit/src -Wl,--whole-archive  -llshkit  -Wl,--no-whole-archive -lgsl -lgslcblas -O1
- #$(BOOST_PROGRAM_OPTIONS_LIB) $(BOOST_THREAD_LIB)  -lm -ldb  -lgsl -lgslcblas
 MODULENAME = eiR
 CCSOURCES  = \
 	../atompair/molecule.cc \
@@ -40,14 +37,21 @@ CCSOURCES  = \
 	../lshkit/include \
 	../lshkit/src/liblshkit.a
 
-EXTRA_DIST = $(MODULENAME)/DESCRIPTION $(MODULENAME)/NAMESPACE $(MODULENAME)/README  $(MODULENAME)/src/Makevars
+EXTRA_DIST = $(MODULENAME)/DESCRIPTION \
+				 $(MODULENAME)/NAMESPACE \
+				 $(MODULENAME)/README  \
+				 $(MODULENAME)/src/Makevars \
+				 $(MODULENAME)/man/eiInit.Rd \
+				 $(MODULENAME)/man/eiMakeDb.Rd \
+				 $(MODULENAME)/man/eiPerformanceTest.Rd \
+				 $(MODULENAME)/man/eiQuery.Rd \
+				 $(MODULENAME)/R/core.R  \
+				 $(MODULENAME)/tests/test.R  \
+				 $(MODULENAME)/inst/runit/runit.eiInit.r  \
+				 $(MODULENAME)/data/example_compounds.RData  
 
 LOCAL_INST=~/testing
 
-#empty=
-#space=$(empty) $(empty)
-#ESC_CXXFLAGS=$(subst $(space),\$(space),$(CXXFLAGS))
-#ESC_LIBS=$(subst $(space),\$(space),$(LIBS))
 
 if BUILD_EIR
 all : $(SRCDIR)/r_wrap.cpp ccsource
@@ -60,7 +64,6 @@ $(SRCDIR)/r_wrap.cpp : swig.i
 ccsource : $(CCSOURCES)
 	cp -a $(CCSOURCES) $(SRCDIR)
 
-#MAKEFLAGS='CXXFLAGS=$(ESC_CXXFLAGS) LDFLAGS=$(ESC_LIBS)' 
 check: all
 	$(R_PATH) CMD check $(PACKAGEFOLDER)
 test: all local
@@ -73,12 +76,14 @@ local: all
 
 install : all
 	 $(R_PATH) CMD INSTALL $(PACKAGEFOLDER)
-endif
 
 dist : all
-	rm -f  $(PACKAGEFOLDER)/src/*.o $(PACKAGEFOLDER)/src/*.so
-	tar czf $(PACKAGEFOLDER).tar.gz --exclude=*.swp $(PACKAGEFOLDER)
+	 $(R_PATH) CMD build $(PACKAGEFOLDER)
 
+#rm -f  $(PACKAGEFOLDER)/src/*.o $(PACKAGEFOLDER)/src/*.so
+#tar czf $(PACKAGEFOLDER).tar.gz --exclude=*.swp $(PACKAGEFOLDER)
+
+endif
 
 clean-generic :
 	rm -f $(SRCDIR)/r_wrap.cpp
