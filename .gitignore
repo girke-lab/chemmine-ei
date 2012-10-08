@@ -5,6 +5,8 @@
 *.in
 *.swo
 
+src/ei_R/eiR/src/*
+
 src/atompair/compare
 src/atompair/db2db_distance
 src/atompair/db_builder

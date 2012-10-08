@@ -57,30 +57,35 @@ test.ca.eiQuery <- function(){
   #    file="example_queries.sdf")
    refIddb = findRefIddb(runDir)
    #results = eiQuery(r,d,refIddb,"example_queries.sdf",K=15)
-   results = eiQuery(r,d,refIddb,sdfsample[1:2])
+   results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
    checkTrue(length(results$distance) != 0)
    checkTrue(all(results$distance <= 1))
    checkEquals(results$distance[16],0)
 }
 
-test.da.eiPerformanceTest <- function() {
-   r = eiPerformanceTest(r,d,K=22)
-   checkMatrix("eucsearch.50-40",20,N)
-   checkMatrix("indexed",20,22)
-}
-#test.ea.eiAdd<- function(){
-#
-#   data(example_compounds)
-#   cat(paste(paste(example_compounds,collapse="\n"),"\n",sep=""),file="example_compounds.sdf")
-#options(warn=-1)
-#   examples=read.SDFset("example_compounds.sdf")
-#options(warn=2)
-#   print("adding4")
-#   eiAdd(r,d,findRefIddb(runDir),examples[1:2])
-#   results = eiQuery(r,d,findRefIddb(runDir),examples[1:2],K=15)
-#   print(results)
-#   checkEquals(results$distance[1],0)
+#test.da.eiPerformanceTest <- function() {
+#   r = eiPerformanceTest(r,d,K=22)
+#   checkMatrix("eucsearch.50-40",20,N)
+#   checkMatrix("indexed",20,22)
 #}
+test.ea.eiAdd<- function(){
+
+   data(example_compounds)
+   cat(paste(paste(example_compounds,collapse="\n"),"\n",sep=""),file="example_compounds.sdf")
+options(warn=-1)
+   examples=read.SDFset("example_compounds.sdf")
+options(warn=2)
+   eiAdd(r,d,findRefIddb(runDir),examples[1:2])
+
+   results = eiQuery(r,d,findRefIddb(runDir),examples[1:2])
+   print(results)
+   checkEquals(results$distance[1],0)
+
+   eiAdd(r,d,findRefIddb(runDir),examples[4:8])
+   results = eiQuery(r,d,findRefIddb(runDir),examples[4])
+   checkEquals(results$distance[1],0)
+   print(results)
+}
 test.aaaaa.cleanup<- function(){
    junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
    unlink(junk,recursive=T)

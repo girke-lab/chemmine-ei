@@ -7,7 +7,9 @@ library(ChemmineR)
 DataDir = "data"
 TestQueries = file.path(DataDir,"test_query.iddb")
 TestQueryResults=file.path(DataDir,"chemical-search.results")
-ChemDb = file.path(DataDir,"chem.db")
+ChemPrefix="chem"
+ChemDb = file.path(DataDir,paste(ChemPrefix,".db",sep=""))
+ChemIndex = file.path(DataDir,paste(ChemPrefix,".index",sep=""))
 Main = file.path(DataDir,"main.iddb")
 
 #default lsh parameters
@@ -17,12 +19,13 @@ defM=19
 defL=10 
 defT=30 
 
-debug=TRUE
+#debug=TRUE
+debug=FALSE
 
 cdbCachedSize=NA
 cdbSize <- function() {
 	if(is.na(cdbCachedSize))
-		cdbCachedSize = length(readLines(Main))
+		cdbCachedSize = getSegmentSize(ChemDb)
 	cdbCachedSize
 }
 embedCoord <- function(s,len,coords) 
@@ -70,6 +73,48 @@ atompairMeasure = list(
 	}
 )
 
+addToChemIndex <- function(filename,size)
+	cat(paste(filename,"\t",size,"\n",sep=""),file=ChemIndex,append=TRUE)
+getSegmentSize <- function(filename)
+	read.table(ChemIndex,sep="\t",row.names=1)[filename,]
+
+applyOverIndex <- function(indexValues,f)
+{
+	index=read.table(ChemIndex,sep="\t",row.names=1)
+	names=rownames(index)
+	sums=sapply(1:length(index[[1]]),function(x) c(x,sum(index[[1]][1:x]))) 
+	owners=names[sapply(indexValues,
+					function(x) sums[,sums[2,]>=x][1])]
+
+	indexesUsed=unique(owners)
+
+	results = rep(NA,length(indexValues))
+	for(i in 1:length(indexesUsed)){
+		if(debug) print(i)
+		ownerIndex=which(names==indexesUsed[i])
+		offset=if(ownerIndex==1) 0 else sums[2,ownerIndex-1]
+		#if(debug) print(paste("offset",offset))
+
+		indexSet=which(owners == indexesUsed[i])
+		results[indexSet]=f(indexesUsed[i],indexValues[indexSet]-offset)
+	}
+	#if(debug) print("results:")
+	#if(debug) print(results)
+	return(results)
+}
+
+getIndexOwners <- function(indexValues)
+{
+	index=read.table(ChemIndex,sep="\t",row.names=1)
+	sums=sapply(1:length(index[[1]]),function(x) c(x,sum(index[[1]][1:x]))) 
+	list(names=rownames(index),sums=sums,
+		  owners=rownames(index)[sapply(indexValues,function(x) sums[,sums[2,]>=x][1])])
+}
+getNames <- function(indexValues)
+{
+	index=read.table(ChemIndex,sep="\t",row.names=1)
+	sums=sapply(1:length(index[[1]]),function(x) c(x,sum(index[[1]][1:x]))) 
+}
 eiInit <- function(compoundDb,measure=atompairMeasure)
 {
 	if(!file.exists(DataDir))
@@ -78,6 +123,7 @@ eiInit <- function(compoundDb,measure=atompairMeasure)
 	if(!file.exists(ChemDb)){
 		numCompounds = measure$dbBuilder(toSdfFile(compoundDb),ChemDb)
 		writeIddb(1:numCompounds,Main)
+		addToChemIndex(ChemDb,numCompounds)
 	}
 }
 
@@ -88,6 +134,10 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
 	if(!file.exists(workDir))
 		dir.create(workDir)
+	matrixFile = file.path(workDir,sprintf("matrix.%d-%d",r,d))
+
+	if(file.exists(matrixFile))
+		stop(paste("found existing",matrixFile),"stopping")
 
 	queryIds=NA
 	#get reference compounds
@@ -168,7 +218,7 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 	Map(function(x) unlink(file.path(workDir,paste(r,d,x,sep="-"))),1:numJobs)
 	Map(function(x) unlink(file.path(workDir,paste("q",r,d,x,sep="-"))),1:numJobs)
 
-	binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
+	binaryCoord(embeddedFile,matrixFile,d)
 	binaryCoord(embeddedQueryFile,
 		file.path(workDir,sprintf("matrix.query.%d-%d",r,d)),d)
 
@@ -189,7 +239,6 @@ eiQuery <- function(r,d,refIddb,queries,
 		numQueries = measure$dbBuilder(queryFile,queryDb)
 
 		#read names
-		allNames = readLines(file.path(dir,paste(ChemDb,"names",sep=".")))
 		queryNames = readLines(paste(queryDb,"names",sep="."))
 
 		#embed queries in search space
@@ -201,6 +250,14 @@ eiQuery <- function(r,d,refIddb,queries,
 		hits = search(embeddedQueries,matrixFile,
 							queryDb,measure,K=K,W=W,M=M,L=L,T=T)
 		if(debug) print(hits)
+
+		targetIds=unlist(lapply(1:length(hits),function(x) hits[[x]][,1]))
+		targetIds=targetIds[targetIds!=-1]
+		targetNames=as.matrix(getNames(targetIds))
+		rownames(targetNames)=targetIds
+		print("targetIds")
+		print(targetIds)
+		print(targetNames)
 
 
 #		chemSdfSet = toSdfSet(ChemDb)
@@ -219,7 +276,8 @@ eiQuery <- function(r,d,refIddb,queries,
 			lapply(1:K,function(hitIndex){
 				if(hits[[queryIndex]][hitIndex,1]!=-1){
 					results[i,"query"]<<-queryNames[queryIndex]
-					results[i,"target"]<<-allNames[hits[[queryIndex]][hitIndex,1]]
+					results[i,"target"]<<-targetNames[
+							as.character(hits[[queryIndex]][hitIndex,1]),1]
 					results[i,"distance"]<<- hits[[queryIndex]][hitIndex,2]
 					i<<-i+1
 				}
@@ -227,17 +285,18 @@ eiQuery <- function(r,d,refIddb,queries,
 		if(debug) print(results)
 		return(results)
 }
-#this won't work until we can append to ChemDb
+
 eiAdd <- function(r,d,refIddb,additions,dir=".",
 		measure=atompairMeasure)
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
-		additionsDb = file.path(tmpDir,"additions.db")
+		additionsDb = nextChemDb(dir)
 
 		#reformat query file
-		measure$dbBuilder(toSdfFile(additions),additionsDb)
-		additionNames = readLines(paste(additionsDb,"names",sep="."))
+		numAdditions=measure$dbBuilder(toSdfFile(additions),additionsDb)
+		#additionNames = readLines(paste(additionsDb,"names",sep="."))
+		addToChemIndex(additionsDb,numAdditions)
 
 		#embed queries in search space
 		embeddedAdditions= embedFromRefs(r,d,refIddb,
@@ -250,8 +309,8 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",
 		write.table(t(embeddedAdditions),
 				file=embeddedFile, append=TRUE,row.names=F,col.names=F)
 		binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
-		write.table(additionNames,append=TRUE,row.names=F,col.names=F,
-				quote=F,file=file.path(dir,paste(ChemDb,"names",sep=".")))
+		#write.table(additionNames,append=TRUE,row.names=F,col.names=F,
+				#quote=F,file=file.path(dir,paste(ChemDb,"names",sep=".")))
 }
 #expects one query per column
 search <- function(queries,matrixFile,queryDb,measure,K,...)
@@ -290,15 +349,80 @@ refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir=tempd
 	writeIddb(c(queryIndex),queryIddb)
 	measure$dbSubset(queriesCdb,queryIddb,queryDb)
 
-	writeIddb(lshNeighbors[,1],candidatesIddb)
-	measure$dbSubset(ChemDb,candidatesIddb,candidatesDb)
+	#name additions as "chem-x.db"
+	#create index file, "chem.index"
+	#each line has name of db file and number of entries in it
+	#	order of files is important, must match order of lines in 
+	#	coord/matrix files.
 
-	d=measure$db2dbDistance(queryDb,db2=candidatesDb)
-	#if(debug) print(str(d))
+#	writeIddb(lshNeighbors[,1],candidatesIddb)
+#	measure$dbSubset(ChemDb,candidatesIddb,candidatesDb)
+#	d=measure$db2dbDistance(queryDb,db2=candidatesDb)
+
+	print(paste("query index:",queryIndex))
+	d=multiFileDistance(queryDb,lshNeighbors[,1],measure)
+
+	print("result distance: ")
+	if(debug) print(str(d))
 	lshNeighbors[,2]=d #measure$db2dbDistance(queryDb,db2=candidatesDb)
 	limit = min(limit,length(lshNeighbors[,2]))
 	lshNeighbors[order(lshNeighbors[,2])[1:limit],]
 }
+getNames <- function(indexes)
+	applyOverIndex(indexes,function(filename,indexSet)
+		readLines(paste(filename,".names",sep=""))[indexSet]
+	)
+
+multiFileDistance <- function(db1,indexes,measure)
+{
+	applyOverIndex(indexes,function(filename,indexSet){
+		tempDir=tempdir()
+		writeIddb(indexSet, file.path(tempDir,"temp.iddb"))
+		measure$dbSubset(filename,file.path(tempDir,"temp.iddb"),
+			file.path(tempDir,"tempdb"))
+		measure$db2dbDistance(db1,db2=file.path(tempDir,"tempdb"))
+	})
+}
+#multiFileDistance <- function(db1,indexes,measure)
+#{
+#	#find out which file each index is from
+#	#create a subset from that file
+#	#compute dist(db1,subset)
+#	#append all distance results together
+#	if(debug) print(paste("indexes",paste(indexes,collapse=" ")))
+#	indexOwners=getIndexOwners(indexes)
+#	print("owners")
+#	if(debug) print(indexOwners)
+#	indexesUsed=unique(indexOwners$owners)
+#	print("used")
+#	if(debug) print(indexesUsed)
+#	tempDir=tempdir()
+#
+#	allDists = rep(0,length(indexes))
+#	#allDists=unlist(sapply(1:length(indexesUsed),function(i){
+#	for(i in 1:length(indexesUsed)){
+#		if(debug) print(i)
+#		ownerIndex=which(indexOwners$names==indexesUsed[i])
+#		offset=if(ownerIndex==1) 0 else indexOwners$sums[2,ownerIndex-1]
+#		print(paste("offset",offset))
+#
+#		indexSet=which(indexOwners$owners == indexesUsed[i])
+#		writeIddb(indexes[indexSet]-offset, file.path(tempDir,"temp.iddb"))
+#		print(paste("using",indexesUsed[i]))
+#		print(indexes[indexSet]-offset)
+#
+#		measure$dbSubset(indexesUsed[i],file.path(tempDir,"temp.iddb"),
+#			file.path(tempDir,"tempdb"))
+#		d=measure$db2dbDistance(db1,db2=file.path(tempDir,"tempdb"))
+#		if(debug) print(d)
+#		allDists[indexSet]=d
+#	}
+#	#}))
+#	#if(length(allDists) != length(indexes))
+#	#	stop("failed to compute distance for each candidate")
+#	allDists
+#
+#}
 writeIddb <- function(data, file)
 		write.table(data,file,quote=FALSE,col.names=FALSE,row.names=FALSE)
 readIddb <- function(file) as.numeric(readLines(file))
@@ -372,6 +496,18 @@ eiPerformanceTest <- function(r,d,measure=atompairMeasure,
 	
 }
 
+nextChemDb <- function(dir=".")
+{
+	regex=paste(ChemPrefix,"-\\d+\\.db$",sep="")
+	sub.regex=paste(ChemPrefix,"-(\\d+)\\.db$",sep="")
+	values = sub(paste(".*",sub.regex,sep=""),"\\1",
+					grep(regex,
+						  dir(file.path(dir,DataDir),pattern=regex,full.names=TRUE),
+						  value=TRUE))
+	nextIndex = if(length(values)==0) 1 else max(as.numeric(values))+1
+
+	return(file.path(dir,DataDir,paste(ChemPrefix,"-",nextIndex,".db",sep="")))
+}
 #if input is a file, do nothing.
 #if input is an SDFset, write it to a file and return the name
 #else cause an error
