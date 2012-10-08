@@ -255,9 +255,6 @@ eiQuery <- function(r,d,refIddb,queries,
 		targetIds=targetIds[targetIds!=-1]
 		targetNames=as.matrix(getNames(targetIds))
 		rownames(targetNames)=targetIds
-		print("targetIds")
-		print(targetIds)
-		print(targetNames)
 
 
 #		chemSdfSet = toSdfSet(ChemDb)
@@ -301,8 +298,8 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",
 		#embed queries in search space
 		embeddedAdditions= embedFromRefs(r,d,refIddb,
 									measure,additionsDb,db2=refDb(refIddb,measure))
-		print(dim(embeddedAdditions))
-		print(embeddedAdditions)
+		if(debug) print(dim(embeddedAdditions))
+		if(debug) print(embeddedAdditions)
 		embeddedFile <- file.path(workDir,sprintf("coord.%d-%d",r,d))
 
 		#add additions to existing coord and names files
@@ -359,10 +356,10 @@ refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir=tempd
 #	measure$dbSubset(ChemDb,candidatesIddb,candidatesDb)
 #	d=measure$db2dbDistance(queryDb,db2=candidatesDb)
 
-	print(paste("query index:",queryIndex))
+	if(debug) print(paste("query index:",queryIndex))
 	d=multiFileDistance(queryDb,lshNeighbors[,1],measure)
 
-	print("result distance: ")
+	if(debug) print("result distance: ")
 	if(debug) print(str(d))
 	lshNeighbors[,2]=d #measure$db2dbDistance(queryDb,db2=candidatesDb)
 	limit = min(limit,length(lshNeighbors[,2]))
@@ -383,46 +380,7 @@ multiFileDistance <- function(db1,indexes,measure)
 		measure$db2dbDistance(db1,db2=file.path(tempDir,"tempdb"))
 	})
 }
-#multiFileDistance <- function(db1,indexes,measure)
-#{
-#	#find out which file each index is from
-#	#create a subset from that file
-#	#compute dist(db1,subset)
-#	#append all distance results together
-#	if(debug) print(paste("indexes",paste(indexes,collapse=" ")))
-#	indexOwners=getIndexOwners(indexes)
-#	print("owners")
-#	if(debug) print(indexOwners)
-#	indexesUsed=unique(indexOwners$owners)
-#	print("used")
-#	if(debug) print(indexesUsed)
-#	tempDir=tempdir()
-#
-#	allDists = rep(0,length(indexes))
-#	#allDists=unlist(sapply(1:length(indexesUsed),function(i){
-#	for(i in 1:length(indexesUsed)){
-#		if(debug) print(i)
-#		ownerIndex=which(indexOwners$names==indexesUsed[i])
-#		offset=if(ownerIndex==1) 0 else indexOwners$sums[2,ownerIndex-1]
-#		print(paste("offset",offset))
-#
-#		indexSet=which(indexOwners$owners == indexesUsed[i])
-#		writeIddb(indexes[indexSet]-offset, file.path(tempDir,"temp.iddb"))
-#		print(paste("using",indexesUsed[i]))
-#		print(indexes[indexSet]-offset)
-#
-#		measure$dbSubset(indexesUsed[i],file.path(tempDir,"temp.iddb"),
-#			file.path(tempDir,"tempdb"))
-#		d=measure$db2dbDistance(db1,db2=file.path(tempDir,"tempdb"))
-#		if(debug) print(d)
-#		allDists[indexSet]=d
-#	}
-#	#}))
-#	#if(length(allDists) != length(indexes))
-#	#	stop("failed to compute distance for each candidate")
-#	allDists
-#
-#}
+
 writeIddb <- function(data, file)
 		write.table(data,file,quote=FALSE,col.names=FALSE,row.names=FALSE)
 readIddb <- function(file) as.numeric(readLines(file))
