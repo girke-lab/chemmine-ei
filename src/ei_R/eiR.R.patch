@@ -1,0 +1,38 @@
+65c65
+< SWIG_createNewRef = 
+---
+> RSWIG_createNewRef = 
+117c117
+< setClass("SWIGArray", representation(dims = "integer"), contains = "ExternalReference")
+---
+> #setClass("SWIGArray", representation(dims = "integer"), contains = "ExternalReference")
+119c119
+< setMethod("length", "SWIGArray", function(x) x@dims[1])
+---
+> #etMethod("length", "SWIGArray", function(x) x@dims[1])
+168,179c168,179
+< setMethod('[', "ExternalReference",
+< function(x,i,j, ..., drop=TRUE) 
+< if (!is.null(x$"__getitem__")) 
+< sapply(i, function(n) x$"__getitem__"(i=as.integer(n-1))))
+< 
+< setMethod('[<-' , "ExternalReference",
+< function(x,i,j, ..., value) 
+< if (!is.null(x$"__setitem__")) {
+< sapply(1:length(i), function(n) 
+< x$"__setitem__"(i=as.integer(i[n]-1), x=value[n]))
+< x
+< })
+---
+> #setMethod('[', "ExternalReference",
+> #function(x,i,j, ..., drop=TRUE) 
+> #if (!is.null(x$"__getitem__")) 
+> #sapply(i, function(n) x$"__getitem__"(i=as.integer(n-1))))
+> #
+> #setMethod('[<-' , "ExternalReference",
+> #function(x,i,j, ..., value) 
+> #if (!is.null(x$"__setitem__")) {
+> #sapply(1:length(i), function(n) 
+> #x$"__setitem__"(i=as.integer(i[n]-1), x=value[n]))
+> #x
+> #})

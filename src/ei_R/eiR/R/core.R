@@ -1,8 +1,5 @@
 
-library(tools)
 library(snow)
-library(snowfall)
-library(ChemmineR)
 
 DataDir = "data"
 TestQueries = file.path(DataDir,"test_query.iddb")
@@ -12,21 +9,12 @@ ChemDb = file.path(DataDir,paste(ChemPrefix,".db",sep=""))
 ChemIndex = file.path(DataDir,paste(ChemPrefix,".index",sep=""))
 Main = file.path(DataDir,"main.iddb")
 
-#default lsh parameters
-defK=6
-defW = 1.39564
-defM=19
-defL=10 
-defT=30 
 
-#debug=TRUE
-debug=FALSE
+debug=TRUE
+#debug=FALSE
 
-cdbCachedSize=NA
-cdbSize <- function() {
-	if(is.na(cdbCachedSize))
-		cdbCachedSize = getSegmentSize(ChemDb)
-	cdbCachedSize
+cdbSize <- function(dir=".") {
+	getSegmentSize(file.path(dir,ChemDb),dir)
 }
 embedCoord <- function(s,len,coords) 
 	.Call("embedCoord",s,as.integer(len),as.double(coords))
@@ -38,6 +26,7 @@ embedCoordTest <- function(r,d,refCoords,coords)
 lshsearch <- function(queries,matrixFile,
 	W=NA,H=NA,M=NA,L=NA,K=NA,T=NA,R=NA) 
 {
+	if(!file.exists(matrixFile)) stop(paste("could not find matrix file:",matrixFile))
 	.Call("lshsearch",queries,as.character(matrixFile),
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
@@ -73,14 +62,14 @@ atompairMeasure = list(
 	}
 )
 
-addToChemIndex <- function(filename,size)
-	cat(paste(filename,"\t",size,"\n",sep=""),file=ChemIndex,append=TRUE)
-getSegmentSize <- function(filename)
-	read.table(ChemIndex,sep="\t",row.names=1)[filename,]
+addToChemIndex <- function(filename,size,dir=".")
+	cat(paste(basename(filename),"\t",size,"\n",sep=""),file=file.path(dir,ChemIndex),append=TRUE)
+getSegmentSize <- function(filename,dir=".")
+	read.table(file.path(dir,ChemIndex),sep="\t",row.names=1)[basename(filename),]
 
-applyOverIndex <- function(indexValues,f)
+applyOverIndex <- function(indexValues,f,dir=".")
 {
-	index=read.table(ChemIndex,sep="\t",row.names=1)
+	index=read.table(file.path(dir,ChemIndex),sep="\t",row.names=1)
 	names=rownames(index)
 	sums=sapply(1:length(index[[1]]),function(x) c(x,sum(index[[1]][1:x]))) 
 	owners=names[sapply(indexValues,
@@ -96,44 +85,40 @@ applyOverIndex <- function(indexValues,f)
 		#if(debug) print(paste("offset",offset))
 
 		indexSet=which(owners == indexesUsed[i])
-		results[indexSet]=f(indexesUsed[i],indexValues[indexSet]-offset)
+		results[indexSet]=f(file.path(dir,DataDir,indexesUsed[i]),indexValues[indexSet]-offset)
 	}
 	#if(debug) print("results:")
 	#if(debug) print(results)
 	return(results)
 }
 
-getIndexOwners <- function(indexValues)
+getIndexOwners <- function(indexValues,dir=".")
 {
-	index=read.table(ChemIndex,sep="\t",row.names=1)
+	index=read.table(file.path(dir,ChemIndex),sep="\t",row.names=1)
 	sums=sapply(1:length(index[[1]]),function(x) c(x,sum(index[[1]][1:x]))) 
 	list(names=rownames(index),sums=sums,
 		  owners=rownames(index)[sapply(indexValues,function(x) sums[,sums[2,]>=x][1])])
 }
-getNames <- function(indexValues)
+eiInit <- function(compoundDb,dir=".",measure=atompairMeasure)
 {
-	index=read.table(ChemIndex,sep="\t",row.names=1)
-	sums=sapply(1:length(index[[1]]),function(x) c(x,sum(index[[1]][1:x]))) 
-}
-eiInit <- function(compoundDb,measure=atompairMeasure)
-{
-	if(!file.exists(DataDir))
-		dir.create(DataDir)
+	if(!file.exists(file.path(dir,DataDir)))
+		dir.create(file.path(dir,DataDir))
 
-	if(!file.exists(ChemDb)){
-		numCompounds = measure$dbBuilder(toSdfFile(compoundDb),ChemDb)
-		writeIddb(1:numCompounds,Main)
-		addToChemIndex(ChemDb,numCompounds)
+	if(!file.exists(file.path(dir,ChemDb))){
+		numCompounds = measure$dbBuilder(toSdfFile(compoundDb),file.path(dir,ChemDb))
+		writeIddb(1:numCompounds,file.path(dir,Main))
+		addToChemIndex(file.path(dir,ChemDb),numCompounds,dir)
 	}
 }
 
 eiMakeDb <- function(r,d,measure=atompairMeasure,
-				dir=".",refIddb=NA,numSamples=cdbSize()*0.1,
+				dir=".",refIddb=NA,numSamples=cdbSize(dir)*0.1,
 				cl=makeCluster(1,type="SOCK"))
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
 	if(!file.exists(workDir))
 		dir.create(workDir)
+	print(paste("dir",dir,"workDir",workDir))
 	matrixFile = file.path(workDir,sprintf("matrix.%d-%d",r,d))
 
 	if(file.exists(matrixFile))
@@ -144,10 +129,10 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 	if(is.na(refIddb)){
 		prefix<- paste(sample(c(0:9,letters),32,replace=TRUE),collapse="")
 		refIddb=file.path(workDir,paste(prefix,"cdb",sep="."))
-		queryIds=genRefs(r,numSamples,refIddb)
+		queryIds=genRefs(r,numSamples,refIddb,dir)
 	}
 	if(is.na(queryIds[1]))
-		queryIds=readIddb(TestQueries)
+		queryIds=readIddb(file.path(dir,TestQueries))
 	
 	selfDistFile <- paste(refIddb,"distmat",sep=".")
 	coordFile <- paste(selfDistFile,"coord",sep=".")
@@ -163,7 +148,7 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 		#compute pairwise distances for all references
 		if(! file.exists(selfDistFile)){
 			message("generating selfDistFile")
-			measure$db2dbDistance(ChemDb,iddb1=refIddb,iddb2=refIddb,file=selfDistFile)
+			measure$db2dbDistance(file.path(dir,ChemDb),iddb1=refIddb,iddb2=refIddb,file=selfDistFile)
 		}
 		selfDist<-read.table(selfDistFile)
 
@@ -175,14 +160,14 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 
 	#compute dist between refs and all compounds
 	if(!file.exists(ref2AllDistFile))
-		measure$db2dbDistance(ChemDb,iddb1=Main,iddb2=refIddb,file=ref2AllDistFile)
+		measure$db2dbDistance(file.path(dir,ChemDb),iddb1=file.path(dir,Main),iddb2=refIddb,file=ref2AllDistFile)
 	
 	#each job needs: R, D, coords, a chunk of distance data
 	solver <- getSolver(r,d,coords)	
 	distConn <- file(ref2AllDistFile,"r")
 
 	numJobs=length(cl)
-	jobSize = as.integer(cdbSize() / numJobs + 1) #make last job short
+	jobSize = as.integer(cdbSize(dir) / numJobs + 1) #make last job short
 
 	dataBlocks = Map(function(x)
 		strsplit(readLines(distConn,jobSize),"\\s+"),1:numJobs)
@@ -226,12 +211,12 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 }
 eiQuery <- function(r,d,refIddb,queries,
 		dir=".",measure=atompairMeasure,
-		K=defK, W = defW, M=defM,L=defL ,T=defT )
+		K=6, W = 1.39564, M=19,L=10,T=30)
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
 		queryDb = file.path(tmpDir,"queries.db")
-		refDb = refDb(refIddb,measure)
+		refDb = refDb(refIddb,measure,dir=dir)
 
 		queryFile=toSdfFile(queries)
 #		querySdfSet=toSdfSet(queries)
@@ -248,12 +233,12 @@ eiQuery <- function(r,d,refIddb,queries,
 		if(debug) print(embeddedQueries)
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
 		hits = search(embeddedQueries,matrixFile,
-							queryDb,measure,K=K,W=W,M=M,L=L,T=T)
+							queryDb,measure,dir,K=K,W=W,M=M,L=L,T=T)
 		if(debug) print(hits)
 
 		targetIds=unlist(lapply(1:length(hits),function(x) hits[[x]][,1]))
 		targetIds=targetIds[targetIds!=-1]
-		targetNames=as.matrix(getNames(targetIds))
+		targetNames=as.matrix(getNames(targetIds,dir))
 		rownames(targetNames)=targetIds
 
 
@@ -293,11 +278,11 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",
 		#reformat query file
 		numAdditions=measure$dbBuilder(toSdfFile(additions),additionsDb)
 		#additionNames = readLines(paste(additionsDb,"names",sep="."))
-		addToChemIndex(additionsDb,numAdditions)
+		addToChemIndex(additionsDb,numAdditions,dir)
 
 		#embed queries in search space
 		embeddedAdditions= embedFromRefs(r,d,refIddb,
-									measure,additionsDb,db2=refDb(refIddb,measure))
+									measure,additionsDb,db2=refDb(refIddb,measure,dir=dir))
 		if(debug) print(dim(embeddedAdditions))
 		if(debug) print(embeddedAdditions)
 		embeddedFile <- file.path(workDir,sprintf("coord.%d-%d",r,d))
@@ -306,17 +291,14 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",
 		write.table(t(embeddedAdditions),
 				file=embeddedFile, append=TRUE,row.names=F,col.names=F)
 		binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
-		#write.table(additionNames,append=TRUE,row.names=F,col.names=F,
-				#quote=F,file=file.path(dir,paste(ChemDb,"names",sep=".")))
 }
 #expects one query per column
-search <- function(queries,matrixFile,queryDb,measure,K,...)
+search <- function(queries,matrixFile,queryDb,measure,K,dir,...)
 {
 		neighbors = lshsearch(queries,matrixFile,K=K,...)
 
-		tmpDir=tempdir()
 		#compute distance between each query and its candidates	
-		Map(function(x) refine(neighbors[x,,],queryDb,x,K,measure,tmpDir),
+		Map(function(x) refine(neighbors[x,,],queryDb,x,K,measure,dir),
 			1:(dim(queries)[2]))
 }
 #fetch coords from refIddb.distmat.coord and call embed
@@ -335,8 +317,9 @@ embed <- function(r,d,coords, measure,...)
 		embeddedQueries = apply(query2RefDists,c(1),
 			function(x) embedCoord(solver,d,x))
 }
-refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir=tempdir())
+refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,dir)
 {
+	tmpDir=tempdir()
 	queryIddb=file.path(tmpDir,"query.iddb")
 	queryDb=file.path(tmpDir,"query.db")
 	candidatesIddb=file.path(tmpDir,"candidates.iddb")
@@ -352,12 +335,9 @@ refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir=tempd
 	#	order of files is important, must match order of lines in 
 	#	coord/matrix files.
 
-#	writeIddb(lshNeighbors[,1],candidatesIddb)
-#	measure$dbSubset(ChemDb,candidatesIddb,candidatesDb)
-#	d=measure$db2dbDistance(queryDb,db2=candidatesDb)
 
 	if(debug) print(paste("query index:",queryIndex))
-	d=multiFileDistance(queryDb,lshNeighbors[,1],measure)
+	d=multiFileDistance(queryDb,lshNeighbors[,1],measure,dir)
 
 	if(debug) print("result distance: ")
 	if(debug) print(str(d))
@@ -365,12 +345,13 @@ refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,tmpDir=tempd
 	limit = min(limit,length(lshNeighbors[,2]))
 	lshNeighbors[order(lshNeighbors[,2])[1:limit],]
 }
-getNames <- function(indexes)
+getNames <- function(indexes,dir)
 	applyOverIndex(indexes,function(filename,indexSet)
-		readLines(paste(filename,".names",sep=""))[indexSet]
+		readLines(paste(filename,".names",sep=""))[indexSet],
+		dir
 	)
 
-multiFileDistance <- function(db1,indexes,measure)
+multiFileDistance <- function(db1,indexes,measure,dir)
 {
 	applyOverIndex(indexes,function(filename,indexSet){
 		tempDir=tempdir()
@@ -378,7 +359,7 @@ multiFileDistance <- function(db1,indexes,measure)
 		measure$dbSubset(filename,file.path(tempDir,"temp.iddb"),
 			file.path(tempDir,"tempdb"))
 		measure$db2dbDistance(db1,db2=file.path(tempDir,"tempdb"))
-	})
+	},dir)
 }
 
 writeIddb <- function(data, file)
@@ -390,10 +371,10 @@ readNames <- function(file) as.numeric(readLines(file))
 # randomly select n reference compounds. Also sample and stash away
 # numSamples query compounds that are not references for later
 # testing
-genRefs <- function(n,numSamples,refFile)
+genRefs <- function(n,numSamples,refFile,dir)
 {
-	testQueryFile <-TestQueries
-	mainIds <- readIddb(Main)
+	testQueryFile <-file.path(dir,TestQueries)
+	mainIds <- readIddb(file.path(dir,Main))
 	queryIds <- if(file.exists(testQueryFile)) {
 			readIddb(testQueryFile)
 		}else{
@@ -405,19 +386,19 @@ genRefs <- function(n,numSamples,refFile)
 	writeIddb(refIds,refFile)
 	queryIds
 }
-refDb <- function(refIddb,measure,refDb=paste(refIddb,"db",sep="."))
+refDb <- function(refIddb,measure,refDb=paste(refIddb,"db",sep="."),dir)
 {
 	if(!file.exists(refDb))
-		measure$dbSubset(ChemDb,refIddb,refDb)
+		measure$dbSubset(file.path(dir,ChemDb),refIddb,refDb)
 	return(refDb)
 }
-genTestQueryResults <- function(measure)
+genTestQueryResults <- function(measure,dir)
 {
-	if(file.exists(TestQueryResults))
+	if(file.exists(file.path(dir,TestQueryResults)))
 		return()
 
-	out=file(TestQueryResults,"w")
-	d=measure$db2dbDistance(ChemDb,iddb1=TestQueries,iddb2=Main)
+	out=file(file.path(dir,TestQueryResults),"w")
+	d=measure$db2dbDistance(file.path(dir,ChemDb),iddb1=file.path(dir,TestQueries),iddb2=file.path(dir,Main))
 	for(i in dim(d)[1])
 		cat(paste(
 				paste(1:dim(d)[2],d[i,],sep=":")[order(d[i,])[1:50000]],
@@ -425,10 +406,10 @@ genTestQueryResults <- function(measure)
 	close(out)
 }
 eiPerformanceTest <- function(r,d,measure=atompairMeasure,
-	dir=".",K=defK, W = defW, M=defM,L=defL ,T=defT )
+	dir=".",K=6, W = 1.39564, M=19,L=10,T=30)
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
-	genTestQueryResults(measure)
+	genTestQueryResults(measure,dir)
 	eucsearch2file(file.path(workDir,sprintf("matrix.%s-%s",r,d)),
 				 file.path(workDir,sprintf("matrix.query.%s-%s",r,d)),
 				 50000,
@@ -441,7 +422,7 @@ eiPerformanceTest <- function(r,d,measure=atompairMeasure,
 
 	embeddedTestQueries = t(as.matrix(read.table(coordQueryFile)))
 	hits = search(embeddedTestQueries,matrixFile,
-						ChemDb,measure,K=K,W=W,M=M,L=L,T=T)
+						file.path(dir,ChemDb),measure,dir,K=K,W=W,M=M,L=L,T=T)
 	out=file(file.path(workDir,"indexed"),"w")
 	#if(debug) print(hits)
 	for(x in hits)

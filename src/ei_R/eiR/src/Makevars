@@ -1,4 +1,5 @@
 
 PKG_CXXFLAGS=  -DNO_MAIN -Iinclude
-PKG_LIBS=-lm -lf2c -L.  -Wl,--whole-archive  -llshkit  -Wl,--no-whole-archive -lgsl -lgslcblas 
+#PKG_LIBS=-lm -lf2c -L.  -Wl,--whole-archive  -llshkit  -Wl,--no-whole-archive -lgsl -lgslcblas 
+PKG_LIBS=-lm -lf2c -L. -lgsl -lgslcblas 
 

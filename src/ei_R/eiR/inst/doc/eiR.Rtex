@@ -5,6 +5,7 @@
 \title{eiR}
 \author{Kevin Horan}
 
+%\VignetteIndexEntry{eiR}
 
 \begin{document}
 \maketitle
@@ -87,6 +88,7 @@ the output would be run-300-100/matrix.300.100.
 
 
 \begin{Scode}
+   library(snow)
    r<- 50
    d<- 40
    matrixFile <- eiMakeDb(r,d,numSamples=20,cl=makeCluster(1,type="SOCK",outfile=""))

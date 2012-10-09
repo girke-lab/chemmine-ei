@@ -22,7 +22,7 @@
    }
   \item{refIddb}{
       An Iddb formatted file containing the reference IDs of the database
-      you wish to query agains. This should almost always be the file:
+      you wish to query against. This should almost always be the file:
       run-\code{r}-\code{d}/<long random string>.cdb.
    }
   \item{queries}{
@@ -37,7 +37,7 @@
    }
   \item{measure}{
       %%     ~~Describe \code{measure} here~~
-      This should be a list containing three functions names "dbBuilder",
+      This should be a list containing three functions named "dbBuilder",
       "dbSubset", and "db2dbDistance". See help on "measure" for details.
    }
 
@@ -86,20 +86,22 @@
    r<- 50
    d<- 40
    j<- 1
-   runDir<-paste("run",r,d,sep="-")
 
    #initialize
    data(sdfsample)
-   eiInit(sdfsample)
+   dir=file.path(tempdir(),"query")
+   dir.create(dir)
+   eiInit(sdfsample,dir=dir)
 
    #create compound db
-   eiMakeDb(r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
+   eiMakeDb(r,d,numSamples=20,dir=dir,cl=makeCluster(j,type="SOCK",outfile=""))
 
+   runDir<-file.path(dir,paste("run",r,d,sep="-"))
    matches<-dir(runDir,pattern=".cdb$",full.names=TRUE)
    refIddb = matches[1]
 
    #find compounds similar two each query
-   results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
+   results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15,dir=dir)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

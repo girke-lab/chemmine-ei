@@ -8,16 +8,22 @@
    measure supports and creates a "data" directory.
 }
 \usage{
-   eiInit(compoundDb, measure = atompairMeasure)
+   eiInit(compoundDb, dir=".", measure = atompairMeasure)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{compoundDb}{
-%%     ~~Describe \code{compoundDb} here~~
-}
+     The filename of a list of compounds in a format understood by the
+     given measure. For the default measure, this will be SDF.
+   }
+  \item{dir}{
+      The directory where the "data" directory lives. Defaults to the
+      current directory.
+   }
   \item{measure}{
-%%     ~~Describe \code{measure} here~~
-}
+      This should be a list containing three functions named "dbBuilder",
+      "dbSubset", and "db2dbDistance". See help on "measure" for details.
+   }
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
@@ -38,7 +44,9 @@
 }
 \examples{
    data(sdfsample)
-   eiInit(sdfsample)
+   dir=file.path(tempdir(),"init")
+   dir.create(dir)
+   eiInit(sdfsample,dir=dir)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

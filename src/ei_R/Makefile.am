@@ -35,7 +35,10 @@ CCSOURCES  = \
 	../euclidean-search/eucsearch.cc \
 	../euclidean-search/recordfile.cc \
 	../lshkit/include \
-	../lshkit/src/liblshkit.a
+	../lshkit/src/apost.cpp \
+	../lshkit/src/char_bit_cnt.cpp  \
+	../lshkit/src/mplsh.cpp   \
+	../lshkit/src/mplsh-model.cpp
 
 EXTRA_DIST = $(MODULENAME)/DESCRIPTION \
 				 $(MODULENAME)/NAMESPACE \
@@ -60,6 +63,7 @@ $(SRCDIR)/r_wrap.cpp : swig.i
 	mkdir -p $(MODULENAME)/R $(MODULENAME)/src
 	$(SWIG) -c++  -module $(MODULENAME) -o $(SRCDIR)/r_wrap.cpp -r swig.i
 	mv $(SRCDIR)/$(MODULENAME).R $(PACKAGEFOLDER)/R/
+	patch $(PACKAGEFOLDER)/R/$(MODULENAME).R $(MODULENAME).R.patch
 
 ccsource : $(CCSOURCES)
 	cp -a $(CCSOURCES) $(SRCDIR)
