@@ -84,9 +84,6 @@ install : all
 dist : all
 	 $(R_PATH) CMD build $(PACKAGEFOLDER)
 
-#rm -f  $(PACKAGEFOLDER)/src/*.o $(PACKAGEFOLDER)/src/*.so
-#tar czf $(PACKAGEFOLDER).tar.gz --exclude=*.swp $(PACKAGEFOLDER)
-
 endif
 
 clean-generic :

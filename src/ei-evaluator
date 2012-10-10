@@ -54,9 +54,13 @@ def update_counter(counter, r, use_plus=False):
 		# we increase <cut> by 1
 		contrib = 0
 		if cut == 0:
+			#print(x_ref[cut])
+			#print(d_target)
+			#print(cut2)
 			if x_ref[cut] in d_target and d_target[x_ref[cut]] <= cut2:
 				contrib += 1
 			captured.append(contrib)
+			#print("first: "+str(contrib))
 		else:
 			# one more compound in reference
 			if x_ref[cut] in d_target and d_target[x_ref[cut]] <= cut2:
@@ -72,9 +76,12 @@ def update_counter(counter, r, use_plus=False):
 						contrib += 1
 			captured.append(captured[cut - 1] + contrib)
 
+	print("captured: "+str(captured))
 	# update <counter> by this call to this function
 	for i in range(len(captured)):
 		counter[i] = counter[i] + captured[i]
+	print(str(counter))
+	print("----------------")
 
 from gzip import GzipFile as zfile
 ref = zfile(sys.argv[1])
@@ -103,10 +110,10 @@ for ii in range(num_queries_to_consider):
 	sys.stderr.write("processing query #%d\n" % (ii+1))
 
 	x_ref = get_ranking(refLine)
-	d_ref = dict()
+	d_ref = dict() # map from rank to index
 	for i in range(len(x_ref)): d_ref[x_ref[i]] = i
 	x_target = get_ranking(targetLine)
-	d_target = dict()
+	d_target = dict() # map from rank to index
 	for i in range(len(x_target)): d_target[x_target[i]] = i
 	
 	# try different extension ratios
@@ -115,6 +122,7 @@ for ii in range(num_queries_to_consider):
 	# try different extensions
 	#for i in range(len(r_plus)):
 	#	update_counter(counters[len(rs) + i], r_plus[i], True)
+	print("=============================================")
 
 # generate evaluation outputs
 for i, r in enumerate(rs):
