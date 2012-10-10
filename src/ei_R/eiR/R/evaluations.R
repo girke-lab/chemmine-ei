@@ -55,6 +55,10 @@ evaluator <- function(reference,result,output=NA)
                      function(y) strsplit(y,":",fixed=TRUE)[[1]][1]))
 
    ###########################################
+   if(!file.exists(reference))
+      stop("could not find file",reference)
+   if(!file.exists(result))
+      stop("could not find file",result)
 
    refFile=gzfile(reference,"r")
    targetFile=gzfile(result,"r")
@@ -102,4 +106,43 @@ evaluator <- function(reference,result,output=NA)
    if(!is.na(output))
       write.csv(ratioSummary,file=paste(output,"csv",sep="."),quote=FALSE)
    return(list(ratios=ratios,ratioSummary=ratioSummary))
+}
+
+compareSearch <- function(file1,file2)
+{
+   getRanking<- function(line) 
+      as.numeric(sapply(line,
+                     function(y) strsplit(y,":",fixed=TRUE)[[1]][1]))
+
+   in1=gzfile(file1,"r")
+   in2=gzfile(file2,"r")
+
+   p=NA
+
+   results=c()
+   while(TRUE){
+      line1=readLines(in1,n=1)
+      line2=readLines(in2,n=1)
+      if(length(line1)==0 || length(line2)==0)
+         break;
+
+      line1=unlist(strsplit(line1,"\\s+"))
+      line2=unlist(strsplit(line2,"\\s+"))
+
+      if(is.na(p)){
+         p=if(length(line1) < length(line2))
+            length(line1)
+         else
+            length(line2)
+      }
+
+      ind1=getRanking(line1[1:p])
+      ind2=getRanking(line2[1:p])
+
+      results=c(results,length(intersect(ind1,ind2))/p)
+   }
+   close(in2)
+   close(in1)
+   print(results)
+   return(results)
 }

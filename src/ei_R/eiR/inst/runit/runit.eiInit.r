@@ -63,11 +63,13 @@ test.ca.eiQuery <- function(){
    checkEquals(results$distance[16],0)
 }
 
-#test.da.eiPerformanceTest <- function() {
-#   r = eiPerformanceTest(r,d,K=22)
-#   checkMatrix("eucsearch.50-40",20,N)
-#   checkMatrix("indexed",20,22)
-#}
+test.da.eiPerformanceTest <- function() {
+   r = eiPerformanceTest(r,d,K=22)
+   checkMatrix("chemical-search.results$",20, N,"data")
+   checkMatrix("eucsearch.50-40",20,N)
+   checkMatrix("^indexed$",20,22)
+   checkMatrix("indexed.performance",20,1)
+}
 test.ea.eiAdd<- function(){
 
    data(example_compounds)
@@ -95,8 +97,8 @@ findRefIddb <- function(runDir){
    checkEquals(length(matches),1)
    matches[1]
 }
-checkMatrix <- function(pattern,x,y){
-   matches<-dir(runDir,pattern=pattern,full.names=T)
+checkMatrix <- function(pattern,x,y,dir=runDir){
+   matches<-dir(dir,pattern=pattern,full.names=T)
    checkEquals(length(matches),1)
    file <- matches[1]
    checkTrue(file.info(file)$size>0)

@@ -397,11 +397,17 @@ genTestQueryResults <- function(measure,dir)
 	if(file.exists(file.path(dir,TestQueryResults)))
 		return()
 
+#TODO: This won't work if called afater eiAdd has been used
+# not sure if we really need to handle this or not.
+
 	out=file(file.path(dir,TestQueryResults),"w")
-	d=measure$db2dbDistance(file.path(dir,ChemDb),iddb1=file.path(dir,TestQueries),iddb2=file.path(dir,Main))
-	for(i in dim(d)[1])
+	d=measure$db2dbDistance(file.path(dir,ChemDb),
+		iddb1=file.path(dir,TestQueries),iddb2=file.path(dir,Main))
+	print(paste("dim(d): ",dim(d)))
+	maxLength=min(dim(d)[2],50000)
+	for(i in 1:(dim(d)[1]))
 		cat(paste(
-				paste(1:dim(d)[2],d[i,],sep=":")[order(d[i,])[1:50000]],
+				paste(1:dim(d)[2],d[i,],sep=":")[order(d[i,])[1:maxLength]],
 				collapse=" "),"\n",file=out)	
 	close(out)
 }
@@ -409,13 +415,15 @@ eiPerformanceTest <- function(r,d,measure=atompairMeasure,
 	dir=".",K=6, W = 1.39564, M=19,L=10,T=30)
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
+	eucsearch=file.path(workDir,sprintf("eucsearch.%s-%s",r,d))
 	genTestQueryResults(measure,dir)
 	eucsearch2file(file.path(workDir,sprintf("matrix.%s-%s",r,d)),
 				 file.path(workDir,sprintf("matrix.query.%s-%s",r,d)),
-				 50000,
-				 file.path(workDir,sprintf("eucsearch.%s-%s",r,d)))
+				 50000,eucsearch)
 
 	#evaluator TestQueryResuts eucsearch-r-d recall
+	evaluator(file.path(dir,TestQueryResults),eucsearch,
+		file.path(workDir,"recall"))
 
 	matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
 	coordQueryFile =file.path(workDir,sprintf("coord.query.%d-%d",r,d))
@@ -423,13 +431,18 @@ eiPerformanceTest <- function(r,d,measure=atompairMeasure,
 	embeddedTestQueries = t(as.matrix(read.table(coordQueryFile)))
 	hits = search(embeddedTestQueries,matrixFile,
 						file.path(dir,ChemDb),measure,dir,K=K,W=W,M=M,L=L,T=T)
-	out=file(file.path(workDir,"indexed"),"w")
+	indexed=file.path(workDir,"indexed")
+	out=file(indexed,"w")
 	#if(debug) print(hits)
 	for(x in hits)
 		cat(paste(x[,1],x[,2],sep=":",collapse=" "),"\n",file=out)
 	close(out)
 
 	#indexed_evalutator TestQueryResults indexed indexed.performance
+	write.table(compareSearch(file.path(dir,TestQueryResults),indexed),
+			file=file.path(workDir,"indexed.performance"),
+			row.names=F,col.names=F,quote=F)
+
 
 	return(hits)
 	
