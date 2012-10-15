@@ -143,6 +143,6 @@ compareSearch <- function(file1,file2)
    }
    close(in2)
    close(in1)
-   print(results)
+   #print(results)
    return(results)
 }

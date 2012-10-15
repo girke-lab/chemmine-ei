@@ -10,8 +10,8 @@ ChemIndex = file.path(DataDir,paste(ChemPrefix,".index",sep=""))
 Main = file.path(DataDir,"main.iddb")
 
 
-debug=TRUE
-#debug=FALSE
+#debug=TRUE
+debug=FALSE
 
 cdbSize <- function(dir=".") {
 	getSegmentSize(file.path(dir,ChemDb),dir)
@@ -118,7 +118,6 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
 	if(!file.exists(workDir))
 		dir.create(workDir)
-	print(paste("dir",dir,"workDir",workDir))
 	matrixFile = file.path(workDir,sprintf("matrix.%d-%d",r,d))
 
 	if(file.exists(matrixFile))
@@ -403,7 +402,7 @@ genTestQueryResults <- function(measure,dir)
 	out=file(file.path(dir,TestQueryResults),"w")
 	d=measure$db2dbDistance(file.path(dir,ChemDb),
 		iddb1=file.path(dir,TestQueries),iddb2=file.path(dir,Main))
-	print(paste("dim(d): ",dim(d)))
+	if(debug) print(paste("dim(d): ",dim(d)))
 	maxLength=min(dim(d)[2],50000)
 	for(i in 1:(dim(d)[1]))
 		cat(paste(
@@ -442,10 +441,6 @@ eiPerformanceTest <- function(r,d,measure=atompairMeasure,
 	write.table(compareSearch(file.path(dir,TestQueryResults),indexed),
 			file=file.path(workDir,"indexed.performance"),
 			row.names=F,col.names=F,quote=F)
-
-
-	return(hits)
-	
 }
 
 nextChemDb <- function(dir=".")

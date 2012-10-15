@@ -1,7 +1,7 @@
 Package: eiR
 Type: Package
 Title: EI for R
-Version: 0.0.1
+Version: 0.99.0
 Date: 2012-08-29
 Author: Kevin Horan
 Maintainer: Kevin Horan <khoran@cs.ucr.edu>
