@@ -4,8 +4,7 @@
    Test the performance of LSH search
 }
 \description{
-   Compares LSH search against both exhustive euclidean search and non-indexed
-   nearest neighbor. %TODO: CHECK THIS
+   Tests the performance of embedding and LSH.
 }
 \usage{
    eiPerformanceTest(r, d, measure = atompairMeasure, dir = ".", 
@@ -35,11 +34,11 @@
    }
   \item{W}{
      Tunable LSH parameter. See LSHKIT page for details.
-     {http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html}
+     \url{http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html}
    }
   \item{M}{
      Tunable LSH parameter. See LSHKIT page for details.
-     {http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html}
+     \url{http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html}
    }
   \item{L}{
      Number of hash tables
@@ -49,10 +48,41 @@
    }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+   This will perform two different tests.
+   The first tests the embedding results in similarity search. The way this works is by
+   approximating 1,000 random similarity searches (determined by
+   data/test_queries.iddb) by nearest neighbor search using the coordinates
+   from the embedding results. The search results are then compared to the
+   reference search results (chemical-search.results.gz). 
+
+   The comparison results are summarized in two types of files. The first
+   type lists the recall for different k values, k being the number of
+   numbers to retrieve. These files are named as ``recall-ratio-k''.
+   For example, if the recall is 70% for top-100
+   compound search - 70 of the 100 results are among the real top-100
+   compounds - then the value at line 100 is 0.7. Several relaxation ration
+   are used, each generating a file in this form. For instance,
+   recall.ratio-10 is the file listing the recalls when relaxation
+   ratio is 10. The other file, recall.csv, lists recalls of different
+   relaxation ratios in one file by limiting to selected k value. In this
+   CSV file, the rows correspond to different relaxation ratios, and the
+   columns are different k values. You will be able to pick an appropriate
+   relaxation ratio for the k values you are interested in.
+
+
+   The second test measures the performance of the Locality Sensitive Hash (LSH).
+   The results for lsh-assisted search will be in
+   run-r-d/indexed.performance. It's a 1,000-line files of recall values. Each
+   line corresponds to one test query.  LSH search performance is
+   highly sensitive to your LSH parameters (K, W, M, L, T). The
+   default parameters are listed in the man page for
+   \code{eiPerformanceTest}. When you have your embedding result in
+   a matrix file, you should follow instruction on
+   \url{http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html} to
+   find the best values for these parameters.
 }
 \value{
-   TBD
+   No value is returned. Creates files in \code{dir} ("run-r-d" by default).
 }
 \author{
    Kevin Horan
@@ -76,7 +106,8 @@
    eiInit(sdfsample,dir=dir)
 
    #create compound db
-   eiMakeDb(r,d,numSamples=20,dir=dir,cl=makeCluster(j,type="SOCK",outfile=""))
+   eiMakeDb(r,d,numSamples=20,dir=dir,
+      cl=makeCluster(j,type="SOCK",outfile=""))
 
    eiPerformanceTest(r,d,dir=dir,K=22)
 }

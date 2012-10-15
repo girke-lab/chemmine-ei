@@ -7,8 +7,9 @@
    Finds similar compounds for each query.
 }
 \usage{
-   eiQuery(r, d, refIddb, queries, dir = ".", measure = atompairMeasure, 
-      K = 6, W = 1.39564, M = 19, L = 10, T = 30)
+   eiQuery(r, d, refIddb, queries, dir = ".", 
+      measure = atompairMeasure, K = 6, W = 1.39564, 
+      M = 19, L = 10, T = 30)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -46,11 +47,11 @@
    }
   \item{W}{
      Tunable LSH parameter. See LSHKIT page for details.
-     {http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html}
+     \url{http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html}
    }
   \item{M}{
      Tunable LSH parameter. See LSHKIT page for details.
-     {http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html}
+     \url{http://lshkit.sourceforge.net/dd/d2a/mplsh-tune_8cpp.html}
    }
   \item{L}{
      Number of hash tables
@@ -60,7 +61,9 @@
    }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+   As with \code{eiInit}, queries can be specified as an SDFset or
+   a filename. You need to identify the reference IDDB file, it will
+   be the file under the run directory ending in ``.cdb''. 
 }
 \value{
    Returns a data frame with columns 'query', 'target', and
@@ -94,7 +97,8 @@
    eiInit(sdfsample,dir=dir)
 
    #create compound db
-   eiMakeDb(r,d,numSamples=20,dir=dir,cl=makeCluster(j,type="SOCK",outfile=""))
+   eiMakeDb(r,d,numSamples=20,dir=dir,
+      cl=makeCluster(j,type="SOCK",outfile=""))
 
    runDir<-file.path(dir,paste("run",r,d,sep="-"))
    matches<-dir(runDir,pattern=".cdb$",full.names=TRUE)

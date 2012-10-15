@@ -1,7 +1,39 @@
+52,53c52,53
+< if(length(getClassDef("EnumerationValue")) == 0) 
+<   setClass("EnumerationValue", contains = "integer")
+---
+> #if(length(getClassDef("EnumerationValue")) == 0) 
+> #  setClass("EnumerationValue", contains = "integer")
 65c65
 < SWIG_createNewRef = 
 ---
 > RSWIG_createNewRef = 
+81,92c81,92
+< defineEnumeration =
+< function(name, .values, where = topenv(parent.frame()), suffix = "Value")
+< {
+<    # Mirror the class definitions via the E analogous to .__C__
+<   defName = paste(".__E__", name, sep = "")
+<   assign(defName,  .values,  envir = where)
+< 
+<   if(nchar(suffix))
+<     name = paste(name, suffix, sep = "")
+< 
+<   setClass(name, contains = "EnumerationValue", where = where)
+< }
+---
+> #defineEnumeration =
+> #function(name, .values, where = topenv(parent.frame()), suffix = "Value")
+> #{
+> #   # Mirror the class definitions via the E analogous to .__C__
+> #  defName = paste(".__E__", name, sep = "")
+> #  assign(defName,  .values,  envir = where)
+> #
+> #  if(nchar(suffix))
+> #    name = paste(name, suffix, sep = "")
+> #
+> #  setClass(name, contains = "EnumerationValue", where = where)
+> #}
 117c117
 < setClass("SWIGArray", representation(dims = "integer"), contains = "ExternalReference")
 ---
@@ -10,6 +42,12 @@
 < setMethod("length", "SWIGArray", function(x) x@dims[1])
 ---
 > #etMethod("length", "SWIGArray", function(x) x@dims[1])
+122,123c122,123
+< defineEnumeration("SCopyReferences",
+<                    .values = c( "FALSE" = 0, "TRUE" = 1, "DEEP" = 2))
+---
+> #defineEnumeration("SCopyReferences",
+>                    #.values = c( "FALSE" = 0, "TRUE" = 1, "DEEP" = 2))
 168,179c168,179
 < setMethod('[', "ExternalReference",
 < function(x,i,j, ..., drop=TRUE) 
