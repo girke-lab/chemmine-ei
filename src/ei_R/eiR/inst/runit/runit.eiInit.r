@@ -47,16 +47,7 @@ test.ba.eiMakeDb <- function() {
 }
 test.ca.eiQuery <- function(){
 
-  # data(example_compounds)
-  # cat(
-  #    paste(
-  #       paste(
-  #          example_compounds[1:which(example_compounds=="$$$$")[2]],
-  #          collapse="\n"),
-  #       "\n",sep=""),
-  #    file="example_queries.sdf")
    refIddb = findRefIddb(runDir)
-   #results = eiQuery(r,d,refIddb,"example_queries.sdf",K=15)
    results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
    checkTrue(length(results$distance) != 0)
    checkTrue(all(results$distance <= 1))
@@ -74,9 +65,9 @@ test.ea.eiAdd<- function(){
 
    data(example_compounds)
    cat(paste(paste(example_compounds,collapse="\n"),"\n",sep=""),file="example_compounds.sdf")
-options(warn=-1)
+   options(warn=-1)
    examples=read.SDFset("example_compounds.sdf")
-options(warn=2)
+   options(warn=2)
    eiAdd(r,d,findRefIddb(runDir),examples[1:2])
 
    results = eiQuery(r,d,findRefIddb(runDir),examples[1:2])

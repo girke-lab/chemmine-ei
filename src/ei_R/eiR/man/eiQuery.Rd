@@ -8,7 +8,7 @@
 }
 \usage{
    eiQuery(r, d, refIddb, queries, dir = ".", 
-      measure = atompairMeasure, K = 6, W = 1.39564, 
+      measure = atompairMeasure, K = 200, W = 1.39564, 
       M = 19, L = 10, T = 30)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -43,7 +43,7 @@
    }
 
   \item{K}{
-      Number of neighbors
+     The number of results to return.
    }
   \item{W}{
      Tunable LSH parameter. See LSHKIT page for details.

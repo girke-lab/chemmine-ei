@@ -8,7 +8,7 @@
 }
 \usage{
    eiPerformanceTest(r, d, measure = atompairMeasure, dir = ".", 
-      K = 6, W = 1.39564, M = 19, L = 10, T = 30)
+      K = 200, W = 1.39564, M = 19, L = 10, T = 30)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -30,7 +30,7 @@
    }
 
   \item{K}{
-      Number of neighbors
+     Number of search results to use for LSH performance test.
    }
   \item{W}{
      Tunable LSH parameter. See LSHKIT page for details.

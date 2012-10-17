@@ -210,7 +210,7 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 }
 eiQuery <- function(r,d,refIddb,queries,
 		dir=".",measure=atompairMeasure,
-		K=6, W = 1.39564, M=19,L=10,T=30)
+		K=200, W = 1.39564, M=19,L=10,T=30)
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
@@ -247,7 +247,8 @@ eiQuery <- function(r,d,refIddb,queries,
 #			}
 #		)
 
-		numHits=sum(sapply(hits,function(x) sum(x[,1]==-1)))
+		numHits=sum(sapply(hits,function(x) sum(x[,1]!=-1)))
+		#print(paste("numHits:",numHits))
 		#fetch names for queries and hits and put in a data frame
 		results = data.frame(query=rep(NA,numHits),
 								  target = rep(NA,numHits),
@@ -294,7 +295,8 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",
 #expects one query per column
 search <- function(queries,matrixFile,queryDb,measure,K,dir,...)
 {
-		neighbors = lshsearch(queries,matrixFile,K=K,...)
+		neighbors = lshsearch(queries,matrixFile,K=5*K,...)
+		#print(paste("got ",paste(dim(neighbors),callapse=","),"neighbors back from lshsearch"))
 
 		#compute distance between each query and its candidates	
 		Map(function(x) refine(neighbors[x,,],queryDb,x,K,measure,dir),
@@ -342,6 +344,8 @@ refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,dir)
 	if(debug) print(str(d))
 	lshNeighbors[,2]=d #measure$db2dbDistance(queryDb,db2=candidatesDb)
 	limit = min(limit,length(lshNeighbors[,2]))
+	#print(paste("num dists:",length(lshNeighbors[,2]),
+			#"limit:",limit))
 	lshNeighbors[order(lshNeighbors[,2])[1:limit],]
 }
 getNames <- function(indexes,dir)
@@ -411,7 +415,7 @@ genTestQueryResults <- function(measure,dir)
 	close(out)
 }
 eiPerformanceTest <- function(r,d,measure=atompairMeasure,
-	dir=".",K=6, W = 1.39564, M=19,L=10,T=30)
+	dir=".",K=200, W = 1.39564, M=19,L=10,T=30)
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
 	eucsearch=file.path(workDir,sprintf("eucsearch.%s-%s",r,d))
