@@ -33,7 +33,7 @@ COORD_TO_BINARY = os.path.join(BINDIR, "ei-bin_formatter")
 INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
 COORDSERVER = os.path.join(BINDIR, "ei-coord_server")
 SINGLE_SEARCH = os.path.join(BINDIR,"ei-single_search")
-K = 600
+K = 200
 
 execfile(getConfig())
 
@@ -50,7 +50,7 @@ TEST_QUERIES = os.path.join(DATADIR, 'test_query.iddb')
 CHEMICAL_SEARCH_RESULTS = os.path.join(DATADIR, 'chemical-search.results.gz')
 MAX_EUCSEARCH_RESULTS = 50000
 
-lsh_param = "%s -K %d" % (lsh_param,K)
+lsh_param = "%s -K %d" % (lsh_param,5*K)
 
 class _Cdbsize(object):
 	"""a callable that returns the database size and remembers it"""
