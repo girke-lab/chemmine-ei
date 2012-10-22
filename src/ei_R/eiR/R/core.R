@@ -111,28 +111,50 @@ eiInit <- function(compoundDb,dir=".",measure=atompairMeasure)
 	}
 }
 
-eiMakeDb <- function(r,d,measure=atompairMeasure,
-				dir=".",refIddb=NA,numSamples=cdbSize(dir)*0.1,
+eiMakeDb <- function(refs,d,measure=atompairMeasure,
+				dir=".",numSamples=cdbSize(dir)*0.1,
 				cl=makeCluster(1,type="SOCK"))
 {
-	workDir=file.path(dir,paste("run",r,d,sep="-"))
-	if(!file.exists(workDir))
-		dir.create(workDir)
+	workDir=NA
+	createWorkDir <- function(){
+		workDir<<-file.path(dir,paste("run",r,d,sep="-"))
+		if(!file.exists(workDir))
+			dir.create(workDir)
+	}
+
+	if(is.character(refs)){ #assume its a filename
+		refIddb=refs
+		refIds=readIddb(refs)
+		r=length(refIds)
+		createWorkDir()
+	}else if(is.numeric(refs)){
+		if(length(refs)==0){ #assume its the number of refs to use
+			stop(paste("variable refs must be posative, found ",refs))
+		}else if(length(refs)==1){ #assume its the number of refs to use
+			r=refs
+			createWorkDir()
+			refIddb=genRefName(workDir)
+			refIds=genRefs(r,refIddb,dir)
+		}else{ #refs is a vector of compount indexes to use a referances
+			refIds=refs
+			r=length(refIds)
+			createWorkDir()
+			refIddb=genRefName(workDir)
+			writeIddb(refIds,refIddb)
+		}
+	}else{
+		stop(paste("don't know how to handle refs:",refs))
+	}
+
 	matrixFile = file.path(workDir,sprintf("matrix.%d-%d",r,d))
 
 	if(file.exists(matrixFile))
 		stop(paste("found existing",matrixFile),"stopping")
 
-	queryIds=NA
-	#get reference compounds
-	if(is.na(refIddb)){
-		prefix<- paste(sample(c(0:9,letters),32,replace=TRUE),collapse="")
-		refIddb=file.path(workDir,paste(prefix,"cdb",sep="."))
-		queryIds=genRefs(r,numSamples,refIddb,dir)
-	}
-	if(is.na(queryIds[1]))
-		queryIds=readIddb(file.path(dir,TestQueries))
-	
+
+	queryIds=genTestQueryIds(numSamples,dir,refIds)
+
+
 	selfDistFile <- paste(refIddb,"distmat",sep=".")
 	coordFile <- paste(selfDistFile,"coord",sep=".")
 	ref2AllDistFile <- paste(refIddb,"distances",sep=".")
@@ -156,7 +178,6 @@ eiMakeDb <- function(r,d,measure=atompairMeasure,
 		write.table(coords,file=coordFile,row.names=F,col.names=F)
 		coords
 	}
-
 	#compute dist between refs and all compounds
 	if(!file.exists(ref2AllDistFile))
 		measure$db2dbDistance(file.path(dir,ChemDb),iddb1=file.path(dir,Main),iddb2=refIddb,file=ref2AllDistFile)
@@ -374,21 +395,30 @@ readNames <- function(file) as.numeric(readLines(file))
 # randomly select n reference compounds. Also sample and stash away
 # numSamples query compounds that are not references for later
 # testing
-genRefs <- function(n,numSamples,refFile,dir)
+genTestQueryIds <- function(numSamples,dir,refIds=c())
 {
 	testQueryFile <-file.path(dir,TestQueries)
 	mainIds <- readIddb(file.path(dir,Main))
-	queryIds <- if(file.exists(testQueryFile)) {
-			readIddb(testQueryFile)
-		}else{
-			ids <- sort(sample(mainIds,numSamples))
-			writeIddb(ids,testQueryFile)
-			ids
-		}
-	refIds = sort(sample(setdiff(mainIds,queryIds),n))
-	writeIddb(refIds,refFile)
+	set=setdiff(mainIds,refIds)
+	if(numSamples < 0 || numSamples > length(set)) stop(paste("trying to take more samples than there are compounds available",numSamples,length(set)))
+	queryIds <- sort(sample(set,numSamples))
+	writeIddb(queryIds,testQueryFile)
 	queryIds
 }
+genRefs <- function(n,refFile,dir,queryIds=c())
+{
+	mainIds <- readIddb(file.path(dir,Main))
+	set=setdiff(mainIds,queryIds)
+	if(n < 0 || n > length(set)) stop(paste("found more refereneces than compound candidates",n,length(set)))
+	refIds = sort(sample(set,n))
+	writeIddb(refIds,refFile)
+	refIds
+}
+genRefName <- function(workDir)
+	file.path(workDir,
+				 paste(paste(sample(c(0:9,letters),32,replace=TRUE),
+								 collapse=""),
+						 "cdb",sep="."))
 refDb <- function(refIddb,measure,refDb=paste(refIddb,"db",sep="."),dir)
 {
 	if(!file.exists(refDb))

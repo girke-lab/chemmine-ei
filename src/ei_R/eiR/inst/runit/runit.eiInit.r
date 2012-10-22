@@ -39,11 +39,21 @@ test.ba.eiMakeDb <- function() {
       Map(function(x)
          checkTrue(!file.exists(file.path(runDir,paste("q",r,d,x,sep="-")))),1:j)
    }
-   t=system.time(eiMakeDb(r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile="")))
+	print("by number")
+   eiMakeDb(r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
    runChecks()
-   print(t)
-   #system.time(eiMakeDb(r,d,cl=makeCluster(j,type="SOCK",outfile="")))
-   #runChecks()
+
+	unlink(runDir,recursive=TRUE)
+	print("by vector")
+   eiMakeDb(1:r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
+   runChecks()
+
+	unlink(runDir,recursive=TRUE)
+   checkException(eiMakeDb(-2,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile="")))
+	eiR:::writeIddb(1:r,file.path(runDir,"reference_file.cdb"))
+	print("by filen name")
+   eiMakeDb(file.path(runDir,"reference_file.cdb"),d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
+   runChecks()
 }
 test.ca.eiQuery <- function(){
 
