@@ -34,6 +34,7 @@ INDEXED_SEARCH_EVALUATOR = os.path.join(BINDIR, "ei-comparesearch")
 COORDSERVER = os.path.join(BINDIR, "ei-coord_server")
 SINGLE_SEARCH = os.path.join(BINDIR,"ei-single_search")
 K = 200
+CHEM_PREFIX="chem"
 
 execfile(getConfig())
 
@@ -44,7 +45,8 @@ localConfig = os.path.join(DATADIR,"eirc")
 if os.path.exists(localConfig):
 	execfile(localConfig)
 
-CDB = os.path.join(DATADIR, 'chem.db')
+CDB = os.path.join(DATADIR, CHEM_PREFIX+'.db')
+CHEM_INDEX = os.path.join(DATADIR, CHEM_PREFIX+'.index')
 IDDB = os.path.join(DATADIR, 'main.iddb')
 TEST_QUERIES = os.path.join(DATADIR, 'test_query.iddb')
 CHEMICAL_SEARCH_RESULTS = os.path.join(DATADIR, 'chemical-search.results.gz')
@@ -638,6 +640,38 @@ def init(input_db,m):
 			f.write(str(i)+"\n")
 		f.close()
 
+#def addToChemIndex(filename,size):
+#	f=file(CHEM_INDEX,"a")
+#	f.write("%s\t%d\n" % (os.path.basename(filename),size))
+#	f.close()
+#
+#def getSegmentSize(filename):
+#	f=file(CHEM_INDEX,"r")
+#	file_base=os.path.basename(filename)
+#	for line in f:
+#		(name,size)=line.split()
+#		if name == filename:
+#			return size
+#	error("no entry found for "+file_base)
+#	return -1
+#
+#def applyOverIndex(indexValues,f):
+#	index = [ line.split() for line in file(CHEM_INDEX) ]
+#	print index
+#	sums = [ reduce(lambda x,y:x[1]+y[1],index[0:(i+1)])  for i in range(len(index)) ]
+#	print sums
+#	owners = dict( (bisect.bisect_left(sums,indexValue), i)  for i in len(indexValues) )
+#	print owners
+#
+#	results = None * len(indexValues)
+#	for (owner,indexSet) in owners.iteritems():
+#		offset = 0 if owner==0 else sums[owner-1]
+#		results[indexSet] = f(index[owner], [indexValues[i]-offset for i in indexSet])
+#	return result
+		
+
+
+
 def check_data_exists():
 	if not os.path.isfile(CDB):
 		sys.stderr.write("No chem.db file found. Please create a database with the --init option\n")
@@ -685,6 +719,7 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	if opts.r is None or opts.d is None:
+#		applyOverIndex([2,3,27,10],lambda x,y: sys.stdout.write(str(x)+str(y)) )
 		sys.stderr.write("must specify r and d. Use --help to see usage\n")
 		sys.exit(1)
 	try:

@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <sstream>
 
+#define MAX_LINE_LENGTH 100000
+
 #ifndef HAS_OPENBABEL
 static char elements[112][3] = {
 	    "R",
@@ -122,6 +124,7 @@ static char elements[112][3] = {
 	    "Rg"	
 };
 
+
 void parse_line_4(const char* buf, int& n_atoms, int& n_bonds)
 {
 	char num[4];
@@ -199,15 +202,15 @@ void parse_sdf(std::istream & ifs, Molecule ** mol)
 {
 	int line_cntr = 0;
 	if (ifs.good()) {
-		char buf[82];
+		char buf[MAX_LINE_LENGTH+2];
 		int n_atoms = 0;
 		int n_bonds = 0;
 		while (true) {
-			ifs.getline(buf, 82);
+			ifs.getline(buf, MAX_LINE_LENGTH+2);
 			line_cntr ++;
-			if (ifs.fail() or strlen(buf) > 80) {
-				if (strlen(buf) > 80) 
-					std::cerr << "SDF not well-formatted : line exceeds 80 characters" << " len=" << strlen(buf) << " last=" << buf[strlen(buf) - 1] << std::endl;
+			if (ifs.fail() or strlen(buf) > MAX_LINE_LENGTH) {
+				if (strlen(buf) > MAX_LINE_LENGTH) 
+					std::cerr << "SDF not well-formatted : line exceeds "<<MAX_LINE_LENGTH<<" characters" << " len=" << strlen(buf) << " last=" << buf[strlen(buf) - 1] << std::endl;
 				else
 					std::cerr << "SDF not well-formatted : error when reading line " << line_cntr << std::endl;
 				delete (*mol);
@@ -316,15 +319,15 @@ new_mol_from_smiles(const char* smiles)
 int sdf_iter(std::fstream& ifs, std::string& sdf, int& line_cntr)
 {
 	sdf.clear();
-	char line[82]; line[81] = '\0';
+	char line[MAX_LINE_LENGTH+2]; line[MAX_LINE_LENGTH+1] = '\0';
 	char buf_4[5]; buf_4[4] = '\0';
 
-	ifs.getline(line, 82);
+	ifs.getline(line, MAX_LINE_LENGTH+2);
 	line_cntr ++;
 
 	while (ifs.good() or ifs.fail()) {
-		if (strlen(line) > 80) {
-			std::cerr << "Line exceeds 80 characters when reading line "
+		if (strlen(line) > MAX_LINE_LENGTH) {
+			std::cerr << "Line exceeds "<<MAX_LINE_LENGTH<<" characters when reading line "
 				<< line_cntr << std::endl;
 			sdf.clear();
 			return 0;
@@ -337,7 +340,7 @@ int sdf_iter(std::fstream& ifs, std::string& sdf, int& line_cntr)
 			return 1;
 		}
 
-		ifs.getline(line, 82);
+		ifs.getline(line, MAX_LINE_LENGTH+2);
 		line_cntr ++;
 	}
 	return 0;
