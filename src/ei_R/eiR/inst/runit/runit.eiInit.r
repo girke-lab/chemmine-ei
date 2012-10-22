@@ -49,7 +49,6 @@ test.ba.eiMakeDb <- function() {
    runChecks()
 
 	unlink(runDir,recursive=TRUE)
-   checkException(eiMakeDb(-2,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile="")))
 	eiR:::writeIddb(1:r,file.path(runDir,"reference_file.cdb"))
 	print("by filen name")
    eiMakeDb(file.path(runDir,"reference_file.cdb"),d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
