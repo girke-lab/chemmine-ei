@@ -295,7 +295,7 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",
 #expects one query per column
 search <- function(queries,matrixFile,queryDb,measure,K,dir,...)
 {
-		neighbors = lshsearch(queries,matrixFile,K=5*K,...)
+		neighbors = lshsearch(queries,matrixFile,K=2*K,...)
 		#print(paste("got ",paste(dim(neighbors),callapse=","),"neighbors back from lshsearch"))
 
 		#compute distance between each query and its candidates	
