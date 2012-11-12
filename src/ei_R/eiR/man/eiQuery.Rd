@@ -15,11 +15,11 @@
 \arguments{
   \item{r}{
       The number of references used to build the database you wish to
-      query agains.
+      query against.
    }
   \item{d}{
       The number of dimensions used to build the database you wish to
-      query agains.
+      query against.
    }
   \item{refIddb}{
       An Iddb formatted file containing the reference IDs of the database

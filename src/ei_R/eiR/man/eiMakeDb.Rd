@@ -8,25 +8,23 @@
    databbase with \code{r} reference compounds in \code{d} dimensions.
 }
 \usage{
-   eiMakeDb(r, d, measure = atompairMeasure, dir = ".", 
-             refIddb = NA, numSamples = cdbSize(dir) * 0.1, 
+   eiMakeDb(refs, d, measure = atompairMeasure, dir = ".", 
+              numSamples = cdbSize(dir) * 0.1, 
              cl = makeCluster(1, type = "SOCK"))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{r}{
-      The number of references used to build the database you wish to
-      query agains.
+  \item{refs}{
+		The reference compounds to use to build the database you wish to query against.
+		\code{Refs} can be one of three things. It can be a filename of an iddb file
+		giving the index values of the reference compounds to use, it can be vector of 
+		index values, or it can be a scalar value giving the number of randomly selected
+		references to use.
    }
   \item{d}{
       The number of dimensions used to build the database you wish to
-      query agains.
+      query against.
    }
-  \item{refIddb}{
-      An Iddb formatted file containing the reference IDs to use when
-      creating this database. If not given, the reference IDs will be
-      randomly chosen.
-  }
   \item{dir}{
       The directory where the "data" directory lives. Defaults to the
       current directory.
