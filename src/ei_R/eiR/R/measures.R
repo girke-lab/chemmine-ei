@@ -56,3 +56,7 @@ rawFingerprintMeasure = list(
 	}
 
 )
+
+sdf2ap = function(sdfset) {
+
+}

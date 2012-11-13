@@ -13,6 +13,10 @@ Main = file.path(DataDir,"main.iddb")
 #debug=TRUE
 debug=FALSE
 
+# Notes
+#  Need function to produce descriptors from sdf or smile
+#  Need function to compute distances between descriptors
+
 cdbSize <- function(dir=".") {
 	getSegmentSize(file.path(dir,ChemDb),dir)
 }
@@ -70,16 +74,26 @@ getIndexOwners <- function(indexValues,dir=".")
 	list(names=rownames(index),sums=sums,
 		  owners=rownames(index)[sapply(indexValues,function(x) sums[,sums[2,]>=x][1])])
 }
-eiInit <- function(compoundDb,dir=".",measure=atompairMeasure)
+eiInit <- function(compoundDb,dir=".",format="SDF",genDescriptor=sdf2ap)
 {
 	if(!file.exists(file.path(dir,DataDir)))
 		dir.create(file.path(dir,DataDir))
 
-	if(!file.exists(file.path(dir,ChemDb))){
-		numCompounds = measure$dbBuilder(toSdfFile(compoundDb),file.path(dir,ChemDb))
-		writeIddb(1:numCompounds,file.path(dir,Main))
-		addToChemIndex(file.path(dir,ChemDb),numCompounds,dir)
+	conn = initDb(file.path(dir,ChemDb))
+	if(format == "SDF"){
+		checksums = loadSdf(conn,compoundDb, descriptor=sdf2ap)
+	}else if(format == "SMILE"){
+		checksums = loadSmile(conn,compoundDb,descriptor=sdf2ap)
+	}else{
+		stop(paste("unknown input format:",format," supported formats: SDF, SMILE"))
 	}
+
+	writeIddb(findCompoundByChecksum(checksums),file.path(dir,Main))
+
+	#if(!file.exists(file.path(dir,ChemDb))){
+		#numCompounds = measure$dbBuilder(toSdfFile(compoundDb),file.path(dir,ChemDb))
+		#addToChemIndex(file.path(dir,ChemDb),numCompounds,dir)
+	#}
 }
 
 eiMakeDb <- function(refs,d,measure=atompairMeasure,
@@ -106,7 +120,7 @@ eiMakeDb <- function(refs,d,measure=atompairMeasure,
 			createWorkDir()
 			refIddb=genRefName(workDir)
 			refIds=genRefs(r,refIddb,dir)
-		}else{ #refs is a vector of compount indexes to use a referances
+		}else{ #refs is a vector of compound indexes to use a referances
 			refIds=refs
 			r=length(refIds)
 			createWorkDir()
@@ -114,7 +128,7 @@ eiMakeDb <- function(refs,d,measure=atompairMeasure,
 			writeIddb(refIds,refIddb)
 		}
 	}else{
-		stop(paste("don't know how to handle refs:",refs))
+		stop(paste("don't know how to handle refs:",str(refs)))
 	}
 
 	matrixFile = file.path(workDir,sprintf("matrix.%d-%d",r,d))
