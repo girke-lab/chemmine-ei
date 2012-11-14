@@ -96,7 +96,7 @@ eiInit <- function(compoundDb,dir=".",format="SDF",genDescriptor=sdf2ap)
 	#}
 }
 
-eiMakeDb <- function(refs,d,measure=atompairMeasure,
+eiMakeDb <- function(refs,d,distance=cmp.similarity,
 				dir=".",numSamples=cdbSize(dir)*0.1,
 				cl=makeCluster(1,type="SOCK"))
 {
@@ -154,7 +154,8 @@ eiMakeDb <- function(refs,d,measure=atompairMeasure,
 		#compute pairwise distances for all references
 		if(! file.exists(selfDistFile)){
 			message("generating selfDistFile")
-			measure$db2dbDistance(file.path(dir,ChemDb),iddb1=refIddb,iddb2=refIddb,file=selfDistFile)
+			sql_db2dbDistance(file.path(dir,ChemDb),iddb1=refIds,iddb2=refIds,file=selfDistFile)
+			
 		}
 		selfDist<-read.table(selfDistFile)
 
@@ -165,7 +166,7 @@ eiMakeDb <- function(refs,d,measure=atompairMeasure,
 	}
 	#compute dist between refs and all compounds
 	if(!file.exists(ref2AllDistFile))
-		measure$db2dbDistance(file.path(dir,ChemDb),iddb1=file.path(dir,Main),iddb2=refIddb,file=ref2AllDistFile)
+		sql_db2dbDistance(file.path(dir,ChemDb),iddb1=readIddb(file.path(dir,Main)),iddb2=refIds,file=ref2AllDistFile)
 	
 	#each job needs: R, D, coords, a chunk of distance data
 	solver <- getSolver(r,d,coords)	
@@ -319,7 +320,7 @@ embedFromRefs <- function(r,d,refIddb,measure,...)
 #return the emedding of each row in the matrix
 embed <- function(r,d,coords, measure,...)
 {
-		query2RefDists = measure$db2dbDistance(...)
+		query2RefDists = sql_db2dbDistance(...)
 		solver = getSolver(r,d,coords)
 		embeddedQueries = apply(query2RefDists,c(1),
 			function(x) embedCoord(solver,d,x))
@@ -345,6 +346,7 @@ refine <- function(lshNeighbors,queriesCdb,queryIndex,limit,measure,dir)
 
 	if(debug) print(paste("query index:",queryIndex))
 	d=multiFileDistance(queryDb,lshNeighbors[,1],measure,dir)
+	#d=sql_db2dbDistance(queryDb,
 
 	if(debug) print("result distance: ")
 	if(debug) print(str(d))
@@ -419,8 +421,8 @@ genTestQueryResults <- function(measure,dir)
 # not sure if we really need to handle this or not.
 
 	out=file(file.path(dir,TestQueryResults),"w")
-	d=measure$db2dbDistance(file.path(dir,ChemDb),
-		iddb1=file.path(dir,TestQueries),iddb2=file.path(dir,Main))
+	d=sql_db2dbDistance(file.path(dir,ChemDb),
+		iddb1=readIddb(file.path(dir,TestQueries)),iddb2=readIddb(file.path(dir,Main)))
 	if(debug) print(paste("dim(d): ",dim(d)))
 	maxLength=min(dim(d)[2],50000)
 	for(i in 1:(dim(d)[1]))
@@ -506,3 +508,177 @@ toSdfSet <- function(input)
 	return(sdfset)
 }
 
+# all vs descriptors     db,descriptors
+# all vs subset          db,iddb
+# subset vs descriptors  db,iddb,descriptors
+# subset vs subset       db,iddb1,iddb2
+
+apPreprocessor = function(v){
+	if(inherits(v,"list"))
+		return(v)
+
+	as( if(!inherits(v,"APset")){
+			names(v)=1:length(v);  
+			read.AP(v,type="ap",isFile=F)
+		} else v,
+		"list")  
+}
+
+desc2descDist <- function(desc1,desc2,dist)
+	as.matrix(sapply(desc2,function(x) sapply(desc1,function(y) dist(x,y))))
+
+
+dbVsGivenDist<- function(db,descriptors,dist,preProcess=apPreprocessor,file=NA){
+	conn = initDb(db)
+
+	descriptors=preProcess(descriptors)
+	process = function(record){
+		bufferResultSet(dbSendQuery(conn,"SELECT descriptor FROM descriptors JOIN descriptor_types 
+												USING(descriptor_type_id) WHERE descriptor_type='ap' ORDER BY compound_id"),
+			function(data){
+				data=preProcess(data[1][[1]])
+				record(desc2descDist(data,descriptors,dist))
+		},closeRS=TRUE)
+	}
+	output(file,cdbSize,length(descriptors),process)
+}
+dbVsIddbDist<- function(db,iddb,dist,preProcess=apPreprocessor,file=NA){
+	dbVsGivenDist(db,getDescriptors(initDb(db),"ap",iddb),dist,preProcess,file)
+}
+IddbVsGivenDist<- function(db,iddb,descriptors,dist,preProcess=apPreprocessor,file=NA){
+
+	conn = initDb(db)
+	descriptors=preProcess(descriptors)
+
+	process = function(record){
+		batchByIndex(iddb,function(ids){
+			outerDesc = preProcess(dbGetQuery(conn,selectDescriptors("ap",ids))[1][[1]])
+			record(desc2descDist(outerDesc,descriptors,dist))
+		})
+	}
+	output(file,length(iddb),length(descriptors),process)
+}
+IddbVsIddbDist<- function(db,iddb1,iddb2,dist,preProcess=apPreprocessor,file=NA){
+	conn = initDb(db)
+
+	descriptors = preProcess(getDescriptors(conn,"ap",iddb2))
+	process = function(record){
+		batchByIndex(iddb1,function(ids){
+			outerDesc = preProcess(dbGetQuery(conn,selectDescriptors("ap",ids))[1][[1]])
+			record(desc2descDist(outerDesc,descriptors,dist))
+		})
+	}
+	output(file,length(iddb1),length(iddb2),process)
+}
+
+#choose whether to output a file or a matrix
+output <- function(filename,nrows,ncols,process)
+	if(!is.na(filename)){ #return result as matrix
+		toFile(filename,process)	
+	}else{ #write result to file
+		toMatrix(nrows,ncols,process)
+	}
+
+#send data produced by body to a file
+toFile <- function(filename,body){
+	f = file(filename,"w")
+	#body(function(data) cat(paste(data,sep="\t"),"\n",sep="", file=f))
+	body(function(data) write.table(data,file=f,quote=F,sep="\t",row.names=F,col.names=F))
+	close(f)
+}
+
+#send data produced by body to a matrix
+toMatrix <- function(nrows,ncols,body){
+
+	allDists = matrix(NA,nrows,ncols)
+	rowCount = 1
+
+	body(function(data){
+		if(debug) print(paste("recording data. rowCount: ",rowCount,", dim:",paste(dim(data),collapse=",")))
+		if(debug) print(dim(allDists))
+		allDists[rowCount:(rowCount+dim(data)[1]-1),] <<- data
+		rowCount <<- rowCount + dim(data)[1]
+	})
+
+	allDists
+}
+
+selectDescriptors <- function(type,ids)
+	paste("SELECT descriptor FROM descriptors JOIN descriptor_types USING(descriptor_type_id) WHERE ",
+				" descriptor_type='",type,"' AND compound_id IN (", paste(ids,collapse=","),") ORDER
+				BY compound_id",sep="")
+getDescriptors <- function(conn,type,idList)
+	selectInBatches(conn,idList,function(ids) selectDescriptors(type,ids))[1][[1]]
+	
+
+sql_db2dbDistance <- function(db,descriptors=NA,iddb1=NA,iddb2=NA,dist,file=NA){
+
+	conn = initDb(db)
+
+	if(!is.na(file)){
+		if(is.na(descriptors) && ! is.na(iddb1) && ! is.na(iddb2)){
+			if(debug) print(" iddb files to file")
+			#db2db_distance2file(db,iddb1,iddb2,file)
+
+			desc2 = getDesc(iddb2)
+			f = file(file,"w")
+
+			batchByIndex(iddb1,function(ids){
+				desc1 = getDesc(ids)
+				cat(paste(sapply(desc2,function(x) sapply(desc1,function(y) dist(x,y))),
+							 sep="\t"),file=f)
+			})
+			close(f)
+				
+		}else if(!is.na(descriptors) &&  is.na(iddb1) &&  is.na(iddb2)){
+		  if(debug) print("2 real dbs to file")
+
+			f = file(file,"w")
+			bufferResultSet(dbSendQuery(conn,"SELECT descriptor FROM descriptors WHERE descriptor_type='ap' ORDER BY compound_id"),
+					function(data){
+						cat(paste(sapply(data[1][[1]],function(x) sapply(descriptors,function(y) dist(x,y))),
+							 sep="\t"),file=f)
+					})
+			close(f)
+
+		  #db2db_distance2file(db,descriptors,file)
+		}else{
+		  stop("bad argument list")
+		}
+	}else{
+		if(is.na(descriptors) && ! is.na(iddb1) && ! is.na(iddb2)){
+		  if(debug) print(" iddb files")
+
+			desc2 = getDesc(iddb2)
+
+			allDists= matrix(NA,length(iddb1),length(iddb2))
+			rowCount=0
+			batchByIndex(iddb1,function(ids){
+				desc1 = getDesc(ids)
+				allDists[rowCount:rowCount+length(desc1)-1,] = sapply(desc2,function(x) sapply(desc1,function(y) dist(x,y)))
+				rowCount = rowCount + length(desc1)
+			})
+			return(allDists)
+
+
+		  #return(.Call("db2db_distance_iddb",as.character(db),as.character(iddb1),as.character(iddb2)))
+		}else if(!is.na(descriptors) &&  is.na(iddb1) &&  is.na(iddb2)){
+		  if(debug) print("2 real dbs")
+
+			allDists= matrix(NA,length(cdbSize),length(descriptors))
+			rowCount=0
+			bufferResultSet(dbSendQuery(conn,"SELECT descriptor FROM descriptors WHERE descriptor_type='ap' ORDER BY compound_id"),
+				function(data){
+					desc2 = data[1][[1]]
+					allDists[rowCount:rowCount+length(desc2)-1,] = sapply(desc2,function(x) sapply(descriptors,function(y) dist(x,y)))
+					rowCount = rowCount + length(desc2)
+			})
+			return(allDists)
+
+		  #return(.Call("db2db_distance_db",as.character(db),as.character(descriptors)))
+		}else{
+		  stop("bad argument list\n")
+		}
+	}
+
+}
