@@ -57,6 +57,10 @@ rawFingerprintMeasure = list(
 
 )
 
-sdf2ap = function(sdfset) {
 
-}
+# functions needed for sql backend:
+# distance
+# descriptorStr  raw format (sdf,smile) -> descriptor object -> string
+# str2Descriptor  string -> descriptor object
+# also need descrptor type, ie, "ap" "fpap", etc.
+# optionally: compound -> string and string -> compound

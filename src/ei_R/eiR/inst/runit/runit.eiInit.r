@@ -17,7 +17,6 @@ test.aa.eiInit <- function() {
    data(sdfsample)
    eiInit(sdfsample)
    checkTrue(file.exists(file.path("data","chem.db")))
-   checkTrue(file.exists(file.path("data","chem.db.names")))
    checkTrue(file.exists(file.path("data","main.iddb")))
    i <- readLines(file.path("data","main.iddb"))
    checkEquals(length(i),N)
