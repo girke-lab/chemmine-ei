@@ -10,8 +10,8 @@ ChemIndex = file.path(DataDir,paste(ChemPrefix,".index",sep=""))
 Main = file.path(DataDir,"main.iddb")
 
 
-#debug=TRUE
-debug=FALSE
+debug=TRUE
+#debug=FALSE
 
 # Notes
 #  Need function to produce descriptors from sdf or smile
@@ -37,9 +37,6 @@ lshsearch <- function(queries,matrixFile,
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
 }
-sdf2apStr = function(sdfset){
-	apset = sdf2ap(sdfset)
-}
 
 
 # functions needed for sql backend:
@@ -50,34 +47,33 @@ sdf2apStr = function(sdfset){
 # also need descrptor type, ie, "ap" "fpap", etc.
 
 # and compound format, ei, "SDF", "SMILE", etc.
-# optionally: compound -> string and string -> compound
+# X optionally: compound -> string and string -> compound
 
-eiInit <- function(compoundDb,dir=".",format="SDF",genDescriptor=sdf2ap,descriptor_type="ap",append=FALSE)
+eiInit <- function(compoundDb,dir=".",format="sdf",descriptorType="ap",append=FALSE)
 {
 	if(!file.exists(file.path(dir,DataDir)))
 		dir.create(file.path(dir,DataDir))
 
-	descriptorFunction = function(sdfset)
-									data.frame(descriptors=genDescriptor(sdfset),descriptor_type=descriptor_type)
+	descriptorFunction = function(set)
+		data.frame(descriptor=getTransform(buildType(format,descriptorType))$toString(set),
+					  descriptor_type=descriptorType)
+	
+
 	conn = initDb(file.path(dir,ChemDb))
-	if(format == "SDF"){
+	if(tolower(format) == "sdf"){
 		compoundIds = loadSdf(conn,compoundDb, descriptors=descriptorFunction)
-	}else if(format == "SMILE"){
+	}else if(tolower(format) == "smile"){
 		compoundIds = loadSmile(conn,compoundDb,descriptors=descriptorFunction)
 	}else{
 		stop(paste("unknown input format:",format," supported formats: SDF, SMILE"))
 	}
+	print(paste(length(compoundIds)," loaded by eiInit"))
 
 	writeIddb(compoundIds,file.path(dir,Main),append=append)
 	compoundIds
-
-	#if(!file.exists(file.path(dir,ChemDb))){
-		#numCompounds = measure$dbBuilder(toSdfFile(compoundDb),file.path(dir,ChemDb))
-		#addToChemIndex(file.path(dir,ChemDb),numCompounds,dir)
-	#}
 }
 
-eiMakeDb <- function(refs,d,distance=cmp.similarity,
+eiMakeDb <- function(refs,d,distance=apDistance,
 				dir=".",numSamples=cdbSize(dir)*0.1,
 				cl=makeCluster(1,type="SOCK"))
 {
@@ -197,13 +193,14 @@ eiMakeDb <- function(refs,d,distance=cmp.similarity,
 
 	return(file.path(workDir,sprintf("matrix.%d-%d",r,d)))
 }
-eiQuery <- function(r,d,refIddb,queries,
-		dir=".",genDescriptor=sdf2ap,distance=cmp.similarity,
+eiQuery <- function(r,d,refIddb,queries,format="sdf",
+		dir=".",descriptorType="ap",distance=apDistance,
 		K=200, W = 1.39564, M=19,L=10,T=30)
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
-		queryDescriptors = genDescriptor(queries)
+		descriptorInfo = getTransform(buildType(format,descriptorType))$toObject(queries)
+		queryDescriptors = descriptorInfo$descriptors
 
 		refIds = readIddb(refIddb)
 		#queryDb = file.path(tmpDir,"queries.db")
@@ -216,12 +213,14 @@ eiQuery <- function(r,d,refIddb,queries,
 
 		#read names
 		#queryNames = readLines(paste(queryDb,"names",sep="."))
-		queryNames = names(queryDescriptors)
+		queryNames = descriptorInfo$names
+		#print("queryNames:")
+		#print(queryNames)
 
 		#embed queries in search space
 		#embeddedQueries = embedFromRefs(r,d,refIddb,measure,queryDb,db2=refDb)
 		embeddedQueries = embedFromRefs(r,d,refIddb,
-									t(IddbVsGivenDist(refIds,queryDescriptors,distance)))
+									t(IddbVsGivenDist(file.path(dir,ChemDb),refIds,queryDescriptors,distance)))
 
 		#search for nearby compounds
 		if(debug) print(embeddedQueries)
@@ -234,6 +233,7 @@ eiQuery <- function(r,d,refIddb,queries,
 		targetIds=targetIds[targetIds!=-1]
 		targetNames=as.matrix(getNames(targetIds,dir))
 		rownames(targetNames)=targetIds
+		#print(paste(targetIds,targetNames))
 
 
 
@@ -244,6 +244,7 @@ eiQuery <- function(r,d,refIddb,queries,
 								  target = rep(NA,numHits),
 								  distance=rep(NA,numHits))
 		i=1
+		print("copying data")
 		lapply(1:numQueries,function(queryIndex)
 			lapply(1:K,function(hitIndex){
 				if(hits[[queryIndex]][hitIndex,1]!=-1){
@@ -254,12 +255,13 @@ eiQuery <- function(r,d,refIddb,queries,
 					i<<-i+1
 				}
 			}))
+		if(debug) print("results:")
 		if(debug) print(results)
 		return(results)
 }
 
 eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
-		genDescriptor=sdf2ap,distance=cmp.similarity)
+		descriptorType="ap",distance=apDistance)
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
@@ -267,9 +269,12 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
 
 		# add additions to database
 		conn = initDb(file.path(dir,ChemDb))
-		compoundIds = eiInit(additions,dir,format,genDescriptor,apend=TRUE)
+		print("adding")
+		compoundIds = eiInit(additions,dir,format,descriptorType,append=TRUE)
+		print("getting descriptors")
 		additionDescriptors=getDescriptors(conn,compoundIds)
 		numAdditions = length(compoundIds)
+		print(numAdditions)
 
 		#reformat query file
 		#numAdditions=measure$dbBuilder(toSdfFile(additions),additionsDb)
@@ -279,7 +284,7 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
 		#embed queries in search space
 
 		embeddedAdditions= embedFromRefs(r,d,refIddb,
-									t(IddbVsGivenDist(refIds,additionDescriptors,distance)))
+									t(IddbVsGivenDist(file.path(dir,ChemDb),refIds,additionDescriptors,distance)))
 		if(debug) print(dim(embeddedAdditions))
 		if(debug) print(embeddedAdditions)
 		embeddedFile <- file.path(workDir,sprintf("coord.%d-%d",r,d))
@@ -296,8 +301,10 @@ search <- function(queries,matrixFile,queryDescriptors,distance,K,dir,...)
 		#print(paste("got ",paste(dim(neighbors),callapse=","),"neighbors back from lshsearch"))
 
 		#compute distance between each query and its candidates	
-		Map(function(i) refine(neighbors[x,,],queryDescriptors[i],K,distance,dir),
+		Map(function(i) refine(neighbors[i,,],queryDescriptors[i],K,distance,dir),
 			1:(dim(queries)[2]))
+
+
 }
 #fetch coords from refIddb.distmat.coord and call embed
 embedFromRefs <- function(r,d,refIddb,query2RefDists)
@@ -331,12 +338,12 @@ refine <- function(lshNeighbors,queryDescriptors,limit,distance,dir)
 	#	coord/matrix files.
 
 
-	if(debug) print(paste("query index:",queryIndex))
+	#if(debug) print(paste("query index:",queryIndex))
 	#d=multiFileDistance(queryDb,lshNeighbors[,1],measure,dir)
 	d = t(IddbVsGivenDist(file.path(dir,ChemDb),lshNeighbors[,1],queryDescriptors,distance))
 
-	if(debug) print("result distance: ")
-	if(debug) print(str(d))
+	#if(debug) print("result distance: ")
+	#if(debug) print(str(d))
 	lshNeighbors[,2]=d 
 	limit = min(limit,length(lshNeighbors[,2]))
 	#print(paste("num dists:",length(lshNeighbors[,2]),
@@ -344,10 +351,7 @@ refine <- function(lshNeighbors,queryDescriptors,limit,distance,dir)
 	lshNeighbors[order(lshNeighbors[,2])[1:limit],]
 }
 getNames <- function(indexes,dir)
-	applyOverIndex(indexes,function(filename,indexSet)
-		readLines(paste(filename,".names",sep=""))[indexSet],
-		dir
-	)
+	getCompoundNames(initDb(file.path(dir,ChemDb)),indexes)
 
 writeIddb <- function(data, file,append=FALSE)
 		write.table(data,file,quote=FALSE,append=append,col.names=FALSE,row.names=FALSE)
@@ -406,7 +410,7 @@ genTestQueryResults <- function(distance,dir)
 				collapse=" "),"\n",file=out)	
 	close(out)
 }
-eiPerformanceTest <- function(r,d,distance,
+eiPerformanceTest <- function(r,d,distance=apDistance,descriptorType="ap",
 	dir=".",K=200, W = 1.39564, M=19,L=10,T=30)
 {
 	workDir=file.path(dir,paste("run",r,d,sep="-"))
@@ -424,7 +428,7 @@ eiPerformanceTest <- function(r,d,distance,
 	coordQueryFile =file.path(workDir,sprintf("coord.query.%d-%d",r,d))
 
 	conn = initDb(file.path(dir,ChemDb))
-	testQueryDescriptors=getDescriptors(conn,"ap",readIddb(file.path(dir,TestQueries)) )
+	testQueryDescriptors=getDescriptors(conn,descriptorType,readIddb(file.path(dir,TestQueries)) )
 	embeddedTestQueries = t(as.matrix(read.table(coordQueryFile)))
 	hits = search(embeddedTestQueries,matrixFile,
 						testQueryDescriptors,distance,dir,K=K,W=W,M=M,L=L,T=T)
@@ -491,25 +495,14 @@ toSdfSet <- function(input)
 # subset vs descriptors  db,iddb,descriptors
 # subset vs subset       db,iddb1,iddb2
 
-#convert string representation to descriptor object
-apPreprocessor = function(v){
-	if(inherits(v,"list") || length(v)==0)
-		return(v)
-
-	as( if(!inherits(v,"APset")){
-			names(v)=as.character(1:length(v));  
-			read.AP(v,type="ap",isFile=F)
-		} else v,
-		"list")  
-}
-
 desc2descDist <- function(desc1,desc2,dist)
 	as.matrix(sapply(desc2,function(x) sapply(desc1,function(y) dist(x,y))))
 
 
-#dbVsGivenDist<- function(db,descriptors,dist,preProcess=apPreprocessor,file=NA){
+#dbVsGivenDist<- function(db,descriptors,dist,descriptorType="ap",file=NA){
 #	conn = initDb(db)
 #
+#	preProcess = getTransform(descriptorType)$toObject
 #	descriptors=preProcess(descriptors)
 #	process = function(record){
 #		bufferResultSet(dbSendQuery(conn,"SELECT descriptor FROM descriptors JOIN descriptor_types 
@@ -521,32 +514,37 @@ desc2descDist <- function(desc1,desc2,dist)
 #	}
 #	output(file,cdbSize,length(descriptors),process)
 #}
-dbVsIddbDist<- function(db,iddb,dist,preProcess=apPreprocessor,file=NA){
-	dbVsGivenDist(db,getDescriptors(initDb(db),"ap",iddb),dist,preProcess,file)
+dbVsIddbDist<- function(db,iddb,dist,descriptorType="ap",file=NA){
+	dbVsGivenDist(db,getDescriptors(initDb(db),descriptorType,iddb),dist,descriptorType,file)
 }
-IddbVsGivenDist<- function(db,iddb,descriptors,dist,preProcess=apPreprocessor,file=NA){
+IddbVsGivenDist<- function(db,iddb,descriptors,dist,descriptorType="ap",file=NA){
 
 	conn = initDb(db)
+	preProcess = getTransform(descriptorType)$toObject
 	descriptors=preProcess(descriptors)
 
 	process = function(record){
 		batchByIndex(iddb,function(ids){
-			outerDesc = preProcess(dbGetQuery(conn,selectDescriptors("ap",ids))[1][[1]])
+			outerDesc = preProcess(getDescriptors(conn,descriptorType,ids))
 			record(desc2descDist(outerDesc,descriptors,dist))
 		})
 	}
 	output(file,length(iddb),length(descriptors),process)
 }
-IddbVsIddbDist<- function(db,iddb1,iddb2,dist,preProcess=apPreprocessor,file=NA){
+IddbVsIddbDist<- function(db,iddb1,iddb2,dist,descriptorType="ap",file=NA){
 	conn = initDb(db)
 
-	print(paste("iddb2:",paste(iddb2,collapse=",")))
-	descriptors = preProcess(getDescriptors(conn,"ap",iddb2))
-	print(str(descriptors))
+	#print(paste("iddb2:",paste(iddb2,collapse=",")))
+	preProcess = getTransform(descriptorType)$toObject
+	descriptors = preProcess(getDescriptors(conn,descriptorType,iddb2))
+	#print("descriptors")
+	#print(str(descriptors))
+	#TODO: ensure consistant orderings here and other dist functions
 	process = function(record){
 		batchByIndex(iddb1,function(ids){
-			print("processing",paste(ids,collapse=","))
-			outerDesc = preProcess(dbGetQuery(conn,selectDescriptors("ap",ids))[1][[1]])
+			#print(paste("processing",paste(ids,collapse=",")))
+			#outerDesc = preProcess(dbGetQuery(conn,selectDescriptors(descriptorType,ids))$descriptor)
+			outerDesc = preProcess(getDescriptors(conn,descriptorType,ids))
 			record(desc2descDist(outerDesc,descriptors,dist))
 		})
 	}
@@ -564,7 +562,6 @@ output <- function(filename,nrows,ncols,process)
 #send data produced by body to a file
 toFile <- function(filename,body){
 	f = file(filename,"w")
-	#body(function(data) cat(paste(data,sep="\t"),"\n",sep="", file=f))
 	body(function(data) write.table(data,file=f,quote=F,sep="\t",row.names=F,col.names=F))
 	close(f)
 }
@@ -576,8 +573,8 @@ toMatrix <- function(nrows,ncols,body){
 	rowCount = 1
 
 	body(function(data){
-		if(debug) print(paste("recording data. rowCount: ",rowCount,", dim:",paste(dim(data),collapse=",")))
-		if(debug) print(dim(allDists))
+#		if(debug) print(paste("recording data. rowCount: ",rowCount,", dim:",paste(dim(data),collapse=",")))
+#		if(debug) print(dim(allDists))
 		allDists[rowCount:(rowCount+dim(data)[1]-1),] <<- data
 		rowCount <<- rowCount + dim(data)[1]
 	})
@@ -586,13 +583,17 @@ toMatrix <- function(nrows,ncols,body){
 }
 
 selectDescriptors <- function(type,ids){
-	q=paste("SELECT descriptor FROM descriptors JOIN descriptor_types USING(descriptor_type_id) WHERE ",
+	q=paste("SELECT compound_id, descriptor FROM descriptors JOIN descriptor_types USING(descriptor_type_id) WHERE ",
 				" descriptor_type='",type,"' AND compound_id IN (", paste(ids,collapse=","),") ORDER
 				BY compound_id",sep="")
-	print(q)
+	#print(q)
 	q
 }
-getDescriptors <- function(conn,type,idList)
-	selectInBatches(conn,idList,function(ids) selectDescriptors(type,ids))[1][[1]]
+getDescriptors <- function(conn,type,idList){
+	data = selectInBatches(conn,idList,function(ids) selectDescriptors(type,ids))
+	n=data$descriptor
+	names(n)=data$compound_id
+	n[as.character(idList)]
+}
 	
 

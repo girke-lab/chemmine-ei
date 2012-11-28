@@ -65,8 +65,10 @@ evaluator <- function(reference,result,output=NA)
 
    for(lineNum in 1:maxQueries)
    {
-      refLine=readLines(refFile,n=1)
-      targetLine=readLines(targetFile,n=1)
+		suppressWarnings({
+			refLine<<-readLines(refFile,n=1)
+			targetLine<<-readLines(targetFile,n=1)
+		})
 
       if(length(refLine)==0 || length(targetLine)==0)
          break
@@ -121,13 +123,17 @@ compareSearch <- function(file1,file2)
 
    results=c()
    while(TRUE){
-      line1=readLines(in1,n=1)
-      line2=readLines(in2,n=1)
+		suppressWarnings({
+			line1=readLines(in1,n=1)
+			line2=readLines(in2,n=1)
+		})
+
       if(length(line1)==0 || length(line2)==0)
          break;
 
       line1=unlist(strsplit(line1,"\\s+"))
       line2=unlist(strsplit(line2,"\\s+"))
+
 
       if(is.na(p)){
          p=if(length(line1) < length(line2))

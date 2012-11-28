@@ -11,15 +11,16 @@ j=1
 runDir<-paste("run",r,d,sep="-")
 
 test.aa.eiInit <- function() {
-   #data(example_compounds)
-   #cat(paste(paste(example_compounds,collapse="\n"),"\n",sep=""),file="example_compounds.sdf")
-   #eiInit("example_compounds.sdf")
+	DEACTIVATED("slow")
    data(sdfsample)
-   eiInit(sdfsample)
+   compoundIds = eiInit(sdfsample)
    checkTrue(file.exists(file.path("data","chem.db")))
    checkTrue(file.exists(file.path("data","main.iddb")))
    i <- readLines(file.path("data","main.iddb"))
    checkEquals(length(i),N)
+	checkEquals(length(compoundIds),N)
+	sdfFromDb = getCompounds(initDb(file.path("data","chem.db")),compoundIds)
+	checkEquals(length(sdfFromDb),N)
 }
 
 test.ba.eiMakeDb <- function() {
@@ -55,6 +56,8 @@ test.ba.eiMakeDb <- function() {
 }
 test.ca.eiQuery <- function(){
 
+	#DEACTIVATED("slow")
+   data(sdfsample)
    refIddb = findRefIddb(runDir)
    results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
    checkTrue(length(results$distance) != 0)
@@ -63,6 +66,7 @@ test.ca.eiQuery <- function(){
 }
 
 test.da.eiPerformanceTest <- function() {
+	#DEACTIVATED("slow")
    r = eiPerformanceTest(r,d,K=22)
    checkMatrix("chemical-search.results$",20, N,"data")
    checkMatrix("eucsearch.50-40",20,N)
@@ -71,6 +75,7 @@ test.da.eiPerformanceTest <- function() {
 }
 test.ea.eiAdd<- function(){
 
+	#DEACTIVATED("slow")
    data(example_compounds)
    cat(paste(paste(example_compounds,collapse="\n"),"\n",sep=""),file="example_compounds.sdf")
    options(warn=-1)
@@ -88,7 +93,8 @@ test.ea.eiAdd<- function(){
    print(results)
 }
 test.aaaaa.cleanup<- function(){
-   junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
+   #junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
+   junk <- c("example_compounds.sdf","example_queries.sdf","run-50-40")
    unlink(junk,recursive=T)
 }
 findRefIddb <- function(runDir){

@@ -58,9 +58,59 @@ rawFingerprintMeasure = list(
 )
 
 
+apDistance <- function(d1,d2){
+	1-cmp.similarity(d1,d2)
+}
+
 # functions needed for sql backend:
 # distance
 # descriptorStr  raw format (sdf,smile) -> descriptor object -> string
 # str2Descriptor  string -> descriptor object
 # also need descrptor type, ie, "ap" "fpap", etc.
-# optionally: compound -> string and string -> compound
+# X optionally: compound -> string and string -> compound
+
+
+Translations = list()
+
+addTransform <- function(name,toString,toObject){
+	Translations[[name]] <<- list(toString=toString,toObject=toObject)
+}
+getTransform <- function(name){
+	Translations[[name]]
+}
+
+buildType <- function(format,descriptorType) tolower(paste(format,descriptorType,sep="-"))
+
+addTransform(buildType("sdf","ap"),
+	# Any sdf source -> ap string
+	toString = function(input) getTransform("ap")$toString(
+												getTransform(buildType("sdf","ap"))$toObject(input)$descriptors),
+	# Any sdf source -> AP list object
+	toObject = function(input){
+
+		sdfset=if(is.character(input) && file.exists(input)){
+			read.SDFset(input)
+		}else if(inherits(input,"SDFset")){
+			input
+		}else{
+			stop(paste("unknown type for 'in', or filename does not exist. type found:",class(input)))
+		}
+		list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
+	}
+)
+addTransform("ap",  # APset -> string, string or list -> APset
+	toString = function(apset){
+		unlist(lapply(ap(apset), function(x) paste(x,collapse=", ")))
+	},
+	toObject= function(v){ 
+		if(inherits(v,"list") || length(v)==0)
+			return(v)
+
+		as( if(!inherits(v,"APset")){
+				names(v)=as.character(1:length(v));  
+				read.AP(v,type="ap",isFile=F)
+			} else v,
+			"list")  
+	}
+)
+
