@@ -78,29 +78,30 @@ eiMakeDb <- function(refs,d,distance=apDistance,
 				cl=makeCluster(1,type="SOCK"))
 {
 	workDir=NA
-	createWorkDir <- function(){
+	createWorkDir <- function(r){
 		workDir<<-file.path(dir,paste("run",r,d,sep="-"))
 		if(!file.exists(workDir))
 			dir.create(workDir)
 	}
 
 	if(is.character(refs)){ #assume its a filename
-		refIddb=refs
 		refIds=readIddb(refs)
 		r=length(refIds)
-		createWorkDir()
+		createWorkDir(r)
+		refIddb=file.path(workDir,basename(refs))
+		file.copy(refs,workDir,overwrite=TRUE)
 	}else if(is.numeric(refs)){
 		if(length(refs)==0){ #assume its the number of refs to use
 			stop(paste("variable refs must be posative, found ",refs))
 		}else if(length(refs)==1){ #assume its the number of refs to use
 			r=refs
-			createWorkDir()
+			createWorkDir(r)
 			refIddb=genRefName(workDir)
 			refIds=genRefs(r,refIddb,dir)
 		}else{ #refs is a vector of compound indexes to use a referances
 			refIds=refs
 			r=length(refIds)
-			createWorkDir()
+			createWorkDir(r)
 			refIddb=genRefName(workDir)
 			writeIddb(refIds,refIddb)
 		}
@@ -122,6 +123,9 @@ eiMakeDb <- function(refs,d,distance=apDistance,
 	ref2AllDistFile <- paste(refIddb,"distances",sep=".")
 	embeddedFile <- file.path(workDir,sprintf("coord.%d-%d",r,d))
 	embeddedQueryFile <- file.path(workDir,sprintf("coord.query.%d-%d",r,d))
+
+allIds = readIddb(file.path(dir,Main))
+IddbVsIddbDist(file.path(dir,ChemDb),allIds,allIds,distance,file="all2allR.dist")
 
 	#embed references in d dimensional space 
 	coords <- if(file.exists(coordFile)){
@@ -199,8 +203,11 @@ eiQuery <- function(r,d,refIddb,queries,format="sdf",
 {
 		tmpDir=tempdir()
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
-		descriptorInfo = getTransform(buildType(format,descriptorType))$toObject(queries)
+		descriptorInfo = getTransform(buildType(format,descriptorType)
+												)$toObject(queries)
 		queryDescriptors = descriptorInfo$descriptors
+		#print("query descriptors")
+		#print(ap(queryDescriptors))
 
 		refIds = readIddb(refIddb)
 		#queryDb = file.path(tmpDir,"queries.db")
@@ -218,15 +225,19 @@ eiQuery <- function(r,d,refIddb,queries,format="sdf",
 		#print(queryNames)
 
 		#embed queries in search space
+		qd=IddbVsGivenDist(file.path(dir,ChemDb),
+															refIds,queryDescriptors,distance)
+		print("distances")
+		print(t(qd))
 		#embeddedQueries = embedFromRefs(r,d,refIddb,measure,queryDb,db2=refDb)
-		embeddedQueries = embedFromRefs(r,d,refIddb,
-									t(IddbVsGivenDist(file.path(dir,ChemDb),refIds,queryDescriptors,distance)))
+		embeddedQueries = embedFromRefs(r,d,refIddb, t(qd))
 
 		#search for nearby compounds
 		if(debug) print(embeddedQueries)
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
 		hits = search(embeddedQueries,matrixFile,
 							queryDescriptors,distance,dir,K=K,W=W,M=M,L=L,T=T)
+		if(debug) print("hits")
 		if(debug) print(hits)
 
 		targetIds=unlist(lapply(1:length(hits),function(x) hits[[x]][,1]))
@@ -244,7 +255,6 @@ eiQuery <- function(r,d,refIddb,queries,format="sdf",
 								  target = rep(NA,numHits),
 								  distance=rep(NA,numHits))
 		i=1
-		print("copying data")
 		lapply(1:numQueries,function(queryIndex)
 			lapply(1:K,function(hitIndex){
 				if(hits[[queryIndex]][hitIndex,1]!=-1){
@@ -272,7 +282,7 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
 		print("adding")
 		compoundIds = eiInit(additions,dir,format,descriptorType,append=TRUE)
 		print("getting descriptors")
-		additionDescriptors=getDescriptors(conn,compoundIds)
+		additionDescriptors=getDescriptors(conn,descriptorType,compoundIds)
 		numAdditions = length(compoundIds)
 		print(numAdditions)
 
@@ -299,12 +309,12 @@ search <- function(queries,matrixFile,queryDescriptors,distance,K,dir,...)
 {
 		neighbors = lshsearch(queries,matrixFile,K=2*K,...)
 		#print(paste("got ",paste(dim(neighbors),callapse=","),"neighbors back from lshsearch"))
+		print("neighbors:")
+		print(neighbors)
 
 		#compute distance between each query and its candidates	
 		Map(function(i) refine(neighbors[i,,],queryDescriptors[i],K,distance,dir),
 			1:(dim(queries)[2]))
-
-
 }
 #fetch coords from refIddb.distmat.coord and call embed
 embedFromRefs <- function(r,d,refIddb,query2RefDists)
@@ -313,7 +323,7 @@ embedFromRefs <- function(r,d,refIddb,query2RefDists)
 		coords = as.matrix(read.table(coordFile))
 		embed(r,d,coords,query2RefDists)
 }
-#take referenace coords, and args to compute distance matrix
+#take referenace coords, and distance matrix
 #return the emedding of each row in the matrix
 embed <- function(r,d,coords, query2RefDists)
 {
@@ -354,7 +364,7 @@ getNames <- function(indexes,dir)
 	getCompoundNames(initDb(file.path(dir,ChemDb)),indexes)
 
 writeIddb <- function(data, file,append=FALSE)
-		write.table(data,file,quote=FALSE,append=append,col.names=FALSE,row.names=FALSE)
+		write.table(sort(data),file,quote=FALSE,append=append,col.names=FALSE,row.names=FALSE)
 readIddb <- function(file) as.numeric(readLines(file))
 readNames <- function(file) as.numeric(readLines(file))
 
@@ -401,7 +411,8 @@ genTestQueryResults <- function(distance,dir)
 	#d=sql_db2dbDistance(file.path(dir,ChemDb),
 	#	iddb1=readIddb(file.path(dir,TestQueries)),iddb2=readIddb(file.path(dir,Main)))
 	d=IddbVsIddbDist(file.path(dir,ChemDb),
-		readIddb(file.path(dir,TestQueries)),readIddb(file.path(dir,Main)),distance)
+		readIddb(file.path(dir,TestQueries)),
+		readIddb(file.path(dir,Main)),distance)
 	if(debug) print(paste("dim(d): ",dim(d)))
 	maxLength=min(dim(d)[2],50000)
 	for(i in 1:(dim(d)[1]))
@@ -525,7 +536,11 @@ IddbVsGivenDist<- function(db,iddb,descriptors,dist,descriptorType="ap",file=NA)
 
 	process = function(record){
 		batchByIndex(iddb,function(ids){
-			outerDesc = preProcess(getDescriptors(conn,descriptorType,ids))
+			outerDesc=getDescriptors(conn,descriptorType,ids)
+			#print("innerDesc")
+			#print(ids)
+			#print(innerDesc)
+			outerDesc = preProcess(outerDesc)
 			record(desc2descDist(outerDesc,descriptors,dist))
 		})
 	}
@@ -539,7 +554,6 @@ IddbVsIddbDist<- function(db,iddb1,iddb2,dist,descriptorType="ap",file=NA){
 	descriptors = preProcess(getDescriptors(conn,descriptorType,iddb2))
 	#print("descriptors")
 	#print(str(descriptors))
-	#TODO: ensure consistant orderings here and other dist functions
 	process = function(record){
 		batchByIndex(iddb1,function(ids){
 			#print(paste("processing",paste(ids,collapse=",")))
@@ -593,7 +607,9 @@ getDescriptors <- function(conn,type,idList){
 	data = selectInBatches(conn,idList,function(ids) selectDescriptors(type,ids))
 	n=data$descriptor
 	names(n)=data$compound_id
-	n[as.character(idList)]
+	ordered=n[as.character(idList)]
+	#write.table(n,file="descriptors.out")
+	ordered
 }
 	
 

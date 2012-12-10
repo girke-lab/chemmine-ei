@@ -11,7 +11,7 @@ j=1
 runDir<-paste("run",r,d,sep="-")
 
 test.aa.eiInit <- function() {
-	DEACTIVATED("slow")
+	#DEACTIVATED("slow")
    data(sdfsample)
    compoundIds = eiInit(sdfsample)
    checkTrue(file.exists(file.path("data","chem.db")))
@@ -23,6 +23,9 @@ test.aa.eiInit <- function() {
 	checkEquals(length(sdfFromDb),N)
 }
 
+testRefs <- function(){
+	c(1,2,5,8,9,10,11,17,18,19,20,23,24,25,26,29,31,33,34,36,38,43,45,46,47,48,49,51,53,66,67,70,71,72,73,74,75,77,78,79,80,81,82,83,87,88,89,91,99,100)
+}
 test.ba.eiMakeDb <- function() {
 
      runChecks = function(){
@@ -39,20 +42,22 @@ test.ba.eiMakeDb <- function() {
       Map(function(x)
          checkTrue(!file.exists(file.path(runDir,paste("q",r,d,x,sep="-")))),1:j)
    }
+
+	print("by file name")
+	eiR:::writeIddb(1:r,"reference_file.cdb")
+   eiMakeDb("reference_file.cdb",d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
+   runChecks()
+	unlink(runDir,recursive=TRUE)
+
 	print("by number")
    eiMakeDb(r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
    runChecks()
-
 	unlink(runDir,recursive=TRUE)
+
 	print("by vector")
-   eiMakeDb(1:r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
+   eiMakeDb(testRefs(),d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
    runChecks()
-
-	unlink(runDir,recursive=TRUE)
-	eiR:::writeIddb(1:r,file.path(runDir,"reference_file.cdb"))
-	print("by filen name")
-   eiMakeDb(file.path(runDir,"reference_file.cdb"),d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
-   runChecks()
+	
 }
 test.ca.eiQuery <- function(){
 
@@ -93,17 +98,20 @@ test.ea.eiAdd<- function(){
    print(results)
 }
 test.aaaaa.cleanup<- function(){
-   #junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
-   junk <- c("example_compounds.sdf","example_queries.sdf","run-50-40")
+   junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
+   #junk <- c("example_compounds.sdf","example_queries.sdf","run-50-40")
    unlink(junk,recursive=T)
 }
 findRefIddb <- function(runDir){
    matches<-dir(runDir,pattern=".cdb$",full.names=T)
+	print(matches)
    checkEquals(length(matches),1)
    matches[1]
 }
 checkMatrix <- function(pattern,x,y,dir=runDir){
+#	print(paste("searching for ",pattern))
    matches<-dir(dir,pattern=pattern,full.names=T)
+#	print(matches)
    checkEquals(length(matches),1)
    file <- matches[1]
    checkTrue(file.info(file)$size>0)

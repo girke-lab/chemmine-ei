@@ -53,6 +53,11 @@ int batch_sdf_parse(const char* sdfile, const char* dbfile)
 			DEBUG_MSG("successfully parsed 1 compound");
 			calc_desc(*mol, descs);
 			DEBUG_VAR(descs.size());
+
+			for(int i=0;i<descs.size();i++)
+				std::cout<<descs[i]<<",";
+			std::cout<<std::endl;
+
 			int io_stat = serialize(descs, ofs);
 			if (io_stat == 2) {
 				std::cerr << "Empty compound (#" << cntr << " cid:" << cid
