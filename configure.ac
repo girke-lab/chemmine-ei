@@ -110,6 +110,7 @@ AC_CONFIG_FILES([Makefile
                  src/atompair/Makefile
                  src/atompair/python/Makefile
                  src/atompair/R/Makefile
+                 src/clustering/Makefile
                  src/embedder/Makefile
                  src/euclidean-search/Makefile
                  src/lshkit/Makefile
