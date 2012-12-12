@@ -104,7 +104,6 @@ test.aaaaa.cleanup<- function(){
 }
 findRefIddb <- function(runDir){
    matches<-dir(runDir,pattern=".cdb$",full.names=T)
-	print(matches)
    checkEquals(length(matches),1)
    matches[1]
 }
