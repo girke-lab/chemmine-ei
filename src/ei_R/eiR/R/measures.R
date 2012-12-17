@@ -83,9 +83,10 @@ buildType <- function(format,descriptorType) tolower(paste(format,descriptorType
 
 addTransform(buildType("sdf","ap"),
 	# Any sdf source -> ap string
-	toString = function(input) getTransform("ap")$toString(
-												getTransform(buildType("sdf","ap"))$toObject(input)$descriptors),
-	# Any sdf source -> AP list object
+	toString = function(input) 
+		getTransform("ap")$toString(
+			getTransform(buildType("sdf","ap"))$toObject(input)$descriptors),
+	# Any sdf source -> APset
 	toObject = function(input){
 
 		sdfset=if(is.character(input) && file.exists(input)){
@@ -98,10 +99,12 @@ addTransform(buildType("sdf","ap"),
 		list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
 	}
 )
-addTransform("ap",  # APset -> string, string or list -> APset
+addTransform("ap",  
+   # APset -> string,
 	toString = function(apset){
 		unlist(lapply(ap(apset), function(x) paste(x,collapse=", ")))
 	},
+   # string or list -> AP set list
 	toObject= function(v){ 
 		if(inherits(v,"list") || length(v)==0)
 			return(v)
@@ -114,3 +117,28 @@ addTransform("ap",  # APset -> string, string or list -> APset
 	}
 )
 
+addTransform(buildType("compound_id","ap"),
+	# compound_id -> ap string
+	toString = function(ids,dir="."){
+		getDescriptors(initDb(file.path(dir,ChemDb)),"ap",ids)
+	},
+	# compound_id -> AP list object
+	toObject = function(ids,dir="."){
+		descInfo = getTransform(buildType("compound_id","ap"))$toString(ids,dir)
+		list(names=names(descInfo),
+			  descriptors=getTransform("ap")$toObject(descInfo))
+	}
+)
+addTransform(buildType("name","ap"),
+	# name -> ap string
+	toString = function(names,dir="."){
+		conn=initDb(file.path(dir,ChemDb))
+		getDescriptors(conn,"ap",findCompoundsByName(conn,names,keepOrder=TRUE))
+	},
+	# name -> AP list object
+	toObject = function(names,dir="."){
+		descInfo = getTransform(buildType("name","ap"))$toString(names,dir)
+		list(names=names,
+			  descriptors=getTransform("ap")$toObject(descInfo))
+	}
+)

@@ -68,6 +68,15 @@ test.ca.eiQuery <- function(){
    checkTrue(length(results$distance) != 0)
    checkTrue(all(results$distance <= 1))
    checkEquals(results$distance[16],0)
+
+
+	results=eiQuery(r,d,refIddb,3:4,format="compound_id",K=15)
+   checkEquals(results$distance[1],0)
+
+	results=eiQuery(r,d,refIddb,c("650002","650003"), format="name",K=15)
+   checkEquals(results$distance[1],0)
+   #checkEquals(results$distance[9],0) # not reliable
+
 }
 
 test.da.eiPerformanceTest <- function() {
