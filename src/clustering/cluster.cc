@@ -16,6 +16,15 @@
 #include <cassert>
 #include <algorithm>
 
+#ifdef NO_MAIN
+#include <R.h>
+#include <Rinternals.h>
+
+extern "C" {
+	SEXP jarvis_patrick(SEXP neighbors,SEXP minNbrs);
+}
+#endif
+
 #define LINE_BUF_SIZE 10240
 
 std::map<std::string, int> name_to_id;
@@ -117,15 +126,15 @@ int nbr_intersect(std::vector<int>& nbrs1, std::vector<int>& nbrs2)
 
 /* initialize the clustering */
 DisjointSets s;
-void cluster_init() {
-	s.AddElements(names.size());
+void cluster_init(int n) {
+	s.AddElements(n);
 	return;
 }
 
-void cluster(int m)
+void cluster(int n,int m)
 {
-	cluster_init();
-	for (int i = 0; i < names.size(); i ++) {
+	cluster_init(n);
+	for (int i = 0; i < n; i ++) {
 		for (int j = 0; j < nbr_list[i].size(); j ++) {
 			int nbr = nbr_list[i][j];
 			if (s.FindSet(i) == s.FindSet(nbr)) continue;
@@ -137,6 +146,56 @@ void cluster(int m)
 		}
 	}
 }
+
+void cluster(int m)
+{
+	cluster(names.size(),m);
+}
+#ifdef NO_MAIN
+SEXP jarvis_patrick(SEXP neighbors,SEXP minNbrs)
+{
+	// neightbors is NxKx2  last 2 are (id,distance)
+	
+	//load nbr_list with data from neighbors
+   SEXP dims= getAttrib(neighbors,R_DimSymbol);
+   int N = INTEGER(dims)[0]; // num compounds
+   int K = INTEGER(dims)[1]; // num neighbors given
+
+	//Rprintf("N:%d, K:%d,m:%d\n",N,K,*INTEGER(minNbrs));
+
+	for(unsigned i=0; i<N; i++)
+	{
+		std::vector<int> nbrs;
+		for(int j=0; j<K; j++)
+		{  // R arrays are column major 
+			if(REAL(neighbors)[j*N+i] != -1)
+				nbrs.push_back(REAL(neighbors)[j*N+i]-1);
+		}
+		nbr_list.push_back(nbrs);
+	}
+	//Rprintf("loaded nbr_list\n");
+
+	// do actual clustering
+	cluster(N,*INTEGER(minNbrs));
+	//Rprintf("done clustering\n");
+
+	//pull result out of s
+	SEXP result;
+   PROTECT(result = allocVector(INTSXP,N));
+	//Rprintf("allocated vector\n");
+
+
+	for(unsigned i=0; i<N; i++){
+		//Rprintf("cluster(%u)=%d\n",i,s.FindSet(i));
+		INTEGER(result)[i]=s.FindSet(i)+1;
+	}
+	//Rprintf("done\n");
+
+	UNPROTECT(1);
+
+	return result;
+}
+#endif
 
 void print_clusters()
 {
@@ -201,6 +260,7 @@ void print_cluster_stat(int print_pair = 0)
  * 2: for each point, print its cluster
  * other: print pairs, encoded in a single long int
  */
+#ifndef NO_MAIN
 int main(int argc, char* argv[])
 {
 	if (argc < 5) {
@@ -221,3 +281,4 @@ int main(int argc, char* argv[])
 		print_cluster_stat(1);
 	return 0;
 }
+#endif

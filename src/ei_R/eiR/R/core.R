@@ -10,8 +10,8 @@ ChemIndex = file.path(DataDir,paste(ChemPrefix,".index",sep=""))
 Main = file.path(DataDir,"main.iddb")
 
 
-#debug=TRUE
-debug=FALSE
+debug=TRUE
+#debug=FALSE
 
 # Notes
 #  Need function to produce descriptors from sdf or smile
@@ -37,6 +37,18 @@ lshsearch <- function(queries,matrixFile,
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
 }
+lshsearchAll <- function(matrixFile,
+	W=NA,H=NA,M=NA,L=NA,K=NA,T=NA,R=NA) 
+{
+	if(!file.exists(matrixFile)) stop(paste("could not find matrix file:",matrixFile))
+	.Call("lshsearchAll",as.character(matrixFile),
+		as.double(W),as.integer(H),as.integer(M),as.integer(L),
+		as.integer(K),as.integer(T), as.double(R))
+}
+jarvisPatrick_c <- function(neighbors,minNbrs){
+	.Call("jarvis_patrick",neighbors,as.integer(minNbrs))
+}
+
 
 
 # functions needed for sql backend:
@@ -116,6 +128,9 @@ eiMakeDb <- function(refs,d,distance=apDistance,
 
 
 	queryIds=genTestQueryIds(numSamples,dir,refIds)
+	mainIds <- readIddb(file.path(dir,Main))
+	#print("queryids")
+	#print(queryIds)
 
 
 	selfDistFile <- paste(refIddb,"distmat",sep=".")
@@ -132,7 +147,6 @@ eiMakeDb <- function(refs,d,distance=apDistance,
 		#compute pairwise distances for all references
 		if(! file.exists(selfDistFile)){
 			message("generating selfDistFile")
-			#sql_db2dbDistance(file.path(dir,ChemDb),iddb1=refIds,iddb2=refIds,file=selfDistFile)
 			IddbVsIddbDist(file.path(dir,ChemDb),refIds,refIds,distance,file=selfDistFile)
 		}
 		selfDist<-read.table(selfDistFile)
@@ -144,11 +158,13 @@ eiMakeDb <- function(refs,d,distance=apDistance,
 	}
 	#compute dist between refs and all compounds
 	if(!file.exists(ref2AllDistFile))
-		IddbVsIddbDist(file.path(dir,ChemDb),readIddb(file.path(dir,Main)),refIds,distance,file=ref2AllDistFile)
+		IddbVsIddbDist(file.path(dir,ChemDb),readIddb(file.path(dir,Main)),
+							refIds,distance,file=ref2AllDistFile)
 	
 	#each job needs: R, D, coords, a chunk of distance data
 	solver <- getSolver(r,d,coords)	
 	distConn <- file(ref2AllDistFile,"r")
+
 
 	numJobs=length(cl)
 	jobSize = as.integer(cdbSize(dir) / numJobs + 1) #make last job short
@@ -166,16 +182,25 @@ eiMakeDb <- function(refs,d,distance=apDistance,
 				file=file.path(workDir,paste(r,d,i,sep="-")),
 				row.names=F,col.names=F)
 
-			#list indexes for this job, see which of them are queries, then shift indexes back to
-			# this jobs range before selecting from data.
-			selected = queryIds[queryIds %in% ((i-1)*jobSize+1):(i*jobSize)]-((i-1)*jobSize)
+			#list indexes for this job, see which of them are queries, 
+			#then shift indexes back to this jobs range before selecting 
+			#from data.
+			#print(mainIds[((i-1)*jobSize+1):(i*jobSize)] %in% queryIds)
+			selected = which( mainIds[((i-1)*jobSize+1):(i*jobSize)]  
+										%in% queryIds ) - ((i-1)*jobSize)
+			#selected = queryIds[queryIds %in% 
+									  #mainIds[((i-1)*jobSize+1):(i*jobSize)]] - 
+								#((i-1)*jobSize)
+			#print(selected)
 			# R magically changes the data type depending on the size, yay!
-			qd = if(length(selected)==1)  t(data[,selected]) else t(data)[selected, ]
+			qd = if(length(selected)==1) 
+						t(data[,selected]) else t(data)[selected, ]
 			write.table(qd ,
 				file=file.path(workDir,paste("q",r,d,i,sep="-")),
 				row.names=F,col.names=F)
 		})
 	close(distConn)
+
 
 	system(paste("cat",
 					 paste(Map(function(x) file.path(workDir,paste(r,d,x,sep="-")),1:numJobs),collapse=" "),
@@ -277,9 +302,26 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
 				file=embeddedFile, append=TRUE,row.names=F,col.names=F)
 		binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
 }
-eiCluster <- function(r,d,refIddb,compoundIds=readIddb(file.path(dir,Main)),K,
+eiCluster <- function(r,d,K,minNbrs, dir=".",...){
+
+		workDir=file.path(dir,paste("run",r,d,sep="-"))
+		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
+		mainIndex = readIddb(file.path(dir,Main))
+		neighbors = lshsearchAll(matrixFile,K=2*K,...)
+
+		print(neighbors)
+
+		rawClustering = jarvisPatrick_c(neighbors,minNbrs)
+		clustering = mainIndex[rawClustering]
+		names(clustering) = mainIndex
+		clustering
+}
+eiCluster2 <- function(r,d,refIddb,compoundIds=readIddb(file.path(dir,Main)),K,
 							 dir=".", format="SDF",descriptorType="ap",distance=apDistance){
 
+		workDir=file.path(dir,paste("run",r,d,sep="-"))
+		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
+		refIds = readIddb(refIddb)
 		conn = initDb(file.path(dir,ChemDb))
 		descriptors=getDescriptors(conn,descriptorType,compoundIds)
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
@@ -301,13 +343,19 @@ eiCluster <- function(r,d,refIddb,compoundIds=readIddb(file.path(dir,Main)),K,
 search <- function(queries,matrixFile,queryDescriptors,distance,K,dir,...)
 {
 		neighbors = lshsearch(queries,matrixFile,K=2*K,...)
+		mainIds <- readIddb(file.path(dir,Main))
 		#print(paste("got ",paste(dim(neighbors),callapse=","),"neighbors back from lshsearch"))
 		#print("neighbors:")
 		#print(neighbors)
 
 		#compute distance between each query and its candidates	
-		Map(function(i) refine(neighbors[i,neighbors[i,,1]!=-1,],queryDescriptors[i],K,distance,dir),
-			1:(dim(queries)[2]))
+		Map(function(i) {
+			 n=neighbors[i,neighbors[i,,1]!=-1,]
+			 n[,1] = mainIds[n[,1]]
+		#	 print("neighbors:")
+		#	 print(n)
+			 refine(n,queryDescriptors[i],K,distance,dir)
+		  }, 1:(dim(queries)[2]))
 }
 #fetch coords from refIddb.distmat.coord and call embed
 embedFromRefs <- function(r,d,refIddb,query2RefDists)
@@ -342,7 +390,7 @@ getNames <- function(indexes,dir)
 	getCompoundNames(initDb(file.path(dir,ChemDb)),indexes)
 
 writeIddb <- function(data, file,append=FALSE)
-		write.table(sort(data),file,quote=FALSE,append=append,col.names=FALSE,row.names=FALSE)
+		write.table(data,file,quote=FALSE,append=append,col.names=FALSE,row.names=FALSE)
 readIddb <- function(file) as.numeric(readLines(file))
 readNames <- function(file) as.numeric(readLines(file))
 

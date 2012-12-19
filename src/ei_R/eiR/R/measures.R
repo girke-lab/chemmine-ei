@@ -117,28 +117,32 @@ addTransform("ap",
 	}
 )
 
-addTransform(buildType("compound_id","ap"),
-	# compound_id -> ap string
-	toString = function(ids,dir="."){
-		getDescriptors(initDb(file.path(dir,ChemDb)),"ap",ids)
-	},
-	# compound_id -> AP list object
-	toObject = function(ids,dir="."){
-		descInfo = getTransform(buildType("compound_id","ap"))$toString(ids,dir)
-		list(names=names(descInfo),
-			  descriptors=getTransform("ap")$toObject(descInfo))
-	}
+lapply(c("ap"),function(descriptorType)
+	addTransform(buildType("compound_id",descriptorType),
+		# compound_id -> ap string
+		toString = function(ids,dir="."){
+			getDescriptors(initDb(file.path(dir,ChemDb)),descriptorType,ids)
+		},
+		# compound_id -> AP list object
+		toObject = function(ids,dir="."){
+			descInfo = getTransform(buildType("compound_id",descriptorType))$toString(ids,dir)
+			list(names=names(descInfo),
+				  descriptors=getTransform(descriptorType)$toObject(descInfo))
+		}
+	)
 )
-addTransform(buildType("name","ap"),
-	# name -> ap string
-	toString = function(names,dir="."){
-		conn=initDb(file.path(dir,ChemDb))
-		getDescriptors(conn,"ap",findCompoundsByName(conn,names,keepOrder=TRUE))
-	},
-	# name -> AP list object
-	toObject = function(names,dir="."){
-		descInfo = getTransform(buildType("name","ap"))$toString(names,dir)
-		list(names=names,
-			  descriptors=getTransform("ap")$toObject(descInfo))
-	}
+lapply(c("ap"),function(descriptorType)
+	addTransform(buildType("name",descriptorType),
+		# name -> ap string
+		toString = function(names,dir="."){
+			conn=initDb(file.path(dir,ChemDb))
+			getDescriptors(conn,descriptorType,findCompoundsByName(conn,names,keepOrder=TRUE))
+		},
+		# name -> AP list object
+		toObject = function(names,dir="."){
+			descInfo = getTransform(buildType("name",descriptorType))$toString(names,dir)
+			list(names=names,
+				  descriptors=getTransform(descriptorType)$toObject(descInfo))
+		}
+	)
 )

@@ -34,6 +34,9 @@ CCSOURCES  = \
 	../euclidean-search/eucsearch.h \
 	../euclidean-search/eucsearch.cc \
 	../euclidean-search/recordfile.cc \
+	../clustering/cluster.cc \
+	../clustering/DisjointSets.cpp \
+	../clustering/DisjointSets.h \
 	../lshkit/include \
 	../lshkit/src/apost.cpp \
 	../lshkit/src/char_bit_cnt.cpp  \

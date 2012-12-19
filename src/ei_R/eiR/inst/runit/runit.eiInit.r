@@ -24,7 +24,7 @@ test.aa.eiInit <- function() {
 }
 
 testRefs <- function(){
-	c(1,2,5,8,9,10,11,17,18,19,20,23,24,25,26,29,31,33,34,36,38,43,45,46,47,48,49,51,53,66,67,70,71,72,73,74,75,77,78,79,80,81,82,83,87,88,89,91,99,100)
+	200+c(1,2,5,8,9,10,11,17,18,19,20,23,24,25,26,29,31,33,34,36,38,43,45,46,47,48,49,51,53,66,67,70,71,72,73,74,75,77,78,79,80,81,82,83,87,88,89,91,99,100)
 }
 test.ba.eiMakeDb <- function() {
 
@@ -44,7 +44,7 @@ test.ba.eiMakeDb <- function() {
    }
 
 	print("by file name")
-	eiR:::writeIddb(1:r,"reference_file.cdb")
+	eiR:::writeIddb((1:r)+200,"reference_file.cdb")
    eiMakeDb("reference_file.cdb",d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
    runChecks()
 	unlink(runDir,recursive=TRUE)
@@ -61,7 +61,7 @@ test.ba.eiMakeDb <- function() {
 }
 test.ca.eiQuery <- function(){
 
-	#DEACTIVATED("slow")
+#	DEACTIVATED("slow")
    data(sdfsample)
    refIddb = findRefIddb(runDir)
    results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
@@ -70,7 +70,7 @@ test.ca.eiQuery <- function(){
    checkEquals(results$distance[16],0)
 
 
-	results=eiQuery(r,d,refIddb,3:4,format="compound_id",K=15)
+	results=eiQuery(r,d,refIddb,203:204,format="compound_id",K=15)
    checkEquals(results$distance[1],0)
 
 	results=eiQuery(r,d,refIddb,c("650002","650003"), format="name",K=15)
@@ -80,7 +80,7 @@ test.ca.eiQuery <- function(){
 }
 
 test.da.eiPerformanceTest <- function() {
-	#DEACTIVATED("slow")
+#	DEACTIVATED("slow")
    r = eiPerformanceTest(r,d,K=22)
    checkMatrix("chemical-search.results$",20, N,"data")
    checkMatrix("eucsearch.50-40",20,N)
@@ -89,7 +89,7 @@ test.da.eiPerformanceTest <- function() {
 }
 test.ea.eiAdd<- function(){
 
-	#DEACTIVATED("slow")
+#	DEACTIVATED("slow")
    data(example_compounds)
    cat(paste(paste(example_compounds,collapse="\n"),"\n",sep=""),file="example_compounds.sdf")
    options(warn=-1)
@@ -105,6 +105,17 @@ test.ea.eiAdd<- function(){
    results = eiQuery(r,d,findRefIddb(runDir),examples[4])
    checkEquals(results$distance[1],0)
    print(results)
+}
+test.fa.eiCluster <- function(){
+
+	clustering=eiCluster(r,d,K=5,minNbrs=3)
+	conn = initDb("data/chem.db")
+	print(clustering)
+	lapply(unique(clustering),
+		function(cid)
+			print(getCompoundNames(conn,names(clustering)[clustering==cid])) )
+	checkTrue(length(clustering) >= N) #ieAdd will add some stuff
+
 }
 test.aaaaa.cleanup<- function(){
    junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
