@@ -127,7 +127,8 @@ SEXP lshsearchAll( SEXP matrixFile,
       unsigned cnt;
       Topk<unsigned> topk;
       float maxValue = std::numeric_limits<float>::max();
-      TopkScanner<FloatMatrix::Accessor, metric::l2sqr<float> > query(accessor, l2sqr, K, R);
+      TopkScanner<FloatMatrix::Accessor, metric::l2sqr<float> > 
+			query(accessor, l2sqr, K, R);
       topk.reset(K);
 
       query.reset(data[i]);
@@ -136,10 +137,12 @@ SEXP lshsearchAll( SEXP matrixFile,
       topk.swap(query.topk());
 
 
-      //for (unsigned j = 0; j < K; j ++)
-      //   if(topk[j].dist != maxValue)
-      //      Rprintf("%d:%f ",topk[j].key,topk[j].dist);
-      //Rprintf("\n");
+     // for (unsigned j = 0; j < K; j ++)
+     //    if(topk[j].dist != maxValue)
+     //       Rprintf("%d:%f ",topk[j].key,topk[j].dist);
+	  // 	else
+     //       Rprintf("%d:%f ",topk[j].key,-1.0);
+     // Rprintf("\n");
 
       for(unsigned j = 0; j < K; j++)
       {

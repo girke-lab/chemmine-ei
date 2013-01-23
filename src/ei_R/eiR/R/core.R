@@ -45,8 +45,8 @@ lshsearchAll <- function(matrixFile,
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
 }
-jarvisPatrick_c <- function(neighbors,minNbrs){
-	.Call("jarvis_patrick",neighbors,as.integer(minNbrs))
+jarvisPatrick_c <- function(neighbors,minNbrs,fast=TRUE){
+	.Call("jarvis_patrick",neighbors,as.integer(minNbrs),as.integer(fast))
 }
 
 
@@ -302,16 +302,62 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
 				file=embeddedFile, append=TRUE,row.names=F,col.names=F)
 		binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
 }
-eiCluster <- function(r,d,K,minNbrs, dir=".",...){
+eiCluster <- function(r,d,K,minNbrs, dir=".",
+							 descriptorType="ap",distance=apDistance,
+							  W = 1.39564, M=19,L=10,T=30){
 
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
 		mainIndex = readIddb(file.path(dir,Main))
-		neighbors = lshsearchAll(matrixFile,K=2*K,...)
+		neighbors = lshsearchAll(matrixFile,K=2*K,W=W,M=M,L=L,T=T)
 
-		print(neighbors)
+		ml=length(mainIndex)
+#		neighbors = array(matrix(1:ml,nrow=ml,
+#								 ncol=ml,byrow=TRUE),dim=c(ml,ml,2))
+#		neighbors[,,2]=-2.0
+		#print(neighbors)
 
-		rawClustering = jarvisPatrick_c(neighbors,minNbrs)
+		conn = initDb(file.path(dir,ChemDb))
+		refinedNeighbors=array(-1,dim=c(length(mainIndex),K))
+		#print("refining")
+		batchByIndex(mainIndex,function(indexSet){
+			#print("indexset:"); print(indexSet)
+			descriptors = getDescriptors(conn,descriptorType,indexSet)
+			lapply(1:length(indexSet),function(i){
+			#	print(neighbors[i,,])
+				nonNegs=neighbors[i,,1]!=-1
+			#	print(nonNegs)
+			   n=neighbors[i,nonNegs,]
+			#	print(dim(n))
+				#must set this manually because if only one row is
+				#left after filtering, R decides its not really an
+				#array anymore
+				dim(n)=c(sum(nonNegs) ,2)
+		      #translate from matrixFile index space to database index space
+				reverseIndex=n[,1]
+				names(reverseIndex)=mainIndex[n[,1]]
+			   n[,1] = mainIndex[n[,1]]
+				#print(reverseIndex)
+			#	print(n)
+				refined=refine(n,descriptors[i],K,distance,dir)
+				dim(refined)=c(min(sum(nonNegs),K) ,2)
+				#print(paste(mainIndex[i],paste(refined[,1],collapse=",")))
+				refinedNeighbors[i,1:(dim(refined)[1])]<<-
+							#as.character(refined[,1])
+							reverseIndex[as.character(refined[,1])]
+				#print(refinedNeighbors[i,1:(dim(refined)[1])])
+			})
+		 })
+
+		
+
+		rownames(refinedNeighbors)=1:ml  ##
+		#print("refined:")
+		#print((refinedNeighbors))
+
+		#return(refinedNeighbors)
+
+		rawClustering = jarvisPatrick_c(refinedNeighbors,minNbrs,fast=TRUE)
 		clustering = mainIndex[rawClustering]
 		names(clustering) = mainIndex
 		clustering
@@ -340,9 +386,9 @@ eiCluster2 <- function(r,d,refIddb,compoundIds=readIddb(file.path(dir,Main)),K,
 		neighbors
 }
 #expects one query per column
-search <- function(queries,matrixFile,queryDescriptors,distance,K,dir,...)
+search <- function(embeddedQueries,matrixFile,queryDescriptors,distance,K,dir,...)
 {
-		neighbors = lshsearch(queries,matrixFile,K=2*K,...)
+		neighbors = lshsearch(embeddedQueries,matrixFile,K=2*K,...)
 		mainIds <- readIddb(file.path(dir,Main))
 		#print(paste("got ",paste(dim(neighbors),callapse=","),"neighbors back from lshsearch"))
 		#print("neighbors:")
@@ -350,12 +396,14 @@ search <- function(queries,matrixFile,queryDescriptors,distance,K,dir,...)
 
 		#compute distance between each query and its candidates	
 		Map(function(i) {
-			 n=neighbors[i,neighbors[i,,1]!=-1,]
+			 nonNegs=neighbors[i,,1]!=-1
+			 n=neighbors[i,nonNegs,]
+			 dim(n)=c(sum(nonNegs) ,2)
 			 n[,1] = mainIds[n[,1]]
 		#	 print("neighbors:")
 		#	 print(n)
 			 refine(n,queryDescriptors[i],K,distance,dir)
-		  }, 1:(dim(queries)[2]))
+		  }, 1:(dim(embeddedQueries)[2]))
 }
 #fetch coords from refIddb.distmat.coord and call embed
 embedFromRefs <- function(r,d,refIddb,query2RefDists)
@@ -377,7 +425,8 @@ refine <- function(lshNeighbors,queryDescriptors,limit,distance,dir)
 	tmpDir=tempdir()
 
 
-	d = t(IddbVsGivenDist(file.path(dir,ChemDb),lshNeighbors[,1],queryDescriptors,distance))
+	d = t(IddbVsGivenDist(file.path(dir,ChemDb),lshNeighbors[,1],
+								 queryDescriptors,distance))
 
 	#if(debug) print("result distance: ")
 	#if(debug) print(str(d))
@@ -403,7 +452,8 @@ genTestQueryIds <- function(numSamples,dir,refIds=c())
 	testQueryFile <-file.path(dir,TestQueries)
 	mainIds <- readIddb(file.path(dir,Main))
 	set=setdiff(mainIds,refIds)
-	if(numSamples < 0 || numSamples > length(set)) stop(paste("trying to take more samples than there are compounds available",numSamples,length(set)))
+	if(numSamples < 0 || numSamples > length(set)) 
+		stop(paste("trying to take more samples than there are compounds available",numSamples,length(set)))
 	queryIds <- sort(sample(set,numSamples))
 	writeIddb(queryIds,testQueryFile)
 	queryIds
@@ -474,18 +524,6 @@ eiPerformanceTest <- function(r,d,distance=apDistance,descriptorType="ap",
 			row.names=F,col.names=F,quote=F)
 }
 
-nextChemDb <- function(dir=".")
-{
-	regex=paste(ChemPrefix,"-\\d+\\.db$",sep="")
-	sub.regex=paste(ChemPrefix,"-(\\d+)\\.db$",sep="")
-	values = sub(paste(".*",sub.regex,sep=""),"\\1",
-					grep(regex,
-						  dir(file.path(dir,DataDir),pattern=regex,full.names=TRUE),
-						  value=TRUE))
-	nextIndex = if(length(values)==0) 1 else max(as.numeric(values))+1
-
-	file.path(dir,DataDir,paste(ChemPrefix,"-",nextIndex,".db",sep=""))
-}
 
 #distance functions
 # subset vs descriptors  db,iddb,descriptors

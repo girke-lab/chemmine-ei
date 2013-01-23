@@ -90,6 +90,8 @@ int main (int argc, char *argv[])
     /* load matrix */
     Matrix<float> data(data_file);
 
+	 cout<<"size:"<<data.getSize()<<endl;
+
     vector<unsigned> idx(data.getSize());
     for (unsigned i = 0; i < idx.size(); ++i) idx[i] = i;
     random_shuffle(idx.begin(), idx.end());
@@ -126,6 +128,7 @@ int main (int argc, char *argv[])
         gG = exp(gG);
     }
 
+	 cout<<"K: "<<K<<", Q: "<<Q<<", idx size: "<<idx.size()<<endl;
     if (Q > idx.size()) Q = idx.size();
     if (K > idx.size() - Q) K = idx.size() - Q;
     /* sample query */
@@ -136,6 +139,8 @@ int main (int argc, char *argv[])
     /* do the queries */
     vector<Topk<unsigned> > topks(Q);
     for (unsigned i = 0; i < Q; ++i) topks[i].reset(K);
+
+	 cout<<"F: "<<F<<", K: "<<K<<endl;
 
     /* ... */
     gsl_matrix *X = gsl_matrix_alloc(F * K, 3);

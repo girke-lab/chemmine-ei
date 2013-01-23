@@ -11,7 +11,7 @@ j=1
 runDir<-paste("run",r,d,sep="-")
 
 test.aa.eiInit <- function() {
-	#DEACTIVATED("slow")
+	DEACTIVATED("slow")
    data(sdfsample)
    compoundIds = eiInit(sdfsample)
    checkTrue(file.exists(file.path("data","chem.db")))
@@ -28,7 +28,8 @@ testRefs <- function(){
 }
 test.ba.eiMakeDb <- function() {
 
-     runChecks = function(){
+	#DEACTIVATED("slow")
+   runChecks = function(){
       checkMatrix(".cdb$",r,1)
       checkMatrix(".cdb.distmat$",r,r)
       checkMatrix(".cdb.distmat.coord$",r,d)
@@ -57,11 +58,12 @@ test.ba.eiMakeDb <- function() {
 	print("by vector")
    eiMakeDb(testRefs(),d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
    runChecks()
+
 	
 }
 test.ca.eiQuery <- function(){
 
-#	DEACTIVATED("slow")
+	DEACTIVATED("slow")
    data(sdfsample)
    refIddb = findRefIddb(runDir)
    results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
@@ -80,7 +82,7 @@ test.ca.eiQuery <- function(){
 }
 
 test.da.eiPerformanceTest <- function() {
-#	DEACTIVATED("slow")
+	DEACTIVATED("slow")
    r = eiPerformanceTest(r,d,K=22)
    checkMatrix("chemical-search.results$",20, N,"data")
    checkMatrix("eucsearch.50-40",20,N)
@@ -89,7 +91,7 @@ test.da.eiPerformanceTest <- function() {
 }
 test.ea.eiAdd<- function(){
 
-#	DEACTIVATED("slow")
+	DEACTIVATED("slow")
    data(example_compounds)
    cat(paste(paste(example_compounds,collapse="\n"),"\n",sep=""),file="example_compounds.sdf")
    options(warn=-1)
@@ -108,18 +110,91 @@ test.ea.eiAdd<- function(){
 }
 test.fa.eiCluster <- function(){
 
-	clustering=eiCluster(r,d,K=5,minNbrs=3)
+	DEACTIVATED("broken")
+	numNbrs=5
+	minNbrs=3
+	#numNbrs=20
+	#minNbrs=17
+	fast=TRUE
+
+	#clnnm=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs)
+	#clustering = jarvisPatrick(clnnm,j=numNbrs,k=minNbrs,fast=fast)
+	compoundIds=eiR:::readIddb(eiR:::Main)
+
+	clustering=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs)
+								#L = 60, T = 50,  M = 9,  W = 101.019)
+								#L = 60,T = 50 ,M = 4,  W = 63.8275)
+#	checkTrue(length(clustering) >= N) #eiAdd will add some stuff
+#
 	conn = initDb("data/chem.db")
-	print(clustering)
-	lapply(unique(clustering),
-		function(cid)
-			print(getCompoundNames(conn,names(clustering)[clustering==cid])) )
-	checkTrue(length(clustering) >= N) #ieAdd will add some stuff
+	compoundIds=names(clustering)
+	compoundNames=getCompoundNames(conn,compoundIds)
+	names(clustering)=compoundNames
+	print(sort(clustering))
+#
+
+	#### non lsh clustering
+
+	preProcess = eiR:::getTransform("ap")$toObject
+	aps=as(preProcess(eiR:::getDescriptors(conn,"ap",compoundIds)),"APset")
+	#cid(aps)=compoundNames
+	#cid(aps)=as.character(compoundIds)
+	cid(aps)=as.character(1:length(compoundIds))
+
+	cl2nnm = jarvisPatrick(aps,j=numNbrs,k=minNbrs,type="matrix")
+	d=dim(cl2nnm)
+	cl2nnm=as.numeric(cl2nnm)
+	cl2nnm[is.na(cl2nnm)]= -1
+	dim(cl2nnm)=d
+	rownames(cl2nnm)=cid(aps)
+
+	print(sapply(seq(dim(cl2nnm)[1]),function(i) 
+			 sapply(seq(along=cl2nnm[i,]),function(j)
+					  if(cl2nnm[i,j]==-1) -1 else cmp.similarity(aps[i],aps[cl2nnm[i,j]]))))
+	print((cl2nnm))
+
+	#cl2 = jarvisPatrick(cl2nnm,j=numNbrs,k=minNbrs,fast=fast)
+
+	cl2 = eiR:::jarvisPatrick_c(cl2nnm,minNbrs,fast=fast)
+	#print(cl2)
+	#names(cl2)=cid(aps)
+	#names(cl2)=as.character(compoundIds)
+	names(cl2)=compoundNames
+	#print(cl2)
+
+
+	write.table(clustering,file="sample_lsh.clstr",quote=F,sep="\t",col.names=F)
+	write.table(cl2,file="sample_true.clstr",quote=F,sep="\t",col.names=F)
+	print(sort(clustering))
+	print(sort(cl2))
+
+
+	source("http://faculty.ucr.edu/~tgirke/Documents/R_BioCond/My_R_Scripts/clusterIndex.R")
+	print(clusterSizes(clustering))
+	print(clusterSizes(cl2))
+	ci <- cindex(clV1=clustering, clV2=cl2, minSZ=0, method="jaccard") 
+	rand <- cindex(clV1=clustering, clV2=cl2, minSZ=0,
+						method="rand")
+	rand=rand$Rand_Index
+	arand <- cindex(clV1=clustering, clV2=cl2, minSZ=0,
+						 method="arand")
+	arand=arand$Adjusted_Rand_Index
+	print(paste("cluster similarity:",ci$Jaccard_Index,rand,arand))
 
 }
+
+clusterSizes <- function(clustering) {
+	sizes=Reduce(rbind,lapply(unique(clustering),function(cid)
+							  cbind(cid=cid,size=sum(clustering==cid))))
+	#sizes[order(sizes[,1]),]
+	sizes[sizes[,2]>1,]
+}
+
+
+
 test.aaaaa.cleanup<- function(){
-   junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
-   #junk <- c("example_compounds.sdf","example_queries.sdf","run-50-40")
+   #junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
+   junk <- c("example_compounds.sdf","example_queries.sdf","run-50-40")
    unlink(junk,recursive=T)
 }
 findRefIddb <- function(runDir){

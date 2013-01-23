@@ -21,12 +21,16 @@
 #include <Rinternals.h>
 
 extern "C" {
-	SEXP jarvis_patrick(SEXP neighbors,SEXP minNbrs);
+	SEXP jarvis_patrick(SEXP neighbors,SEXP minNbrs,SEXP fast);
 }
 #endif
 
+void print_clusters(DisjointSets &s);
+void print_clusters(DisjointSets &s,int N);
+
 #define LINE_BUF_SIZE 10240
 
+//This is not thread safe
 std::map<std::string, int> name_to_id;
 std::vector<std::string> names;
 std::vector<std::vector<int> > nbr_list;
@@ -124,35 +128,54 @@ int nbr_intersect(std::vector<int>& nbrs1, std::vector<int>& nbrs2)
 	return intrsct;
 }
 
-/* initialize the clustering */
-DisjointSets s;
-void cluster_init(int n) {
-	s.AddElements(n);
-	return;
+void checkPair(DisjointSets &s,int i, int j,int m)
+{
+	//printf("%d:%d\n",i,j);
+	if (s.FindSet(i) == s.FindSet(j)) return;
+
+	//printf("different sets\n");
+	// check condition 2
+	if (nbr_intersect(nbr_list[i], nbr_list[j]) < m)
+		return;
+
+	//printf("met intersection req\n");
+	// merging clusters
+	//printf("merged %d and %d\n",s.FindSet(i), s.FindSet(j));
+	s.Union(s.FindSet(i), s.FindSet(j));
 }
 
-void cluster(int n,int m)
+DisjointSets clusterAllPairs(int n,int m)
 {
-	cluster_init(n);
+	DisjointSets s;
+	s.AddElements(n);
+	for (int i = 0; i < n; i ++) {
+		for (int j = i+1; j < n; j ++) { 
+			checkPair(s,i,j,m);
+		}
+		//print_clusters(s,n);
+	}
+	return s;
+}
+
+DisjointSets cluster(int n,int m)
+{
+	DisjointSets s;
+	s.AddElements(n);
 	for (int i = 0; i < n; i ++) {
 		for (int j = 0; j < nbr_list[i].size(); j ++) {
-			int nbr = nbr_list[i][j];
-			if (s.FindSet(i) == s.FindSet(nbr)) continue;
-			// check condition 2
-			if (nbr_intersect(nbr_list[i], nbr_list[nbr]) < m)
-				continue;
-			// merging clusters
-			s.Union(s.FindSet(i), s.FindSet(nbr));
+			checkPair(s,i,nbr_list[i][j],m);
 		}
+	//	print_clusters(s,n);
 	}
+	return s;
+}
+DisjointSets cluster(int m)
+{
+	return cluster(names.size(),m);
 }
 
-void cluster(int m)
-{
-	cluster(names.size(),m);
-}
 #ifdef NO_MAIN
-SEXP jarvis_patrick(SEXP neighbors,SEXP minNbrs)
+SEXP jarvis_patrick(SEXP neighbors,SEXP minNbrs,SEXP fast)
 {
 	// neightbors is NxKx2  last 2 are (id,distance)
 	
@@ -163,21 +186,27 @@ SEXP jarvis_patrick(SEXP neighbors,SEXP minNbrs)
 
 	//Rprintf("N:%d, K:%d,m:%d\n",N,K,*INTEGER(minNbrs));
 
-	for(unsigned i=0; i<N; i++)
+	nbr_list.clear();
+	for(unsigned i=0; i<N; i++) //rows
 	{
 		std::vector<int> nbrs;
-		for(int j=0; j<K; j++)
+		for(int j=0; j<K; j++)  //cols
 		{  // R arrays are column major 
 			if(REAL(neighbors)[j*N+i] != -1)
 				nbrs.push_back(REAL(neighbors)[j*N+i]-1);
 		}
+		std::sort(nbrs.begin(), nbrs.end());
 		nbr_list.push_back(nbrs);
 	}
 	//Rprintf("loaded nbr_list\n");
 
 	// do actual clustering
-	cluster(N,*INTEGER(minNbrs));
+	DisjointSets s= *INTEGER(fast)? 
+		cluster(N,*INTEGER(minNbrs)):
+		clusterAllPairs(N,*INTEGER(minNbrs));
+
 	//Rprintf("done clustering\n");
+	print_clusters(s,N);
 
 	//pull result out of s
 	SEXP result;
@@ -197,13 +226,18 @@ SEXP jarvis_patrick(SEXP neighbors,SEXP minNbrs)
 }
 #endif
 
-void print_clusters()
+void print_clusters(DisjointSets &s)
 {
-	for (int i = 0; i < names.size(); i ++) 
-		std::cout << s.FindSet(i) << std::endl;	
+	print_clusters(s,names.size());
+}
+void print_clusters(DisjointSets &s,int N)
+{
+	for (int i = 0; i < N; i ++) 
+		std::cout << i<<","<<s.FindSet(i) <<"  ";
+	std::cout << std::endl;	
 }
 
-void print_cluster_stat(int print_pair = 0)
+void print_cluster_stat(DisjointSets &s,int print_pair = 0)
 {
 	std::map<int, std::vector<int> > lg_cls;
 	int *st = new int[names.size()];
@@ -272,13 +306,13 @@ int main(int argc, char* argv[])
 		mode = atoi(argv[5]);
 	prepare_neighbors(argv[1], atoi(argv[2]), atoi(argv[3]));
 	//print_neighbors();
-	cluster(atoi(argv[4]));
+	DisjointSet s =cluster(atoi(argv[4]));
 	if (mode == 2)
-		print_clusters();
+		print_clusters(s);
 	else if (mode == 1)
-		print_cluster_stat();
+		print_cluster_stat(s);
 	else
-		print_cluster_stat(1);
+		print_cluster_stat(s,1);
 	return 0;
 }
 #endif
