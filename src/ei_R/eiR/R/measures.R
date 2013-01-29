@@ -83,29 +83,29 @@ buildType <- function(format,descriptorType) tolower(paste(format,descriptorType
 
 addTransform(buildType("sdf","ap"),
 	# Any sdf source -> ap string
-	toString = function(input) 
+	toString = function(input,dir=".") 
 		getTransform("ap")$toString(
 			getTransform(buildType("sdf","ap"))$toObject(input)$descriptors),
 	# Any sdf source -> APset
-	toObject = function(input){
+	toObject = function(input,dir="."){
 
 		sdfset=if(is.character(input) && file.exists(input)){
 			read.SDFset(input)
 		}else if(inherits(input,"SDFset")){
 			input
 		}else{
-			stop(paste("unknown type for 'in', or filename does not exist. type found:",class(input)))
+			stop(paste("unknown type for 'input', or filename does not exist. type found:",class(input)))
 		}
 		list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
 	}
 )
 addTransform("ap",  
    # APset -> string,
-	toString = function(apset){
+	toString = function(apset,dir="."){
 		unlist(lapply(ap(apset), function(x) paste(x,collapse=", ")))
 	},
    # string or list -> AP set list
-	toObject= function(v){ 
+	toObject= function(v,dir="."){ 
 		if(inherits(v,"list") || length(v)==0)
 			return(v)
 

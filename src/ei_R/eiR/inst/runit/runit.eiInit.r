@@ -63,7 +63,7 @@ test.ba.eiMakeDb <- function() {
 }
 test.ca.eiQuery <- function(){
 
-	DEACTIVATED("slow")
+	#DEACTIVATED("slow")
    data(sdfsample)
    refIddb = findRefIddb(runDir)
    results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
@@ -110,7 +110,25 @@ test.ea.eiAdd<- function(){
 }
 test.fa.eiCluster <- function(){
 
-	DEACTIVATED("broken")
+	numNbrs=5
+	minNbrs=3
+
+
+	clustering=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs)
+	checkTrue(length(clustering) >= N) #eiAdd will add some stuff
+
+	conn = initDb("data/chem.db")
+	compoundIds=names(clustering)
+	compoundNames=getCompoundNames(conn,compoundIds)
+	names(clustering)=compoundNames
+	print(sort(clustering))
+	print(clusterSizes(clustering))
+
+
+}
+test.fn.cluster_comparison <- function(){
+
+	#DEACTIVATED("broken")
 	numNbrs=5
 	minNbrs=3
 	#numNbrs=20
@@ -119,7 +137,7 @@ test.fa.eiCluster <- function(){
 
 	#clnnm=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs)
 	#clustering = jarvisPatrick(clnnm,j=numNbrs,k=minNbrs,fast=fast)
-	compoundIds=eiR:::readIddb(eiR:::Main)
+	#compoundIds=eiR:::readIddb(eiR:::Main)
 
 	clustering=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs)
 								#L = 60, T = 50,  M = 9,  W = 101.019)
