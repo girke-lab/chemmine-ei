@@ -226,7 +226,7 @@ eiQuery <- function(r,d,refIddb,queries,format="sdf",
 
 
 		descriptorInfo = getTransform(buildType(format,descriptorType)
-												)$toObject(queries)
+												)$toObject(queries,dir)
 		queryDescriptors = descriptorInfo$descriptors
 		numQueries = length(queryDescriptors)
 		queryNames = descriptorInfo$names
