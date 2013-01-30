@@ -45,9 +45,6 @@ lshsearchAll <- function(matrixFile,
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
 }
-jarvisPatrick_c <- function(neighbors,minNbrs,fast=TRUE){
-	.Call("jarvis_patrick",neighbors,as.integer(minNbrs),as.integer(fast))
-}
 
 
 
