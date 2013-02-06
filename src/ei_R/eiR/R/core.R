@@ -383,8 +383,11 @@ search <- function(embeddedQueries,matrixFile,queryDescriptors,distance,K,dir,..
 		Map(function(i) {
 			 #nonNegs=neighbors[i,,1]!=-1
 			 nonNegs = ! is.na(neighbors[i,,1])
+			 #print(nonNegs)
 			 n=neighbors[i,nonNegs,]
 			 dim(n)=c(sum(nonNegs) ,2)
+			 #print(sum(nonNegs))
+			 #print(n)
 			 n[,1] = mainIds[n[,1]]
 		#	 print("neighbors:")
 		#	 print(n)

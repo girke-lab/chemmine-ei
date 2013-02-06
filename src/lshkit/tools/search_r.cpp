@@ -237,8 +237,8 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile,
             REAL(result)[index]   = topk[j].key+1;
             REAL(result)[index2] = topk[j].dist;
          }else{
-            REAL(result)[index]   = -1;
-            REAL(result)[index2] = -1;
+            REAL(result)[index]   = NA_REAL;
+            REAL(result)[index2] = NA_REAL;
          }
       }
 

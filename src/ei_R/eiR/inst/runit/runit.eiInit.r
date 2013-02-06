@@ -121,16 +121,18 @@ test.fa.eiCluster <- function(){
 	compoundIds=names(clustering)
 	compoundNames=getCompoundNames(conn,compoundIds)
 	names(clustering)=compoundNames
-	print(sort(clustering))
-	print(clusterSizes(clustering))
+	sizes= clusterSizes(clustering)
+	#print(sizes)
+	checkTrue(nrow(sizes) %in% c(9,10)) # 10 if eiAdd has run
+	checkTrue(all(sizes[,2]==2))
+
+	#print(sort(clustering))
 }
 test.fn.cluster_comparison <- function(){
 
 	#DEACTIVATED("off")
 	numNbrs=10
 	minNbrs=2
-	#numNbrs=20
-	#minNbrs=17
 	fast=TRUE
 	cutoff=0.5
 
@@ -139,29 +141,21 @@ test.fn.cluster_comparison <- function(){
 	#r=300
 	#d=100
 
-	#clnnm=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs)
-	#clustering = jarvisPatrick(clnnm,j=numNbrs,k=minNbrs,fast=fast)
-	#compoundIds=eiR:::readIddb(eiR:::Main)
 
 	clustering=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs,dir=dir,cutoff=cutoff)
-								#L = 60, T = 50,  M = 9,  W = 101.019)
-								#L = 60,T = 50 ,M = 4,  W = 63.8275)
-#	checkTrue(length(clustering) >= N) #eiAdd will add some stuff
-#
+	checkTrue(length(clustering) >= N) #eiAdd will add some stuff
+
 	conn = initDb(file.path(dir,"data/chem.db"))
 	compoundIds=names(clustering)
 	compoundNames=getCompoundNames(conn,compoundIds)
 	names(clustering)=compoundNames
-	print(sort(clustering))
-#
+	#print(sort(clustering))
+
 
 	#### non lsh clustering
 
-###### gen cl2
 	preProcess = eiR:::getTransform("ap")$toObject
 	aps=as(preProcess(eiR:::getDescriptors(conn,"ap",compoundIds)),"APset")
-	#cid(aps)=compoundNames
-	#cid(aps)=as.character(compoundIds)
 	cid(aps)=as.character(1:length(compoundIds))
 
 	cl2nnm = jarvisPatrick(aps,j=numNbrs,k=minNbrs,type="matrix",cutoff=cutoff)
@@ -170,39 +164,31 @@ test.fn.cluster_comparison <- function(){
 	dim(cl2nnm)=d
 	rownames(cl2nnm)=cid(aps)
 
-	#print(sapply(seq(dim(cl2nnm)[1]),function(i) 
-	#		 sapply(seq(along=cl2nnm[i,]),function(j)
-	#				  if(is.na(cl2nnm[i,j])) -1 else cmp.similarity(aps[i],aps[cl2nnm[i,j]]))))
-	print(tail(cl2nnm))
+	#print(tail(cl2nnm))
 
-	#cl2 = jarvisPatrick(cl2nnm,j=numNbrs,k=minNbrs,fast=fast)
 
 	cl2 = jarvisPatrick_c(cl2nnm,minNbrs,fast=fast)
-	#print(cl2)
-	#names(cl2)=cid(aps)
-	#names(cl2)=as.character(compoundIds)
 	names(cl2)=compoundNames
 	#print(cl2)
-##############
 
 
-	write.table(clustering,file="sample_lsh_cutoff.clstr",quote=F,sep="\t",col.names=F)
-	write.table(cl2,file="sample_true.cutoff.clstr",quote=F,sep="\t",col.names=F)
-	print(sort(clustering))
-	print(sort(cl2))
+	#print(sort(clustering))
+	#print(sort(cl2))
 
 
 	source("http://faculty.ucr.edu/~tgirke/Documents/R_BioCond/My_R_Scripts/clusterIndex.R")
-	print(clusterSizes(clustering))
-	print(clusterSizes(cl2))
-	ci <- cindex(clV1=clustering, clV2=cl2, minSZ=0, method="jaccard") 
+	#print(clusterSizes(clustering))
+	#print(clusterSizes(cl2))
+	ci <- cindex(clV1=clustering, clV2=cl2, minSZ=0, method="jaccard")$Jaccard_Index
+	checkEquals(ci,1)
+
 	rand <- cindex(clV1=clustering, clV2=cl2, minSZ=0,
 						method="rand")
 	rand=rand$Rand_Index
 	arand <- cindex(clV1=clustering, clV2=cl2, minSZ=0,
 						 method="arand")
 	arand=arand$Adjusted_Rand_Index
-	print(paste("cluster similarity:",ci$Jaccard_Index,rand,arand))
+	#print(paste("cluster similarity:",ci,rand,arand))
 
 }
 
@@ -308,8 +294,8 @@ clusterSizes <- function(clustering) {
 
 
 test.aaaaa.cleanup<- function(){
-   #junk <- c("data","example_compounds.sdf","example_queries.sdf","run-50-40")
-   junk <- c("example_compounds.sdf","example_queries.sdf","run-50-40")
+   #junk <- c("data","example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
+   junk <- c("example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
    unlink(junk,recursive=T)
 }
 findRefIddb <- function(runDir){
