@@ -240,7 +240,7 @@ eiQuery <- function(r,d,refIddb,queries,format="sdf",
 														  refIds,queryDescriptors,distance)))
 
 		#search for nearby compounds
-		if(debug) print(embeddedQueries)
+		#if(debug) print(embeddedQueries)
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
 		hits = search(embeddedQueries,matrixFile,
 							queryDescriptors,distance,dir,K=K,W=W,M=M,L=L,T=T)
@@ -248,24 +248,27 @@ eiQuery <- function(r,d,refIddb,queries,format="sdf",
 		#if(debug) print(hits)
 
 		targetIds=unlist(lapply(1:length(hits),function(x) hits[[x]][,1]))
-		targetIds=targetIds[targetIds!=-1]
+		#targetIds=targetIds[targetIds!=-1]
+		targetIds=targetIds[!is.na(targetIds)]
 		targetNames=as.matrix(getNames(targetIds,dir))
 		rownames(targetNames)=targetIds
 		#print(paste(targetIds,targetNames))
 
 
-		numHits=sum(sapply(hits,function(x) sum(x[,1]!=-1)))
+		#numHits=sum(sapply(hits,function(x) sum(x[,1]!=-1)))
+		numHits=sum(sapply(hits,function(x) !is.na(sum(x[,1]))))
 		#print(paste("numHits:",numHits))
 		#fetch names for queries and hits and put in a data frame
 		results = data.frame(query=rep(NA,numHits),
 								  target = rep(NA,numHits),
-								  distance=rep(NA,numHits))
+								  distance=rep(NA,numHits),
+								  target_ids = rep(NA,numHits))
 		i=1
 		lapply(1:numQueries,function(queryIndex)
 			lapply(1:(length(hits[[queryIndex]][,1])),function(hitIndex){
 					results[i,"query"]<<-queryNames[queryIndex]
-					results[i,"target"]<<-targetNames[
-							as.character(hits[[queryIndex]][hitIndex,1]),1]
+					results[i,"target"]<<-targetNames[ as.character(hits[[queryIndex]][hitIndex,1]),1]
+					results[i,"target_ids"]<<-hits[[queryIndex]][hitIndex,1]
 					results[i,"distance"]<<- hits[[queryIndex]][hitIndex,2]
 					i<<-i+1
 			}))
@@ -299,9 +302,9 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
 				file=embeddedFile, append=TRUE,row.names=F,col.names=F)
 		binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
 }
-eiCluster <- function(r,d,K,minNbrs, dir=".",
+eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 							 descriptorType="ap",distance=apDistance,
-							  W = 1.39564, M=19,L=10,T=30){
+							  W = 1.39564, M=19,L=10,T=30,type="cluster"){
 
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
@@ -315,14 +318,16 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",
 		#print(neighbors)
 
 		conn = initDb(file.path(dir,ChemDb))
-		refinedNeighbors=array(-1,dim=c(length(mainIndex),K))
+		refinedNeighbors=array(NA,dim=c(length(mainIndex),K))
 		#print("refining")
 		batchByIndex(mainIndex,function(indexSet){
 			#print("indexset:"); print(indexSet)
 			descriptors = getDescriptors(conn,descriptorType,indexSet)
+		#	print("done loading descriptors")
 			lapply(1:length(indexSet),function(i){
 			#	print(neighbors[i,,])
-				nonNegs=neighbors[i,,1]!=-1
+				#nonNegs=neighbors[i,,1]!=-1
+				nonNegs=!is.na(neighbors[i,,1])
 			#	print(nonNegs)
 			   n=neighbors[i,nonNegs,]
 			#	print(dim(n))
@@ -336,9 +341,12 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",
 			   n[,1] = mainIndex[n[,1]]
 				#print(reverseIndex)
 			#	print(n)
-				refined=refine(n,descriptors[i],K,distance,dir)
+				#print(paste("refining",i))
+				refined=refine(n,descriptors[i],K,distance,dir,cutoff=cutoff)
 				dim(refined)=c(min(sum(nonNegs),K) ,2)
 				#print(paste(mainIndex[i],paste(refined[,1],collapse=",")))
+				#print(i)
+				#print(refined)
 				refinedNeighbors[i,1:(dim(refined)[1])]<<-
 							#as.character(refined[,1])
 							reverseIndex[as.character(refined[,1])]
@@ -352,36 +360,16 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",
 		#print("refined:")
 		#print((refinedNeighbors))
 
-		#return(refinedNeighbors)
+		if(type=="matrix")
+			return(refinedNeighbors)
 
+		#print("clustering")
 		rawClustering = jarvisPatrick_c(refinedNeighbors,minNbrs,fast=TRUE)
 		clustering = mainIndex[rawClustering]
 		names(clustering) = mainIndex
 		clustering
 }
-eiCluster2 <- function(r,d,refIddb,compoundIds=readIddb(file.path(dir,Main)),K,
-							 dir=".", format="SDF",descriptorType="ap",distance=apDistance){
 
-		workDir=file.path(dir,paste("run",r,d,sep="-"))
-		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
-		refIds = readIddb(refIddb)
-		conn = initDb(file.path(dir,ChemDb))
-		descriptors=getDescriptors(conn,descriptorType,compoundIds)
-		workDir=file.path(dir,paste("run",r,d,sep="-"))
-		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
-		refIds = readIddb(refIddb)
-		
-		#TODO: fetch these from the matrix file instead
-		embedded = embedFromRefs(r,d,refIddb, 
-								  t(IddbVsGivenDist(file.path(dir,ChemDb), 
-														  refIds,descriptors,distance)))
-		print(embedded)
-
-		neighbors = lshsearch(embedded,matrixFile,K=K)[,,1]
-		rownames(neighbors) = compoundIds
-
-		neighbors
-}
 #expects one query per column
 search <- function(embeddedQueries,matrixFile,queryDescriptors,distance,K,dir,...)
 {
@@ -393,7 +381,8 @@ search <- function(embeddedQueries,matrixFile,queryDescriptors,distance,K,dir,..
 
 		#compute distance between each query and its candidates	
 		Map(function(i) {
-			 nonNegs=neighbors[i,,1]!=-1
+			 #nonNegs=neighbors[i,,1]!=-1
+			 nonNegs = ! is.na(neighbors[i,,1])
 			 n=neighbors[i,nonNegs,]
 			 dim(n)=c(sum(nonNegs) ,2)
 			 n[,1] = mainIds[n[,1]]
@@ -417,7 +406,7 @@ embed <- function(r,d,coords, query2RefDists)
 		embeddedQueries = apply(query2RefDists,c(1),
 			function(x) embedCoord(solver,d,x))
 }
-refine <- function(lshNeighbors,queryDescriptors,limit,distance,dir)
+refine <- function(lshNeighbors,queryDescriptors,limit,distance,dir,cutoff=NA)
 {
 	tmpDir=tempdir()
 
@@ -428,8 +417,12 @@ refine <- function(lshNeighbors,queryDescriptors,limit,distance,dir)
 	#if(debug) print("result distance: ")
 	#if(debug) print(str(d))
 	lshNeighbors[,2]=d 
+
+	if(!is.na(cutoff))
+		lshNeighbors[lshNeighbors[,2] > cutoff,]=NA
+
 	limit = min(limit,length(lshNeighbors[,2]))
-	#print(paste("num dists:",length(lshNeighbors[,2]), "limit:",limit))
+	#print(paste("num dists:",length(lshNeighbors[,2]), "limit:",limit,"cutoff: ",cutoff))
 	lshNeighbors[order(lshNeighbors[,2])[1:limit],]
 }
 getNames <- function(indexes,dir)
