@@ -302,6 +302,15 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
 				file=embeddedFile, append=TRUE,row.names=F,col.names=F)
 		binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
 }
+
+
+readAp <- function(x){
+	 desclist <- strsplit(as.character(x), ", ", fixed= TRUE)
+	 desclist <- lapply(desclist, as.numeric)
+	 names(desclist) <- names(x)
+	 return(as(desclist, "APset"))
+}
+
 eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 							 descriptorType="ap",distance=apDistance,
 							  W = 1.39564, M=19,L=10,T=30,type="cluster"){
@@ -309,7 +318,11 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
 		mainIndex = readIddb(file.path(dir,Main))
+
+		lshStart=Sys.time()
 		neighbors = lshsearchAll(matrixFile,K=2*K,W=W,M=M,L=L,T=T)
+		print(paste("lsh search:",Sys.time() - lshStart))
+
 
 		ml=length(mainIndex)
 #		neighbors = array(matrix(1:ml,nrow=ml,
@@ -320,10 +333,14 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 		conn = initDb(file.path(dir,ChemDb))
 		refinedNeighbors=array(NA,dim=c(length(mainIndex),K))
 		#print("refining")
+		refineStart=Sys.time()
+		refineCall=0
 		batchByIndex(mainIndex,function(indexSet){
+
 			#print("indexset:"); print(indexSet)
-			descriptors = getDescriptors(conn,descriptorType,indexSet)
+			print(system.time(descriptors <<- getDescriptors(conn,descriptorType,indexSet)))
 		#	print("done loading descriptors")
+
 			lapply(1:length(indexSet),function(i){
 			#	print(neighbors[i,,])
 				#nonNegs=neighbors[i,,1]!=-1
@@ -341,21 +358,49 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 			   n[,1] = mainIndex[n[,1]]
 				#print(reverseIndex)
 			#	print(n)
+
 				#print(paste("refining",i))
-				refined=refine(n,descriptors[i],K,distance,dir,cutoff=cutoff)
+
+
+
+
+t=Sys.time()
+
+				 #t(IddbVsGivenDist(file.path(dir,ChemDb),n[,1],
+				#				 descriptors[i],distance,conn=conn))
+#	conn = initDb(file.path(dir,ChemDb))
+#	preProcess = getTransform("ap")$toObject
+#	ppd=preProcess(descriptors[i])
+#	batchByIndex(n[,1],function(ids){
+#			dd=getDescriptors(conn,"ap",ids)
+#			names(dd)=as.character(1:length(dd));  
+#					ddap=read.AP(dd,type="ap",isFile=F)
+#			outerDesc = as(ddap,"list")
+#			desc2descDist(outerDesc,ppd,apDistance)
+#		})
+
+
+
+
+
+
+				refined <- refine(n,descriptors[i],K,distance,dir,cutoff=cutoff,conn=conn)
+refineCall <<- refineCall + (Sys.time()-t)
+
 				dim(refined)=c(min(sum(nonNegs),K) ,2)
 				#print(paste(mainIndex[i],paste(refined[,1],collapse=",")))
-				#print(i)
-				#print(refined)
 				refinedNeighbors[i,1:(dim(refined)[1])]<<-
 							#as.character(refined[,1])
 							reverseIndex[as.character(refined[,1])]
 				#print(refinedNeighbors[i,1:(dim(refined)[1])])
 			})
 		 })
+		print(paste("refining:",Sys.time() - refineStart))
+		print(paste("refine call: ",refineCall))
 
 		
 
+		clusteringStart=Sys.time()
 		rownames(refinedNeighbors)=1:ml  ##
 		#print("refined:")
 		#print((refinedNeighbors))
@@ -367,6 +412,7 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 		rawClustering = jarvisPatrick_c(refinedNeighbors,minNbrs,fast=TRUE)
 		clustering = mainIndex[rawClustering]
 		names(clustering) = mainIndex
+		print(paste("clustering:",Sys.time() - clusteringStart))
 		clustering
 }
 
@@ -409,13 +455,12 @@ embed <- function(r,d,coords, query2RefDists)
 		embeddedQueries = apply(query2RefDists,c(1),
 			function(x) embedCoord(solver,d,x))
 }
-refine <- function(lshNeighbors,queryDescriptors,limit,distance,dir,cutoff=NA)
+refine <- function(lshNeighbors,queryDescriptors,limit,distance,dir,cutoff=NA,
+						 conn=initDb(db))
 {
-	tmpDir=tempdir()
-
 
 	d = t(IddbVsGivenDist(file.path(dir,ChemDb),lshNeighbors[,1],
-								 queryDescriptors,distance))
+								 queryDescriptors,distance,conn=conn))
 
 	#if(debug) print("result distance: ")
 	#if(debug) print(str(d))
@@ -526,9 +571,9 @@ desc2descDist <- function(desc1,desc2,dist)
 	as.matrix(sapply(desc2,function(x) sapply(desc1,function(y) dist(x,y))))
 
 
-IddbVsGivenDist<- function(db,iddb,descriptors,dist,descriptorType="ap",file=NA){
+IddbVsGivenDist<- function(db,iddb,descriptors,dist,descriptorType="ap",file=NA,
+									conn=initDb(db)){
 
-	conn = initDb(db)
 	preProcess = getTransform(descriptorType)$toObject
 	descriptors=preProcess(descriptors)
 
