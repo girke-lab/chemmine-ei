@@ -28,20 +28,36 @@ embedCoord <- function(s,len,coords)
 embedCoordTest <- function(r,d,refCoords,coords) 
 	.Call("embedCoordTest",as.integer(r),as.integer(d),as.double(refCoords),as.double(coords))
 
+
+lshPrep <- function(matrixFile,
+	W=NA,H=NA,M=NA,L=NA,K=NA,T=NA,R=NA,dir=".") {
+
+	if(!file.exists(matrixFile)) stop(paste("could not find matrix file:",matrixFile))
+
+	#TODO: see about removeing old .lshindex files
+	matrixHash = digest(file = matrixFile,serialize=FALSE)
+	matrixDir=dirname(matrixFile)
+	indexName = file.path(matrixDir,paste(paste(matrixHash,W,H,M,L,T,R,sep="-"),"lshindex",sep="."))
+	print(paste("index name: ",indexName))
+	indexName
+}
+
 # requires one query per column, not per row
 lshsearch <- function(queries,matrixFile,
 	W=NA,H=NA,M=NA,L=NA,K=NA,T=NA,R=NA) 
 {
-	if(!file.exists(matrixFile)) stop(paste("could not find matrix file:",matrixFile))
-	.Call("lshsearch",queries,as.character(matrixFile),
+	indexFile = lshPrep(matrixFile,W,H,M,L,K,T,R)
+	.Call("lshsearch",queries,as.character(matrixFile),indexFile,
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
 }
 lshsearchAll <- function(matrixFile,
 	W=NA,H=NA,M=NA,L=NA,K=NA,T=NA,R=NA) 
 {
-	if(!file.exists(matrixFile)) stop(paste("could not find matrix file:",matrixFile))
-	.Call("lshsearchAll",as.character(matrixFile),
+
+	indexFile = lshPrep(matrixFile,W,H,M,L,K,T,R)
+
+	.Call("lshsearchAll",as.character(matrixFile),indexFile,
 		as.double(W),as.integer(H),as.integer(M),as.integer(L),
 		as.integer(K),as.integer(T), as.double(R))
 }
@@ -358,35 +374,10 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 			   n[,1] = mainIndex[n[,1]]
 				#print(reverseIndex)
 			#	print(n)
-
 				#print(paste("refining",i))
-
-
-
-
 t=Sys.time()
-
-				 #t(IddbVsGivenDist(file.path(dir,ChemDb),n[,1],
-				#				 descriptors[i],distance,conn=conn))
-#	conn = initDb(file.path(dir,ChemDb))
-#	preProcess = getTransform("ap")$toObject
-#	ppd=preProcess(descriptors[i])
-#	batchByIndex(n[,1],function(ids){
-#			dd=getDescriptors(conn,"ap",ids)
-#			names(dd)=as.character(1:length(dd));  
-#					ddap=read.AP(dd,type="ap",isFile=F)
-#			outerDesc = as(ddap,"list")
-#			desc2descDist(outerDesc,ppd,apDistance)
-#		})
-
-
-
-
-
-
 				refined <- refine(n,descriptors[i],K,distance,dir,cutoff=cutoff,conn=conn)
 refineCall <<- refineCall + (Sys.time()-t)
-
 				dim(refined)=c(min(sum(nonNegs),K) ,2)
 				#print(paste(mainIndex[i],paste(refined[,1],collapse=",")))
 				refinedNeighbors[i,1:(dim(refined)[1])]<<-

@@ -5,9 +5,10 @@
 #include <Rinternals.h>
 
 using namespace lshkit;
+using namespace std;
 
 extern "C" {
-   SEXP lshsearch(SEXP queries, SEXP matrixFile, 
+   SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP indexFile,
       SEXP Win, 
       SEXP Hin, 
       SEXP Min, 
@@ -16,7 +17,7 @@ extern "C" {
       SEXP Tin, 
       SEXP Rin
    );
-   SEXP lshsearchAll(SEXP matrixFile, 
+   SEXP lshsearchAll(SEXP matrixFile, SEXP indexFile,
       SEXP Win, 
       SEXP Hin, 
       SEXP Min, 
@@ -30,9 +31,22 @@ extern "C" {
 
 typedef MultiProbeLshIndex<unsigned> Index;
 
-int loadIndex(Index &index, FloatMatrix &data, 
+int loadIndex(Index &index, FloatMatrix &data, string &index_file,
       float W, unsigned H, unsigned M, unsigned L)
 {
+   ifstream is(index_file.c_str(), ios_base::binary);
+	// if we can open and read index file use it and return
+   if (is) {
+    	is.exceptions(ios_base::eofbit | ios_base::failbit | ios_base::badbit);
+    	cout << "LOADING INDEX..." << endl;
+    	index.load(is);
+    	BOOST_VERIFY(is);
+		return 1;
+   }
+	//else, generate a new index file and save it
+
+
+
    // We define a short name for the MPLSH index.
    Index::Parameter param;
 
@@ -58,16 +72,13 @@ int loadIndex(Index &index, FloatMatrix &data,
    }
 
 
-   /*
-   if (use_index) {
-      cerr << "SAVING INDEX..." << endl;
-      {
-          ofstream os(index_file.c_str(), ios_base::binary);
-          os.exceptions(ios_base::eofbit | ios_base::failbit | ios_base::badbit);
-          index.save(os);
-      }
-   }
-   */
+	cerr << "SAVING INDEX..." << endl;
+	ofstream os(index_file.c_str(), ios_base::binary);
+	os.exceptions(ios_base::eofbit | ios_base::failbit | ios_base::badbit);
+	index.save(os);
+
+	return 1;
+
 }
 int check(SEXP in,int deflt) {
    return INTEGER(in)[0] == NA_INTEGER ? deflt : INTEGER(in)[0];
@@ -75,7 +86,7 @@ int check(SEXP in,int deflt) {
 double check(SEXP in,double deflt) {
    return ISNA(REAL(in)[0]) ? deflt : REAL(in)[0];
 }
-SEXP lshsearchAll( SEXP matrixFile, 
+SEXP lshsearchAll( SEXP matrixFile, SEXP indexFile,
       SEXP Win, 
       SEXP Hin, 
       SEXP Min, 
@@ -100,8 +111,9 @@ SEXP lshsearchAll( SEXP matrixFile,
 
    FloatMatrix::Accessor accessor(data);
    Index index;
+	string index_file = string(CHAR(STRING_ELT(indexFile,0)));
 
-   loadIndex(index,data,W,H,M,L);
+   loadIndex(index,data,index_file,W,H,M,L);
 
    metric::l2sqr<float> l2sqr(data.getDim());
 
@@ -162,7 +174,7 @@ SEXP lshsearchAll( SEXP matrixFile,
    UNPROTECT(1);
    return result;
 }
-SEXP lshsearch(SEXP queries, SEXP matrixFile, 
+SEXP lshsearch(SEXP queries, SEXP matrixFile, SEXP indexFile,
       SEXP Win, 
       SEXP Hin, 
       SEXP Min, 
@@ -187,8 +199,9 @@ SEXP lshsearch(SEXP queries, SEXP matrixFile,
 
    FloatMatrix::Accessor accessor(data);
    Index index;
+	string index_file = string(CHAR(STRING_ELT(indexFile,0)));
 
-   loadIndex(index,data,W,H,M,L);
+   loadIndex(index,data,index_file,W,H,M,L);
 
    metric::l2sqr<float> l2sqr(data.getDim());
 

@@ -1,7 +1,6 @@
 useDynLib(eiR)
 
-import(tools)
-import(snowfall)
+import(tools,snowfall,digest)
 import(ChemmineR)
 
 

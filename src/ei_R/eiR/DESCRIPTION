@@ -9,4 +9,4 @@ Suggests: ChemmineR,RCurl,snow
 Description:  fast compound searching
 License: Artistic-2.0
 Depends: R (>= 2.10.0), ChemmineR, methods
-Imports: snow, tools, snowfall, RUnit, methods,ChemmineR,RCurl
+Imports: snow, tools, snowfall, RUnit, methods,ChemmineR,RCurl,digest
