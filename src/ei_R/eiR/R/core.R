@@ -319,14 +319,6 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
 		binaryCoord(embeddedFile,file.path(workDir,sprintf("matrix.%d-%d",r,d)),d)
 }
 
-
-readAp <- function(x){
-	 desclist <- strsplit(as.character(x), ", ", fixed= TRUE)
-	 desclist <- lapply(desclist, as.numeric)
-	 names(desclist) <- names(x)
-	 return(as(desclist, "APset"))
-}
-
 eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 							 descriptorType="ap",distance=apDistance,
 							  W = 1.39564, M=19,L=10,T=30,type="cluster"){
@@ -334,11 +326,7 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))
 		mainIndex = readIddb(file.path(dir,Main))
-
-		lshStart=Sys.time()
 		neighbors = lshsearchAll(matrixFile,K=2*K,W=W,M=M,L=L,T=T)
-		print(paste("lsh search:",Sys.time() - lshStart))
-
 
 		ml=length(mainIndex)
 #		neighbors = array(matrix(1:ml,nrow=ml,
@@ -349,13 +337,10 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 		conn = initDb(file.path(dir,ChemDb))
 		refinedNeighbors=array(NA,dim=c(length(mainIndex),K))
 		#print("refining")
-		refineStart=Sys.time()
-		refineCall=0
 		batchByIndex(mainIndex,function(indexSet){
 
 			#print("indexset:"); print(indexSet)
-			print(system.time(descriptors <<- getDescriptors(conn,descriptorType,indexSet)))
-		#	print("done loading descriptors")
+			descriptors = getDescriptors(conn,descriptorType,indexSet)
 
 			lapply(1:length(indexSet),function(i){
 			#	print(neighbors[i,,])
@@ -375,9 +360,7 @@ eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NA,
 				#print(reverseIndex)
 			#	print(n)
 				#print(paste("refining",i))
-t=Sys.time()
-				refined <- refine(n,descriptors[i],K,distance,dir,cutoff=cutoff,conn=conn)
-refineCall <<- refineCall + (Sys.time()-t)
+				refined = refine(n,descriptors[i],K,distance,dir,cutoff=cutoff,conn=conn)
 				dim(refined)=c(min(sum(nonNegs),K) ,2)
 				#print(paste(mainIndex[i],paste(refined[,1],collapse=",")))
 				refinedNeighbors[i,1:(dim(refined)[1])]<<-
@@ -386,12 +369,9 @@ refineCall <<- refineCall + (Sys.time()-t)
 				#print(refinedNeighbors[i,1:(dim(refined)[1])])
 			})
 		 })
-		print(paste("refining:",Sys.time() - refineStart))
-		print(paste("refine call: ",refineCall))
 
 		
 
-		clusteringStart=Sys.time()
 		rownames(refinedNeighbors)=1:ml  ##
 		#print("refined:")
 		#print((refinedNeighbors))
@@ -403,7 +383,6 @@ refineCall <<- refineCall + (Sys.time()-t)
 		rawClustering = jarvisPatrick_c(refinedNeighbors,minNbrs,fast=TRUE)
 		clustering = mainIndex[rawClustering]
 		names(clustering) = mainIndex
-		print(paste("clustering:",Sys.time() - clusteringStart))
 		clustering
 }
 
