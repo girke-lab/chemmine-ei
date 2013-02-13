@@ -11,7 +11,7 @@ j=1
 runDir<-paste("run",r,d,sep="-")
 
 test.aa.eiInit <- function() {
-	DEACTIVATED("slow")
+#	DEACTIVATED("slow")
    data(sdfsample)
    compoundIds = eiInit(sdfsample)
    checkTrue(file.exists(file.path("data","chem.db")))
@@ -294,8 +294,8 @@ clusterSizes <- function(clustering) {
 
 
 test.aaaaa.cleanup<- function(){
-   #junk <- c("data","example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
-   junk <- c("example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
+   junk <- c("data","example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
+   #junk <- c("example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
    unlink(junk,recursive=T)
 }
 findRefIddb <- function(runDir){

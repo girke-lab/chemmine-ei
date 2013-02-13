@@ -38,7 +38,7 @@ lshPrep <- function(matrixFile,
 	matrixHash = digest(file = matrixFile,serialize=FALSE)
 	matrixDir=dirname(matrixFile)
 	indexName = file.path(matrixDir,paste(paste(matrixHash,W,H,M,L,T,R,sep="-"),"lshindex",sep="."))
-	print(paste("index name: ",indexName))
+	if(debug) print(paste("index name: ",indexName))
 	indexName
 }
 
