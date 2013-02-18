@@ -8,9 +8,10 @@
    databbase with \code{r} reference compounds in \code{d} dimensions.
 }
 \usage{
-   eiMakeDb(refs, d, measure = atompairMeasure, dir = ".", 
-              numSamples = cdbSize(dir) * 0.1, 
-             cl = makeCluster(1, type = "SOCK"))
+	eiMakeDb(refs,d,descriptorType="ap",distance=getDefaultDist(descriptorType), 
+				dir=".",numSamples=cdbSize(dir)*0.1,
+				cl=makeCluster(1,type="SOCK"))
+
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -25,15 +26,19 @@
       The number of dimensions used to build the database you wish to
       query against.
    }
+  \item{descriptorType}{
+		The format of the descriptor. Currently supported values are "ap" for atom pair, and 
+		"fp" for fingerprint.
+   }
+	\item{distance}{
+		The distance function to be used to compute the distance between two descriptors. A default function is
+		provided for "ap" and "fp" descriptors.
+	}
+
   \item{dir}{
       The directory where the "data" directory lives. Defaults to the
       current directory.
    }
-  \item{measure}{
-      This should be a list containing three functions named "dbBuilder",
-      "dbSubset", and "db2dbDistance". See help on "measure" for details.
-   }
-
   \item{numSamples}{
       The number of non-reference samples to be chosen now to be used
       later by the eiPerformanceTest function.
@@ -51,17 +56,19 @@
    d is the dimension of the embedding space.  We have
    found in practice that setting d to around 100 works
    well.  r should be large enough to ``represent'' the
-   full compound database. 
+   full compound database. Note that an r by r matrix will be constructed
+	during the course of execution, so r should be less than
+	about 46,000 to avoid overflowing an integer.
+   Since this is the longest running step, a SNOW cluster can be
+   provided to parallelize the task.
     
    To help tune these values, \code{eiMakeDb} will pick
    \code{numSamples} non-reference samples which can later be used by the
    \code{eiPerformanceTest} function.
-   Since this is the longest running step, a SNOW cluster can be
-   provided to parallelize the task.
 
    \code{eiMakdDb} does its job in a job folder, named after the number of reference
    compounds and the number of embedding dimensions. For example, using 300
-   reference compounds to generate a 300-dimensional embedding (r=300,
+   reference compounds to generate a 100-dimensional embedding (r=300,
    d=100) will result in a job folder called run-300-100. 
    The embedding result is the file matrix.<r>.<d>. In the above example,
    the output would be run-300-100/matrix.300.100.
@@ -69,8 +76,9 @@
 
 }
 \value{
-   No value is returned. Creates files in \code{dir} ("run-r-d" by
-   default).
+   Creates files in \code{dir} ("run-r-d" by default).
+	The return value is the name of the refIddb file, which needs to be
+	given to other functions such as eiQuery or eiAdd.
 }
 \author{
    Kevin Horan
@@ -87,7 +95,6 @@
 
    r<- 50
    d<- 40
-   j=1
 
    #initialize 
    data(sdfsample)
@@ -96,8 +103,8 @@
    eiInit(sdfsample,dir=dir)
 
    #create compound db
-   eiMakeDb(r,d,numSamples=20,dir=dir,
-      cl=makeCluster(j,type="SOCK",outfile=""))
+   refIddb=eiMakeDb(r,d,numSamples=20,dir=dir,
+      cl=makeCluster(1,type="SOCK",outfile=""))
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

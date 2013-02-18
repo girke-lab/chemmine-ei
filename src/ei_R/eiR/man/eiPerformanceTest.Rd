@@ -7,8 +7,8 @@
    Tests the performance of embedding and LSH.
 }
 \usage{
-   eiPerformanceTest(r, d, measure = atompairMeasure, dir = ".", 
-      K = 200, W = 1.39564, M = 19, L = 10, T = 30)
+	eiPerformanceTest(r,d,distance=getDefaultDist(descriptorType),descriptorType="ap",
+		dir=".",K=200, W = 1.39564, M=19,L=10,T=30)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -20,13 +20,19 @@
       The number of dimensions used to build the database you wish to
       query agains.
    }
+
+
+	\item{distance}{
+		The distance function to be used to compute the distance between two descriptors. A default function is
+		provided for "ap" and "fp" descriptors.
+	}
+	\item{descriptorType}{
+		The format of the descriptor. Currently supported values are "ap" for atom pair, and 
+		"fp" for fingerprint.
+	}
  \item{dir}{
       The directory where the "data" directory lives. Defaults to the
       current directory.
-   }
-  \item{measure}{
-      This should be a list containing three functions named "dbBuilder",
-      "dbSubset", and "db2dbDistance". See help on "measure" for details.
    }
 
   \item{K}{
@@ -82,7 +88,7 @@
    find the best values for these parameters.
 }
 \value{
-   No value is returned. Creates files in \code{dir} ("run-r-d" by default).
+   No value is returned. Creates files in \code{dir}/run-r-d.
 }
 \author{
    Kevin Horan
@@ -98,7 +104,7 @@
 
    r<- 50
    d<- 40
-   j=1
+
    #initialize 
    data(sdfsample)
    dir=file.path(tempdir(),"perf")
@@ -107,7 +113,7 @@
 
    #create compound db
    eiMakeDb(r,d,numSamples=20,dir=dir,
-      cl=makeCluster(j,type="SOCK",outfile=""))
+      cl=makeCluster(1,type="SOCK",outfile=""))
 
    eiPerformanceTest(r,d,dir=dir,K=22)
 }

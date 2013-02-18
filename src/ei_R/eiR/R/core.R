@@ -295,7 +295,7 @@ eiQuery <- function(r,d,refIddb,queries,format="sdf",
 		results
 }
 
-eiAdd <- function(r,d,refIddb,additions,dir=".",format="SDF",
+eiAdd <- function(r,d,refIddb,additions,dir=".",format="sdf",
 		descriptorType="ap",distance=getDefaultDist(descriptorType))
 {
 		tmpDir=tempdir()

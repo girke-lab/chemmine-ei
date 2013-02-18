@@ -7,9 +7,9 @@
    Finds similar compounds for each query.
 }
 \usage{
-   eiQuery(r, d, refIddb, queries, dir = ".", 
-      measure = atompairMeasure, K = 200, W = 1.39564, 
-      M = 19, L = 10, T = 30)
+	eiQuery(r,d,refIddb,queries,format="sdf",
+		dir=".",descriptorType="ap",distance=getDefaultDist(descriptorType),
+		K=200, W = 1.39564, M=19,L=10,T=30)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -25,22 +25,30 @@
       An Iddb formatted file containing the reference IDs of the database
       you wish to query against. This should almost always be the file:
       run-\code{r}-\code{d}/<long random string>.cdb.
+		The \code{refIddb} value should also be returned by eiMakeDb.
    }
   \item{queries}{
       This can be either an SDFset, or a file containg 1 or more
-      query compounds. The file should be in whatever format is supported
-      by the given measure. The default is SDF.
+      query compounds.
    }
+	\item{format}{
+		The format in which the queries are given. Valid values are: "sdf" when
+		\code{queries} is either a filename of an sdf file, or and SDFset object;
+		"compound_id" when \code{queries} is a list of id numbers; and "name", when \code{queries}
+		is a list of compound names, as returned by \code{cid(apset)}.
+	}
   \item{dir}{
-      %%     ~~Describe \code{dir} here~~
       The directory where the "data" directory lives. Defaults to the
       current directory.
    }
-  \item{measure}{
-      %%     ~~Describe \code{measure} here~~
-      This should be a list containing three functions named "dbBuilder",
-      "dbSubset", and "db2dbDistance". See help on "measure" for details.
-   }
+	\item{descriptorType}{
+		The format of the descriptor. Currently supported values are "ap" for atom pair, and 
+		"fp" for fingerprint.
+	}
+	\item{distance}{
+		The distance function to be used to compute the distance between two descriptors. A default function is
+		provided for "ap" and "fp" descriptors.
+	}
 
   \item{K}{
      The number of results to return.
@@ -61,16 +69,18 @@
    }
 }
 \details{
-   As with \code{eiInit}, queries can be specified as an SDFset or
-   a filename. You need to identify the reference IDDB file, it will
-   be the file under the run directory ending in ``.cdb''. 
+	This function identifies the database by the \code{r}, \code{d}, and 
+	\code{refIddb} parameters. The queries can be given in a few
+	different formats, see the \code{queries} parameter for details. 
+	The LSH algorithm is used to quickly identify compounds similar to the
+	queries. 
 }
 \value{
-   Returns a data frame with columns 'query', 'target', and
-   'distance'. 'query' and 'target' are the compound IDs and
+   Returns a data frame with columns 'query', 'target', 'target_ids', and
+   'distance'. 'query' and 'target' are the compound names and
    distance is the distance between them, as computed by
-   db2dbDistance. Query IDs are repeated for each matching target
-   found.
+   the given distance function.'target_ids' is the compound id of the target.
+	Query namess are repeated for each matching target found.
 }
 \author{
    Kevin Horan
@@ -88,7 +98,6 @@
    library(snow)
    r<- 50
    d<- 40
-   j<- 1
 
    #initialize
    data(sdfsample)
@@ -97,12 +106,8 @@
    eiInit(sdfsample,dir=dir)
 
    #create compound db
-   eiMakeDb(r,d,numSamples=20,dir=dir,
-      cl=makeCluster(j,type="SOCK",outfile=""))
-
-   runDir<-file.path(dir,paste("run",r,d,sep="-"))
-   matches<-dir(runDir,pattern=".cdb$",full.names=TRUE)
-   refIddb = matches[1]
+   refIddb=eiMakeDb(r,d,numSamples=20,dir=dir,
+      cl=makeCluster(1,type="SOCK",outfile=""))
 
    #find compounds similar two each query
    results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15,dir=dir)
