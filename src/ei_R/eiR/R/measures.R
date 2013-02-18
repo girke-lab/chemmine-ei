@@ -61,6 +61,20 @@ rawFingerprintMeasure = list(
 apDistance <- function(d1,d2){
 	1-cmp.similarity(d1,d2)
 }
+fpDistance <- function(d1,d2){
+	1-fpSim(d1,d2)
+}
+defaultDistances = list(
+	ap=apDistance,
+	fp=fpDistance
+)
+getDefaultDist <- function(descriptorType){
+	d=defaultDistances[descriptorType][[1]]
+	if(is.null(d) && debug)
+		warn("no default distance found for desciptor type ",descriptorType)
+	d
+}
+
 
 # functions needed for sql backend:
 # distance
@@ -69,14 +83,16 @@ apDistance <- function(d1,d2){
 # also need descrptor type, ie, "ap" "fpap", etc.
 # X optionally: compound -> string and string -> compound
 
-
 Translations = list()
 
 addTransform <- function(name,toString,toObject){
 	Translations[[name]] <<- list(toString=toString,toObject=toObject)
 }
 getTransform <- function(name){
-	Translations[[name]]
+	t=Translations[[name]]
+	if(is.null(t))
+		stop("transform ",name," not defined")
+	t
 }
 
 buildType <- function(format,descriptorType) tolower(paste(format,descriptorType,sep="-"))
@@ -99,6 +115,20 @@ addTransform(buildType("sdf","ap"),
 		list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
 	}
 )
+
+addTransform(buildType("sdf","fp"),
+	# Any sdf source -> fp string
+	toString = function(input,dir=".") {
+		getTransform("fp")$toString(
+			getTransform(buildType("sdf","fp"))$toObject(input)$descriptors)
+	},
+	# Any sdf source -> FPset
+	toObject = function(input,dir="."){
+		apList = getTransform(buildType("sdf","ap"))$toObject(input,dir)
+		apList$descriptors = desc2fp(apList$descriptors)
+		apList
+	}
+)
 addTransform("ap",  
    # APset -> string,
 	toString = function(apset,dir="."){
@@ -116,8 +146,24 @@ addTransform("ap",
 			"list")  
 	}
 )
+addTransform("fp",  
+   # FPset -> string,
+	toString = function(fpset,dir="."){
+		sapply(1:length(fpset), function(i) as(fpset[i],"character") )
+	},
+   # string or list -> FP set list
+	toObject= function(v,dir="."){ 
+		if(inherits(v,"list") || length(v)==0)
+			return(v)
 
-lapply(c("ap"),function(descriptorType)
+		as( if(!inherits(v,"FPset")){
+				#names(v)=as.character(1:length(v));  
+				read.AP(v,type="fp",isFile=F)
+			} else v,
+			"FP")  
+	}
+)
+lapply(c("ap","fp"),function(descriptorType)
 	addTransform(buildType("compound_id",descriptorType),
 		# compound_id -> ap string
 		toString = function(ids,dir="."){
@@ -131,7 +177,7 @@ lapply(c("ap"),function(descriptorType)
 		}
 	)
 )
-lapply(c("ap"),function(descriptorType)
+lapply(c("ap","fp"),function(descriptorType)
 	addTransform(buildType("name",descriptorType),
 		# name -> ap string
 		toString = function(names,dir="."){

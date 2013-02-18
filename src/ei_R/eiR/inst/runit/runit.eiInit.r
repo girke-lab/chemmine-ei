@@ -4,23 +4,33 @@ library(snow)
 
 options(warn=2)
 r<- 50
-d<- 40
+d<- 30
 #N<- 122
 N<- 100
 j=1
 runDir<-paste("run",r,d,sep="-")
+fpDir="fp_test"
+descType="fp"
+
 
 test.aa.eiInit <- function() {
 #	DEACTIVATED("slow")
+	checkData <- function(cids,dir="."){
+		checkTrue(file.exists(file.path(dir,"data","chem.db")))
+		checkTrue(file.exists(file.path(dir,"data","main.iddb")))
+		i <- readLines(file.path(dir,"data","main.iddb"))
+		checkEquals(length(i),N)
+		checkEquals(length(cids),N)
+		sdfFromDb = getCompounds(initDb(file.path(dir,"data","chem.db")),cids)
+		checkEquals(length(sdfFromDb),N)
+	}
    data(sdfsample)
-   compoundIds = eiInit(sdfsample)
-   checkTrue(file.exists(file.path("data","chem.db")))
-   checkTrue(file.exists(file.path("data","main.iddb")))
-   i <- readLines(file.path("data","main.iddb"))
-   checkEquals(length(i),N)
-	checkEquals(length(compoundIds),N)
-	sdfFromDb = getCompounds(initDb(file.path("data","chem.db")),compoundIds)
-	checkEquals(length(sdfFromDb),N)
+   compoundIds = eiInit(sdfsample,descriptorType=descType)
+	checkData(compoundIds)
+
+	dir.create(fpDir)
+	fpCids = eiInit(sdfsample,dir=fpDir,descriptorType="fp")
+	checkData(fpCids,fpDir)
 }
 
 testRefs <- function(){
@@ -46,17 +56,17 @@ test.ba.eiMakeDb <- function() {
 
 	print("by file name")
 	eiR:::writeIddb((1:r)+200,"reference_file.cdb")
-   eiMakeDb("reference_file.cdb",d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
+   eiMakeDb("reference_file.cdb",d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""),descriptorType=descType)
    runChecks()
 	unlink(runDir,recursive=TRUE)
 
 	print("by number")
-   eiMakeDb(r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
+   eiMakeDb(r,d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""),descriptorType=descType)
    runChecks()
 	unlink(runDir,recursive=TRUE)
 
 	print("by vector")
-   eiMakeDb(testRefs(),d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""))
+   eiMakeDb(testRefs(),d,numSamples=20,cl=makeCluster(j,type="SOCK",outfile=""),descriptorType=descType)
    runChecks()
 
 	
@@ -66,16 +76,16 @@ test.ca.eiQuery <- function(){
 	DEACTIVATED("slow")
    data(sdfsample)
    refIddb = findRefIddb(runDir)
-   results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
+   results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15,descriptorType=descType)
    checkTrue(length(results$distance) != 0)
    checkTrue(all(results$distance <= 1))
    checkEquals(results$distance[16],0)
 
 
-	results=eiQuery(r,d,refIddb,203:204,format="compound_id",K=15)
+	results=eiQuery(r,d,refIddb,203:204,format="compound_id",K=15,descriptorType=descType)
    checkEquals(results$distance[1],0)
 
-	results=eiQuery(r,d,refIddb,c("650002","650003"), format="name",K=15)
+	results=eiQuery(r,d,refIddb,c("650002","650003"), format="name",K=15,descriptorType=descType)
    checkEquals(results$distance[1],0)
    #checkEquals(results$distance[9],0) # not reliable
 
@@ -83,9 +93,9 @@ test.ca.eiQuery <- function(){
 
 test.da.eiPerformanceTest <- function() {
 	DEACTIVATED("slow")
-   r = eiPerformanceTest(r,d,K=22)
+   eiPerformanceTest(r,d,K=22,descriptorType=descType)
    checkMatrix("chemical-search.results$",20, N,"data")
-   checkMatrix("eucsearch.50-40",20,N)
+   checkMatrix(sprintf("eucsearch.%d-%d",r,d),20,N)
    checkMatrix("^indexed$",20,22)
    checkMatrix("indexed.performance",20,1)
 }
@@ -97,14 +107,14 @@ test.ea.eiAdd<- function(){
    options(warn=-1)
    examples=read.SDFset("example_compounds.sdf")
    options(warn=2)
-   eiAdd(r,d,findRefIddb(runDir),examples[1:2])
+   eiAdd(r,d,findRefIddb(runDir),examples[1:2],descriptorType=descType)
 
-   results = eiQuery(r,d,findRefIddb(runDir),examples[1:2])
+   results = eiQuery(r,d,findRefIddb(runDir),examples[1:2],descriptorType=descType)
    print(results)
    checkEquals(results$distance[1],0)
 
-   eiAdd(r,d,findRefIddb(runDir),examples[4:8])
-   results = eiQuery(r,d,findRefIddb(runDir),examples[4])
+   eiAdd(r,d,findRefIddb(runDir),examples[4:8],descriptorType=descType)
+   results = eiQuery(r,d,findRefIddb(runDir),examples[4],descriptorType=descType)
    checkEquals(results$distance[1],0)
    print(results)
 }
@@ -112,9 +122,10 @@ test.fa.eiCluster <- function(){
 #	DEACTIVATED("off")
 	numNbrs=5
 	minNbrs=2
+	cutoff=0.5
 
 
-	clustering=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs,cutoff=0.5)
+	clustering=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs,cutoff=1-cutoff,descriptorType=descType)
 	checkTrue(length(clustering) >= N) #eiAdd will add some stuff
 
 	conn = initDb("data/chem.db")
@@ -122,7 +133,7 @@ test.fa.eiCluster <- function(){
 	compoundNames=getCompoundNames(conn,compoundIds)
 	names(clustering)=compoundNames
 	sizes= clusterSizes(clustering)
-	#print(sizes)
+	print(sizes)
 	checkTrue(nrow(sizes) %in% c(9,10)) # 10 if eiAdd has run
 	checkTrue(all(sizes[,2]==2))
 
@@ -134,7 +145,7 @@ test.fn.cluster_comparison <- function(){
 	numNbrs=10
 	minNbrs=2
 	fast=TRUE
-	cutoff=0.5
+	cutoff=0.8
 
 	dir="."
 	#dir="/home/khoran/runs/drug_bank_1000"
@@ -142,7 +153,7 @@ test.fn.cluster_comparison <- function(){
 	#d=100
 
 
-	clustering=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs,dir=dir,cutoff=cutoff)
+	clustering=eiCluster(r,d,K=numNbrs,minNbrs=minNbrs,dir=dir,cutoff=1-cutoff,descriptorType=descType)
 	checkTrue(length(clustering) >= N) #eiAdd will add some stuff
 
 	conn = initDb(file.path(dir,"data/chem.db"))
@@ -153,16 +164,20 @@ test.fn.cluster_comparison <- function(){
 
 
 	#### non lsh clustering
-
-	preProcess = eiR:::getTransform("ap")$toObject
-	aps=as(preProcess(eiR:::getDescriptors(conn,"ap",compoundIds)),"APset")
-	cid(aps)=as.character(1:length(compoundIds))
+	preProcess = eiR:::getTransform(descType)$toObject
+	desc = preProcess(eiR:::getDescriptors(conn,descType,compoundIds))
+	aps=if(descType=="ap") as(desc,"APset")
+		 else if(descType=="fp"){
+			 x=as(sapply(1:length(desc),function(i) as(desc[[i]],"character")),"FPset")
+			 cid(x) = compoundNames
+			 x
+		 }
 
 	cl2nnm = jarvisPatrick(aps,j=numNbrs,k=minNbrs,type="matrix",cutoff=cutoff)
-	d=dim(cl2nnm)
-	cl2nnm=as.numeric(cl2nnm)
-	dim(cl2nnm)=d
-	rownames(cl2nnm)=cid(aps)
+#	d=dim(cl2nnm)
+#	cl2nnm=as.numeric(cl2nnm)
+#	dim(cl2nnm)=d
+#	rownames(cl2nnm)=cid(aps)
 
 	#print(tail(cl2nnm))
 
@@ -180,7 +195,6 @@ test.fn.cluster_comparison <- function(){
 	#print(clusterSizes(clustering))
 	#print(clusterSizes(cl2))
 	ci <- cindex(clV1=clustering, clV2=cl2, minSZ=0, method="jaccard")$Jaccard_Index
-	checkEquals(ci,1)
 
 	rand <- cindex(clV1=clustering, clV2=cl2, minSZ=0,
 						method="rand")
@@ -188,7 +202,8 @@ test.fn.cluster_comparison <- function(){
 	arand <- cindex(clV1=clustering, clV2=cl2, minSZ=0,
 						 method="arand")
 	arand=arand$Adjusted_Rand_Index
-	#print(paste("cluster similarity:",ci,rand,arand))
+	print(paste("cluster similarity:",ci,rand,arand))
+	checkEquals(ci,1)
 
 }
 
@@ -246,13 +261,13 @@ test.fo.nnm_test  <- function(){
 }
 lshNnm <- function(...){
 
-	nnm=eiCluster(...,type="matrix")
+	nnm=eiCluster(...,type="matrix",descriptorType=descType)
 	nnm
 }
 queriedNnm <- function(compoundIds,r,d,numNbrs,dir){
 
 		refIddb=findRefIddb(file.path(dir,paste("run",r,d,sep="-")))
-		results = eiQuery(r,d,refIddb,compoundIds,format="compound_id",K=numNbrs,dir=dir)
+		results = eiQuery(r,d,refIddb,compoundIds,format="compound_id",K=numNbrs,dir=dir,descriptorType=descType)
 		cidToPosition = 1:length(compoundIds)
 		names(cidToPosition) = as.character(compoundIds)
 		print(results)
@@ -267,8 +282,8 @@ queriedNnm <- function(compoundIds,r,d,numNbrs,dir){
 trueNnm <- function(compoundIds,numNbrs,minNbrs,dir,cutoff=NA){
 
 	conn = initDb(file.path(dir,"data/chem.db"))
-	preProcess = eiR:::getTransform("ap")$toObject
-	aps=as(preProcess(eiR:::getDescriptors(conn,"ap",compoundIds)),"APset")
+	preProcess = eiR:::getTransform(descType)$toObject
+	aps=as(preProcess(eiR:::getDescriptors(conn,descType,compoundIds)),"APset")
 	#cid(aps)=compoundNames
 	#cid(aps)=as.character(compoundIds)
 	cid(aps)=as.character(1:length(compoundIds))
@@ -294,7 +309,7 @@ clusterSizes <- function(clustering) {
 
 
 test.aaaaa.cleanup<- function(){
-   junk <- c("data","example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
+   junk <- c("data","example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"),fpDir)
    #junk <- c("example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
    unlink(junk,recursive=T)
 }
@@ -304,9 +319,9 @@ findRefIddb <- function(runDir){
    matches[1]
 }
 checkMatrix <- function(pattern,x,y,dir=runDir){
-#	print(paste("searching for ",pattern))
+	#print(paste("searching for ",pattern))
    matches<-dir(dir,pattern=pattern,full.names=T)
-#	print(matches)
+	#print(matches)
    checkEquals(length(matches),1)
    file <- matches[1]
    checkTrue(file.info(file)$size>0)
