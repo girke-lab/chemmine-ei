@@ -8,10 +8,10 @@
 	the LSH algorithm to quickly find nearest neighbors.
 }
 \usage{
-	eiCluster(r, d, K, minNbrs, dir = ".", cutoff = NA, descriptorType = "ap", 
-		distance = apDistance, W = 1.39564, M = 19, L = 10, T = 30, type = "cluster")
+	eiCluster(r,d,K,minNbrs, dir=".",cutoff=NULL,
+							 descriptorType="ap",distance=getDefaultDist(descriptorType),
+							  W = 1.39564, M=19,L=10,T=30,type="cluster")
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{r}{
       The number of references used to build the database you wish to
@@ -65,6 +65,17 @@
 	}
 }
 \details{
+	The jarvis patrick clustering algorithm takes a set of items, a distance function, and two parameters, \code{K}, and 
+	\code{minNbrs}. For each item, it find the \code{K} nearest neighbors of that item. Normally this requires computing the distance
+	between every pair of items. However, using Locality Sensative Hashing (LSH), the set of nearst neighbors can be
+	found in near constant time. Once the nearest neighbor matrix is computed, the algorithm makes one pass through
+	the items and merges all pairs that have at least \code{minNbrs} neighbors in common.
+
+	Although not required, it is avisable to specify a \code{cutoff} value. This is the maximum distance two items can
+	have from each other and still be considered to be neighbors. 	It is thus possible for an item to end up with less
+	than \code{K} neighbors if less than \code{K} items are close enough to it. If a cutoff is not specified, it is
+	possible for highly un-related items to be listed as neighbors of another item simply because nothing else was
+	nearby. This can lead to items being joined into clusters with which they have no true connection.
 
 }
 \value{
@@ -80,7 +91,26 @@
 \author{
 	Kevin Horan
 }
-}
+
 \examples{
+
+	library(snow)
+   r<- 50
+   d<- 40
+
+   #initialize
+   data(sdfsample)
+   dir=file.path(tempdir(),"cluster")
+   dir.create(dir)
+   eiInit(sdfsample,dir=dir)
+
+   #create compound db
+   eiMakeDb(r,d,numSamples=20,dir=dir, cl=makeCluster(1,type="SOCK",outfile=""))
+
+	print(dir())
+	print(dir(dir))
+	print(dir(file.path(dir,"data")))
+	print(dir(file.path(dir,"run-50-40")))
+	eiCluster(r,d,K=5,minNbrs=2,cutoff=0.5,dir=dir)
 
 }

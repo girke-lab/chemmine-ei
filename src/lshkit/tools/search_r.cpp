@@ -38,7 +38,7 @@ int loadIndex(Index &index, FloatMatrix &data, string &index_file,
 	// if we can open and read index file use it and return
    if (is) {
     	is.exceptions(ios_base::eofbit | ios_base::failbit | ios_base::badbit);
-    	cout << "LOADING INDEX..." << endl;
+    	//cout << "LOADING INDEX..." << endl;
     	index.load(is);
     	BOOST_VERIFY(is);
 		return 1;
@@ -72,7 +72,7 @@ int loadIndex(Index &index, FloatMatrix &data, string &index_file,
    }
 
 
-	cerr << "SAVING INDEX..." << endl;
+	//cout << "SAVING INDEX..." << endl;
 	ofstream os(index_file.c_str(), ios_base::binary);
 	os.exceptions(ios_base::eofbit | ios_base::failbit | ios_base::badbit);
 	index.save(os);

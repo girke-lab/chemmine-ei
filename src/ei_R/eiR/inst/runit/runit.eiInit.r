@@ -4,13 +4,13 @@ library(snow)
 
 options(warn=2)
 r<- 50
-d<- 30
+d<- 40
 #N<- 122
 N<- 100
 j=1
 runDir<-paste("run",r,d,sep="-")
 fpDir="fp_test"
-descType="fp"
+descType="ap"
 
 
 test.aa.eiInit <- function() {

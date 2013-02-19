@@ -31,7 +31,7 @@
 		If true the given compounds will be added to an existing database
 		and the <data-dir>/Main.iddb file will be udpated with the new
 		compound id numbers. This should not normally be used directly, use
-		\code{\link{ieAdd}} instead to add new compounds to a database.
+		\code{\link{eiAdd}} instead to add new compounds to a database.
 	}
 
 }
