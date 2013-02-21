@@ -323,7 +323,7 @@ eiAdd <- function(r,d,refIddb,additions,dir=".",format="sdf",
 
 eiCluster <- function(r,d,K,minNbrs, dir=".",cutoff=NULL,
 							 descriptorType="ap",distance=getDefaultDist(descriptorType),
-							  W = 1.39564, M=19,L=10,T=30,type="cluster"){
+							  W = 1.39564, M=19,L=10,T=30,type="cluster",linkage="single"){
 
 		workDir=file.path(dir,paste("run",r,d,sep="-"))
 		matrixFile =file.path(workDir,sprintf("matrix.%d-%d",r,d))

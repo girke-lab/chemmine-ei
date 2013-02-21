@@ -10,7 +10,7 @@
 \usage{
 	eiCluster(r,d,K,minNbrs, dir=".",cutoff=NULL,
 							 descriptorType="ap",distance=getDefaultDist(descriptorType),
-							  W = 1.39564, M=19,L=10,T=30,type="cluster")
+							  W = 1.39564, M=19,L=10,T=30,type="cluster",linkage="single")
 }
 \arguments{
   \item{r}{
@@ -63,6 +63,14 @@
    \item{type}{
 		If "cluster", returns a clustering, else, if "matrix", returns a nearest neighbor matrix.
 	}
+	\item{linkage}{
+		Can be one of "single", "average", or "complete", for single linkage, average linkage and complete linkage
+		merge requirements, respectively. In the context of Jarvis-Patrick, average linkage means that at least half 
+		of the pairs between the clusters under consideration must pass the merge requirement. Similarly, for complete
+		linkage, all pairs must pass the merge requirement. Single linkage is the normal case for Jarvis-Patrick and 
+		just means that at least one pair must meet the requirement.
+	}
+
 }
 \details{
 	The jarvis patrick clustering algorithm takes a set of items, a distance function, and two parameters, \code{K}, and 

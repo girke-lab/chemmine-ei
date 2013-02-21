@@ -11,40 +11,84 @@
 \maketitle
 
 \section{Introduction}
-EiR provides an index for compound databases allowing one to
+EiR provides an index for chemical compound databases allowing one to
 quickly find similar compounds in a very large database.
+To create this index, $r$ reference compounds are
+selected to represent the database. Then each compound in the database
+is embedded into $d$-dimensional space based on their distance to each
+reference compound. This requires time linear in the size of the database, but
+only needs to be done once for a database.
+Within this space, Locality Sensitive Hashing (LSH)
+is employed to allow sub-linear time nearest neighbor lookups.
+This means that nearest neighbors can be found without doing a linear
+scan through the entire compound database.
+Additional compounds can be added to the database in time linear to 
+the number of new compounds. No time is spend processing existing compounds,
+as long as the set of reference compounds remains the same.
+Given the ability to quickly find nearest neighbors, this method enables
+fast clustering with the Jarvis-Pattrick algorithm as well. 
 For details see ``Accelerated similarity searching and clustering of large compound sets by
 geometric embedding and locality sensitive hashing.'', Cao Y, Jiang T, Girke T
 Bioinformatics. 2010 Apr 1; 26(7): 953-9.
 
-EiR works on compound databases. A compound database consists of two files.
-One is the actual database data file in some format. This database, known
-as the <bindb>, typically consists of actual compound data. For example,
-an atom-pair database would use a <bindb> to store atom pair descriptors.
-The other file is an ID database or <iddb>. This database is just a text
-file, each line of which is a sequence ID used to subset the <bindb>. For
-example, if the <bindb> contains 1,000 compounds, then the <iddb> can
-contain at most 1,000 lines of sequential numbers from 1 to 1000. Using
-this <bindb> and <iddb>, then we have a compound database for 1,000
-compounds. If, for example, the <iddb> contains 500 lines of odd numbers
-from 1 up to 999, then the combination of the <bindb> and the <iddb>
-describes a compound database of 500 compounds. Note that <iddb> uses
-1-based numbering, not 0-based. 
+This library uses an SQL backend (SQLite by default) to store chemical 
+compound definitions, either in SDF or SMILE format, as well
+as descriptors. Several different kinds of descriptors can be stored for
+each compound, for example, one could compute and store atom-pair and fingerprint
+descriptors for each compound. The SQLite database, if used, is stored in a directory called "data".
+Also in this directory is a file called "Main.iddb", which stores the id
+of each compound in the current "logical" database. This allows you to
+have compounds in the SQL database that are not being used, or to create
+various subsets of one large SQL database. The  eiInit function is
+used to create a new database, it can import data from SDF or SMILE formated
+files, or an SDFset object. 
 
-You may see these files under the data folder:
-\begin{itemize}
-	\item main.iddb : this is the main iddb. Compounds referenced in this 
-         iddb will be embedded.
-	\item test\_query.iddb : this file is auto-generated. It is a subset of 
-         main.iddb used to perform automatic search tests in order to evaluate 
-         the embedding quality.
-\end{itemize}
+Once a database has been created, an embedding must also be created. In this
+step the reference compounds are chosen and each compound is embedded into
+the new space. This step creates a new directory called "run-r-d", where "r"
+and "d" are the corresponding values. This is the most costly step of
+the process and is handled by the eiMakeDb function. This step can be
+parrallized by providing a SNOW cluster to the eiMakeDb function.
 
-Note that there is no requirement on what format <bindb> uses. EiR does not
-utilize <bindb> directly. Instead, it passes the path to <bindb> to
-the db2dbDistance function. If you use your own custom similarity
-measure (see Section \ref{customization}), as long as your custom
-db2dbDistance function can understand <bindb>, then it is fine.    
+Given an embedded database, queries can be run against it with the
+eiQuery function. Additional compounds can also be added to an existing
+database and embedding using eiAdd. Performance tests can be run using the 
+eiPerformanceTest function, and Jarvis-Patrick clustering can be done
+with the eiCluster function.
+
+EiR also provides some mechanisms to allow the user to extend the set of 
+descriptor formats used and to define new distance functions.
+
+
+
+%EiR works on compound databases. A compound database consists of two files.
+%One is the actual database data file in some format. This database, known
+%as the <bindb>, typically consists of actual compound data. For example,
+%an atom-pair database would use a <bindb> to store atom pair descriptors.
+%The other file is an ID database or <iddb>. This database is just a text
+%file, each line of which is a sequence ID used to subset the <bindb>. For
+%example, if the <bindb> contains 1,000 compounds, then the <iddb> can
+%contain at most 1,000 lines of sequential numbers from 1 to 1000. Using
+%this <bindb> and <iddb>, then we have a compound database for 1,000
+%compounds. If, for example, the <iddb> contains 500 lines of odd numbers
+%from 1 up to 999, then the combination of the <bindb> and the <iddb>
+%describes a compound database of 500 compounds. Note that <iddb> uses
+%1-based numbering, not 0-based. 
+%
+%You may see these files under the data folder:
+%\begin{itemize}
+%	\item main.iddb : this is the main iddb. Compounds referenced in this 
+%         iddb will be embedded.
+%	\item test\_query.iddb : this file is auto-generated. It is a subset of 
+%         main.iddb used to perform automatic search tests in order to evaluate 
+%         the embedding quality.
+%\end{itemize}
+%
+%Note that there is no requirement on what format <bindb> uses. EiR does not
+%utilize <bindb> directly. Instead, it passes the path to <bindb> to
+%the db2dbDistance function. If you use your own custom similarity
+%measure (see Section \ref{customization}), as long as your custom
+%db2dbDistance function can understand <bindb>, then it is fine.    
 
 
 \section{Initialization}
@@ -56,15 +100,25 @@ An initial compound database must be created with the following command:
    eiInit(sdfsample[1:99])
 \end{Scode}
 
-EiInit can take either an SDFset, or a filename.  SDF is supported
-by default. Other formats can be supported through customization
-(Sec. \ref{customization}). It might complain if your SDF file does not
+EiInit can take either an SDFset, or a filename. If a filename is given
+it must be in either SDF  or SMILE format and the format must be specified 
+with the \texttt{format} paramter.  It might complain if your SDF file does not
 follow the SDF specification. If this happens, you can create an
 SDFset with the \texttt{read.SDFset} command and then use that
-instead of the filename.  EiInit will create  a folder called
+instead of the filename.  
+
+Descriptors will also be computed at this time. The default descriptor type
+is atompair. Other types can be used by setting the \texttt{descriptorType}
+parameter. Currently available types are "ap" for atompair, and "fp" for
+fingerprint.  The set of available descriptors can be extended, see Section
+\ref{customization}.
+EiInit will create  a folder called
 'data'. Commands should always be executed in the folder containing
 this directory (ie, the parent directory of "data"), or else
 specify the location of that directory with the \texttt{dir} option.
+
+eiInit will return a list of compound id numbers which represent the
+compounds just inserted. These numbers can be used to issue queries later.
 
 \section{Creating a Searchable Database}
 
@@ -89,36 +143,53 @@ d=100$) will result in a job folder called run-300-100.
 The embedding result is the file matrix.<r>.<d>. In the above example,
 the output would be run-300-100/matrix.300.100.
 
+Since more than one type of descriptor can be stored for each compound, the desired
+descriptor type must be given to this function with the \texttt{descriptorType} parameter.
+The default value is "ap", for atompair.  You can also specify a custom distance function that must be able to
+take two descriptors in the format specified and return a distance value.
+
+The return value is the path of the refIddb file, which is a file
+containing list of referenice id values. This file is needed by other
+functions.
+
 
 \begin{Scode}
    library(snow)
    r<- 50
    d<- 40
-   embedding <- eiMakeDb(r,d,numSamples=20,cl=makeCluster(1,type="SOCK",outfile=""))
+   refIddb <- eiMakeDb(r,d,numSamples=20,cl=makeCluster(1,type="SOCK",outfile=""))
 \end{Scode}
 
 
 \section{Queries}
 
-As with \texttt{eiInit}, queries can be specified as an SDFset or
-a filename. You need to identify the reference IDDB file, it will
-be the file under the run directory ending in ``.cdb''. Then you
+Queries can be given in several formats, defined by the
+\texttt{format} parameter. The default format is "sdf". The 
+\texttt{queries} parameter can be either an sdf file or and SDFset under
+this format. Other valid values for \texttt{format} are "name" and "compound\_id".
+Under these two formats the \texttt{queries} parameter is expected to
+be a list of compound names (as returned by sdfid on an SDFset), or a list
+of id numbers from the database, such as what is returned by the eiInit
+function.
+
+As with \texttt{eiMakeDb}, the \texttt{descriptorType} and \texttt{distance}
+parameters may be given if desired. They will default to atompair.
+
+You need to identify the reference IDDB file, it will
+be returned by the eiMakeDb function. Then you
 can perform a query as follows: 
 
 \begin{Scode}
-   #find reference IDDB file
-   runDir<-paste("run",r,d,sep="-")
-   matches<-dir(runDir,pattern=".cdb$",full.names=TRUE)
-   refIddb = matches[1]
 
    #find compounds similar to each query
    eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
 
 \end{Scode}
 
-The result will be a data frame with three columns. The first is
-a query id, the second is a target, or hit, id, and the third is
-the distance between them. Lsh parameters can be passed in as well,
+The result will be a data frame with four columns. The first is
+a query id, the second is a target, or hit, id, the third is the id number of 
+the target, and the fourth is
+the distance between the query and target. Lsh parameters can be passed in as well,
 see Section \ref{performance-tests} for more details.
 
 \section{Adding New Compounds}
