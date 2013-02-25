@@ -194,8 +194,13 @@ see Section \ref{performance-tests} for more details.
 
 \section{Adding New Compounds}
 New Compounds can be added to an existing database, however, the 
-reference compounds cannot be changed. To add new compounds, use the 
-eiAdd function:
+reference compounds cannot be changed. 
+To add new compounds, use the eiAdd function. This function
+is very similar to the eiQuery function, except instead of a 
+\texttt{queiries} parameter, there is an \texttt{additions} parameter,
+defining the compounds to be added. The format of the value of this
+parameter works the same as in the eiQuery function.
+For example, to add one compound from an SDFset you would do:
 
 \begin{Scode}{term=false}
    eiAdd(r,d,refIddb,sdfsample[100])
@@ -205,6 +210,11 @@ eiAdd function:
 \section{Performance Tests}
 \label{performance-tests}
 
+The eiPerforamceTest function will run several tests using some sample
+data to evaluate the performace of the current embedding. It takes
+the usual $r$ and $d$ parameters, as well as on option distance function
+and descriptor type, to choose which set of descriptors to use. It also
+takes several LSH parameters, though the defaults are usually fine. 
 To evaluate the performance you can run:
 
 \begin{Scode}{term=false}
@@ -221,9 +231,9 @@ reference search results (chemical-search.results.gz).
 The comparison results are summarized in two types of files. The first
 type lists the recall for different k values, k being the number of
 numbers to retrieve. These files are named as ``recall-ratio-k''.
-For example, if the recall is 70% for top-100
-compound search - 70 of the 100 results are among the real top-100
-compounds - then the value at line 100 is 0.7. Several relaxation ration
+For example, if the recall is 70\% for top-100
+compound search (70 of the 100 results are among the real top-100
+compounds) then the value at line 100 is 0.7. Several relaxation ratios
 are used, each generating a file in this form. For instance,
 recall.ratio-10 is the file listing the recalls when relaxation
 ratio is 10. The other file, recall.csv, lists recalls of different
@@ -235,7 +245,7 @@ relaxation ratio for the k values you are interested in.
 
 The second test measures the performance of the Locality Sensitive Hash (LSH).
 The results for lsh-assisted search will be in
-run-r-d/indexed.performance. It's a 1,000-line files of recall values. Each
+run-r-d/indexed.performance. It's a 1,000-line file of recall values. Each
 line corresponds to one test query.  LSH search performance is
 highly sensitive to your LSH parameters (K, W, M, L, T). The
 default parameters are listed in the man page for
@@ -247,6 +257,55 @@ find the best values for these parameters.
 
 \section{Customization}
 \label{customization}
+
+EiR can be extended to understand new descriptor types and new distance 
+functions. New distance functions can be set in two different ways.
+Any function that takes a distance parameter can be given a new 
+distance function that will be used for just that call. If no
+distance function is given, it will fetch a default distance
+function that has been defined for the given descriptor type.
+This default value can be changed using the \texttt{setDefaultDistance}
+function, which takes the descriptor type and a distance function.
+Once this function has been called, the new distance function will be
+used for that descriptor type by all functions using a distance function.
+The built-in defaults are defined as follows:
+\begin{Scode}
+	setDefaultDistance("ap", function(d1,d2) 1-cmp.similarity(d1,d2) )
+	setDefaultDistance("fp", function(d1,d2) 1-fpSim(d1,d2) )
+\end{Scode}
+
+New descriptor types can also be added using the \texttt{addTransform}
+function. These transforms are basically just ways to read descriptors from 
+compound definitions, and to convert descriptors between string and object form. This conversion
+is required because descriptors are stored as strings in the SQL database, but are used
+by the rest of the program as objects.
+
+There are two main components that need to be added. The
+\texttt{addTransform} function takes the name of the transform and two functions,
+\texttt{toString}, and \texttt{toObject}. These have slightly different
+meanings depending on the component you are adding.
+The first component to add 
+is a transform from a chemical compound format, such as SDF, to a descriptor format,
+such as atom pair (AP), in either string or object form. 
+In this case the transform name should be
+built with the \texttt{buildType} function, which takes the compound format
+and the descriptor type as arguments. The toString function should take
+any kind of SDF source, such an SDF file, an SDF object or an SDFset, 
+and output a string representation of the descriptors. The toObject function
+should take the same kind of input, but output the descriptors as an object.
+The actual return value is a list containing the names of the compounds, and
+the actual descriptor objects.
+
+The second component to add is a transform that converts between string
+and object representations of descriptors. In this case the toString function
+takes descriptors in object form and returns a string representation for each.
+The toObject function performs the inverse operation. It takes descriptors in string
+form and returns them as objects. The objects returned by this function
+will be exactly what is handed to the distance function, so you need to make sure that
+the two match each other.
+
+
+
 
 All \texttt{eiXXXX} methods accept a \texttt{measure} parameter.
 A measure object handles dealing with the compound representations

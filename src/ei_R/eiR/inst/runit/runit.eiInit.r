@@ -73,7 +73,7 @@ test.ba.eiMakeDb <- function() {
 }
 test.ca.eiQuery <- function(){
 
-	DEACTIVATED("slow")
+	#DEACTIVATED("slow")
    data(sdfsample)
    refIddb = findRefIddb(runDir)
    results = eiQuery(r,d,refIddb,sdfsample[1:2],K=15,descriptorType=descType)
@@ -92,7 +92,7 @@ test.ca.eiQuery <- function(){
 }
 
 test.da.eiPerformanceTest <- function() {
-	DEACTIVATED("slow")
+	#DEACTIVATED("slow")
    eiPerformanceTest(r,d,K=22,descriptorType=descType)
    checkMatrix("chemical-search.results$",20, N,"data")
    checkMatrix(sprintf("eucsearch.%d-%d",r,d),20,N)
@@ -101,7 +101,7 @@ test.da.eiPerformanceTest <- function() {
 }
 test.ea.eiAdd<- function(){
 
-	DEACTIVATED("slow")
+	#DEACTIVATED("slow")
    data(example_compounds)
    cat(paste(paste(example_compounds,collapse="\n"),"\n",sep=""),file="example_compounds.sdf")
    options(warn=-1)
