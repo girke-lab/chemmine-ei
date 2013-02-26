@@ -65,9 +65,9 @@ Section \ref{customization} for details.
 An initial compound database must be created with the following command:
 
 \begin{Scode}
-   library(eiR)
-   data(sdfsample)
-   eiInit(sdfsample[1:99])
+library(eiR)
+data(sdfsample)
+eiInit(sdfsample[1:99])
 \end{Scode}
 
 EiInit can take either an SDFset, or a filename. If a filename is given
@@ -124,10 +124,10 @@ functions.
 
 
 \begin{Scode}
-   library(snow)
-   r<- 50
-   d<- 40
-   refIddb <- eiMakeDb(r,d,numSamples=20,cl=makeCluster(1,type="SOCK",outfile=""))
+library(snow)
+r<- 50
+d<- 40
+refIddb <- eiMakeDb(r,d,numSamples=20,cl=makeCluster(1,type="SOCK",outfile=""))
 \end{Scode}
 
 
@@ -150,10 +150,8 @@ be returned by the eiMakeDb function. Then you
 can perform a query as follows: 
 
 \begin{Scode}
-
-   #find compounds similar to each query
-   eiQuery(r,d,refIddb,sdfsample[1:2],K=15)
-
+#find compounds similar to each query
+eiQuery(r,d,refIddb,sdfsample[1:2],K=5)
 \end{Scode}
 
 The result will be a data frame with four columns. The first is
@@ -173,7 +171,7 @@ parameter works the same as in the eiQuery function.
 For example, to add one compound from an SDFset you would do:
 
 \begin{Scode}{term=false}
-   eiAdd(r,d,refIddb,sdfsample[100])
+eiAdd(r,d,refIddb,sdfsample[100])
 \end{Scode}
 
 
@@ -188,7 +186,7 @@ takes several LSH parameters, though the defaults are usually fine.
 To evaluate the performance you can run:
 
 \begin{Scode}{term=false}
-   eiPerformanceTest(r,d,K=22)
+eiPerformanceTest(r,d,K=22)
 \end{Scode}
 
 This will perform two different tests.
@@ -240,8 +238,8 @@ Once this function has been called, the new distance function will be
 used for that descriptor type by all functions using a distance function.
 The built-in defaults are defined as follows:
 \begin{Scode}
-	setDefaultDistance("ap", function(d1,d2) 1-cmp.similarity(d1,d2) )
-	setDefaultDistance("fp", function(d1,d2) 1-fpSim(d1,d2) )
+setDefaultDistance("ap", function(d1,d2) 1-cmp.similarity(d1,d2) )
+setDefaultDistance("fp", function(d1,d2) 1-fpSim(d1,d2) )
 \end{Scode}
 
 New descriptor types can also be added using the \texttt{addTransform}
@@ -278,37 +276,38 @@ For example, to allow atom pair descriptors to be extracted from and SDF source 
 would make the following call:
 
 \begin{Scode}
-	addTransform("ap","sdf",
-		# Any sdf source -> APset
-		toObject = function(input,dir="."){
-			sdfset=if(is.character(input) && file.exists(input)){
-				read.SDFset(input)
-			}else if(inherits(input,"SDFset")){
-				input
-			}else{
-				stop(paste("unknown type for 'input', or filename does not exist. type found:",class(input)))
-			}
-			list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
+addTransform("ap","sdf",
+	# Any sdf source -> APset
+	toObject = function(input,dir="."){
+		sdfset=if(is.character(input) && file.exists(input)){
+			read.SDFset(input)
+		}else if(inherits(input,"SDFset")){
+			input
+		}else{
+			stop(paste("unknown type for 'input', 
+				or filename does not exist. type found:",class(input)))
 		}
-	)
+		list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
+	}
+)
 
-	addTransform("ap",  
-		# APset -> string,
-		toString = function(apset,dir="."){
-			unlist(lapply(ap(apset), function(x) paste(x,collapse=", ")))
-		},
-		# string or list -> AP set list
-		toObject= function(v,dir="."){ 
-			if(inherits(v,"list") || length(v)==0)
-				return(v)
+addTransform("ap",  
+	# APset -> string,
+	toString = function(apset,dir="."){
+		unlist(lapply(ap(apset), function(x) paste(x,collapse=", ")))
+	},
+	# string or list -> AP set list
+	toObject= function(v,dir="."){ 
+		if(inherits(v,"list") || length(v)==0)
+			return(v)
 
-			as( if(!inherits(v,"APset")){
-					names(v)=as.character(1:length(v));  
-					read.AP(v,type="ap",isFile=FALSE)
-				} else v,
-				"list")  
-		}
-	)
+		as( if(!inherits(v,"APset")){
+				names(v)=as.character(1:length(v));  
+				read.AP(v,type="ap",isFile=FALSE)
+			} else v,
+			"list")  
+	}
+)
 \end{Scode}  
 
 

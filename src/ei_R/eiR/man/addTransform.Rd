@@ -72,37 +72,37 @@ addTransform(descriptorType, compoundFormat = NULL, toString = NULL, toObject)
 	# adding support for atompair (ap) descriptors extracted from
 	# sdf formmatted data.
 
-	#first component
-	addTransform("ap","sdf",
-		# Any sdf source -> APset
-		toObject = function(input,dir="."){
-			sdfset=if(is.character(input) && file.exists(input)){
-				read.SDFset(input)
-			}else if(inherits(input,"SDFset")){
-				input
-			}else{
-				stop(paste("unknown type for 'input', or filename does not exist. type found:",class(input)))
-			}
-			list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
-		}
-	)
+    #first component
+    addTransform("ap","sdf",
+        # Any sdf source -> APset
+        toObject = function(input,dir="."){
+            sdfset=if(is.character(input) && file.exists(input)){
+                read.SDFset(input)
+            }else if(inherits(input,"SDFset")){
+                input
+            }else{
+                stop(paste("unknown type for 'input', or filename does not exist. type found:",class(input)))
+            }
+            list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
+        }
+    )
 
-	#second component
-	addTransform("ap",  
-		# APset -> string,
-		toString = function(apset,dir="."){
-			unlist(lapply(ap(apset), function(x) paste(x,collapse=", ")))
-		},
-		# string or list -> AP set list
-		toObject= function(v,dir="."){ 
-			if(inherits(v,"list") || length(v)==0)
-				return(v)
+    #second component
+    addTransform("ap",  
+        # APset -> string,
+        toString = function(apset,dir="."){
+            unlist(lapply(ap(apset), function(x) paste(x,collapse=", ")))
+        },
+        # string or list -> AP set list
+        toObject= function(v,dir="."){ 
+            if(inherits(v,"list") || length(v)==0)
+                return(v)
 
-			as( if(!inherits(v,"APset")){
-					names(v)=as.character(1:length(v));  
-					read.AP(v,type="ap",isFile=FALSE)
-				} else v,
-				"list")  
-		}
-	)
+            as( if(!inherits(v,"APset")){
+                    names(v)=as.character(1:length(v));  
+                    read.AP(v,type="ap",isFile=FALSE)
+                } else v,
+                "list")  
+        }
+    )
 }
