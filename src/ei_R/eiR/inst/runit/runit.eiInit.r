@@ -24,6 +24,14 @@ test.aa.eiInit <- function() {
 		sdfFromDb = getCompounds(initDb(file.path(dir,"data","chem.db")),cids)
 		checkEquals(length(sdfFromDb),N)
 	}
+
+	setDefaultDistance("dummy",function(x,y) x-y)
+	checkTrue(!is.null(eiR:::getDefaultDist("dummy")))
+
+	addTransform("dummy","d2",toObject=function(x)x)
+	checkTrue(!is.null(eiR:::getTransform("dummy","d2")))
+
+
    data(sdfsample)
    compoundIds = eiInit(sdfsample,descriptorType=descType)
 	checkData(compoundIds)

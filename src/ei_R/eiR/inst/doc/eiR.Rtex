@@ -57,38 +57,8 @@ eiPerformanceTest function, and Jarvis-Patrick clustering can be done
 with the eiCluster function.
 
 EiR also provides some mechanisms to allow the user to extend the set of 
-descriptor formats used and to define new distance functions.
-
-
-
-%EiR works on compound databases. A compound database consists of two files.
-%One is the actual database data file in some format. This database, known
-%as the <bindb>, typically consists of actual compound data. For example,
-%an atom-pair database would use a <bindb> to store atom pair descriptors.
-%The other file is an ID database or <iddb>. This database is just a text
-%file, each line of which is a sequence ID used to subset the <bindb>. For
-%example, if the <bindb> contains 1,000 compounds, then the <iddb> can
-%contain at most 1,000 lines of sequential numbers from 1 to 1000. Using
-%this <bindb> and <iddb>, then we have a compound database for 1,000
-%compounds. If, for example, the <iddb> contains 500 lines of odd numbers
-%from 1 up to 999, then the combination of the <bindb> and the <iddb>
-%describes a compound database of 500 compounds. Note that <iddb> uses
-%1-based numbering, not 0-based. 
-%
-%You may see these files under the data folder:
-%\begin{itemize}
-%	\item main.iddb : this is the main iddb. Compounds referenced in this 
-%         iddb will be embedded.
-%	\item test\_query.iddb : this file is auto-generated. It is a subset of 
-%         main.iddb used to perform automatic search tests in order to evaluate 
-%         the embedding quality.
-%\end{itemize}
-%
-%Note that there is no requirement on what format <bindb> uses. EiR does not
-%utilize <bindb> directly. Instead, it passes the path to <bindb> to
-%the db2dbDistance function. If you use your own custom similarity
-%measure (see Section \ref{customization}), as long as your custom
-%db2dbDistance function can understand <bindb>, then it is fine.    
+descriptor formats used and to define new distance functions. See
+Section \ref{customization} for details.
 
 
 \section{Initialization}
@@ -287,14 +257,14 @@ meanings depending on the component you are adding.
 The first component to add 
 is a transform from a chemical compound format, such as SDF, to a descriptor format,
 such as atom pair (AP), in either string or object form. 
-In this case the transform name should be
-built with the \texttt{buildType} function, which takes the compound format
-and the descriptor type as arguments. The toString function should take
-any kind of SDF source, such an SDF file, an SDF object or an SDFset, 
-and output a string representation of the descriptors. The toObject function
+The toString function should take
+any kind of chemical compound source, such an SDF file, an SDF object or an SDFset, 
+and output a string representation of the descriptors. Since this function
+can be written in terms of other functions that will be defined, you
+can usually accept the default value of this function.  The toObject function
 should take the same kind of input, but output the descriptors as an object.
-The actual return value is a list containing the names of the compounds, and
-the actual descriptor objects.
+The actual return value is a list containing the names of the compounds (in the names field), and
+the actual descriptor objects ( in the descriptors field).
 
 The second component to add is a transform that converts between string
 and object representations of descriptors. In this case the toString function
@@ -304,74 +274,47 @@ form and returns them as objects. The objects returned by this function
 will be exactly what is handed to the distance function, so you need to make sure that
 the two match each other.
 
+For example, to allow atom pair descriptors to be extracted from and SDF source we
+would make the following call:
 
-
-
-All \texttt{eiXXXX} methods accept a \texttt{measure} parameter.
-A measure object handles dealing with the compound representations
-and also computing distances between compounds.
-It is a list with three fields, named: dbBuilder, dbSubset, and
-db2dbDistance. Each of these is a function.
-
-As an example, here is the default measure, which works for sdf
-formated files and computes distances using atompair descriptors:
 \begin{Scode}
- atompairMeasure = list(
-	dbBuilder = function(input,output)
-		batch_sdf_parse(input,output),
-	dbSubset = function(db,iddb,output)
-		db_subset(db,iddb,output),
-	db2dbDistance = function(db,db2=NA,iddb1=NA,iddb2=NA,file=NA)
-	{
-		if(!is.na(file)){
-			if(is.na(db2) && ! is.na(iddb1) && ! is.na(iddb2)){
-				db2db_distance2file(db,iddb1,iddb2,file)
-			}else if(!is.na(db2) &&  is.na(iddb1) &&  is.na(iddb2)){
-				db2db_distance2file(db,db2,file)
+	addTransform("ap","sdf",
+		# Any sdf source -> APset
+		toObject = function(input,dir="."){
+			sdfset=if(is.character(input) && file.exists(input)){
+				read.SDFset(input)
+			}else if(inherits(input,"SDFset")){
+				input
 			}else{
-				stop("bad argument list")
+				stop(paste("unknown type for 'input', or filename does not exist. type found:",class(input)))
 			}
-		}else{
-			if(is.na(db2) && ! is.na(iddb1) && ! is.na(iddb2)){
-				return(.Call("db2db_distance_iddb",as.character(db),as.character(iddb1),as.character(iddb2)))
-			}else if(!is.na(db2) &&  is.na(iddb1) &&  is.na(iddb2)){
-				return(.Call("db2db_distance_db",as.character(db),as.character(db2)))
-			}else{
-				stop("bad argument list\n")
-			}
+			list(names=sdfid(sdfset),descriptors=sdf2ap(sdfset))
 		}
-	}
-)
-\end{Scode}
- 
+	)
 
-\texttt{DbBuilder} transforms the raw input file into whatever
-format will be used by dbSubset and db2dbDistance. It should take
-the name of an input file and the name of an output file to create.
+	addTransform("ap",  
+		# APset -> string,
+		toString = function(apset,dir="."){
+			unlist(lapply(ap(apset), function(x) paste(x,collapse=", ")))
+		},
+		# string or list -> AP set list
+		toObject= function(v,dir="."){ 
+			if(inherits(v,"list") || length(v)==0)
+				return(v)
 
-\texttt{DbSubset} extracts a subset of compounds from one file and
-puts them in another file. The compounds to extract are defined by 
-an IDDB file. It should take the name of a compound
-file, in the format output by dbBuilder, an IDDB file, and the name
-of the output file
+			as( if(!inherits(v,"APset")){
+					names(v)=as.character(1:length(v));  
+					read.AP(v,type="ap",isFile=FALSE)
+				} else v,
+				"list")  
+		}
+	)
+\end{Scode}  
 
-\texttt{Db2dbDistance} computes distances between compounds. There
-are two ways to use this function. The first is to specify both
-\texttt{db} and \texttt{db2}. This should compute all pairwise
-distances between compounds in these two files. The second way is
-to specify \texttt{db}, \texttt{iddb1}, and \texttt{iddb2}. In this
-case distances are computed only between compounds given in the two
-IDDB files. \texttt{db} should contain all compounds referenced by
-the IDDB files. In both cases, the \texttt{file} can optionally be
-given. If given, the output should be written to a file. The output
-should be lines of whitespace separated numbers. Each line should
-contain the distances of the first element of the first db against
-each member of the second db. If \texttt{file} is not given, the
-result should be returned as a matrix.
 
 
 \begin{Scode}{echo=false,term=false}
-   unlink("data",recursive=TRUE)
-   unlink(runDir,recursive=TRUE)
+#   unlink("data",recursive=TRUE)
+#   unlink(runDir,recursive=TRUE)
 \end{Scode}
 \end{document}

@@ -80,7 +80,7 @@ eiInit <- function(compoundDb,dir=".",format="sdf",descriptorType="ap",append=FA
 		dir.create(file.path(dir,DataDir))
 
 	descriptorFunction = function(set)
-		data.frame(descriptor=getTransform(buildType(format,descriptorType))$toString(set),
+		data.frame(descriptor=getTransform(descriptorType,format)$toString(set),
 					  descriptor_type=descriptorType)
 	
 
@@ -243,8 +243,7 @@ eiQuery <- function(r,d,refIddb,queries,format="sdf",
 		refIds = readIddb(refIddb)
 
 
-		descriptorInfo = getTransform(buildType(format,descriptorType)
-												)$toObject(queries,dir)
+		descriptorInfo = getTransform(descriptorType,format)$toObject(queries,dir)
 		queryDescriptors = descriptorInfo$descriptors
 		numQueries = length(queryDescriptors)
 		queryNames = descriptorInfo$names
