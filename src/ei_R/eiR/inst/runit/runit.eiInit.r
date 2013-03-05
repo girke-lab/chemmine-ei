@@ -181,7 +181,7 @@ test.fn.cluster_comparison <- function(){
 			 x
 		 }
 
-	cl2nnm = jarvisPatrick(aps,j=numNbrs,k=minNbrs,type="matrix",cutoff=cutoff)
+	cl2nnm = nearestNeighbors(aps,numNbrs=numNbrs,cutoff=cutoff)
 #	d=dim(cl2nnm)
 #	cl2nnm=as.numeric(cl2nnm)
 #	dim(cl2nnm)=d
@@ -190,7 +190,7 @@ test.fn.cluster_comparison <- function(){
 	#print(tail(cl2nnm))
 
 
-	cl2 = jarvisPatrick_c(cl2nnm,minNbrs,fast=fast)
+	cl2 = jarvisPatrick_c(cl2nnm$ids,minNbrs,fast=fast)
 	names(cl2)=compoundNames
 	#print(cl2)
 
@@ -298,13 +298,13 @@ trueNnm <- function(compoundIds,numNbrs,minNbrs,dir,cutoff=NA){
 
 
 
-	nnm = jarvisPatrick(aps,type="matrix",cutoff,j=numNbrs,k=minNbrs)
+	nnm = nearestNeighbors(aps,cutoff=cutoff,numNbrs=numNbrs)
 	d=dim(nnm)
 	nnm=as.numeric(nnm)
 	dim(nnm)=d
 	rownames(nnm)=cid(aps)
 
-	nnm
+	nnm$ids
 }
 
 clusterSizes <- function(clustering) {

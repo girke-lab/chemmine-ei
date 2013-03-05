@@ -1,6 +1,7 @@
 \documentclass{article}
 
 \usepackage{hyperref}
+\usepackage{a4wide}
 
 \title{eiR}
 \author{Kevin Horan}
@@ -124,10 +125,9 @@ functions.
 
 
 \begin{Scode}
-library(snow)
-r<- 50
+r<- 60
 d<- 40
-refIddb <- eiMakeDb(r,d,numSamples=20,cl=makeCluster(1,type="SOCK",outfile=""))
+refIddb <- eiMakeDb(r,d)
 \end{Scode}
 
 
@@ -149,9 +149,13 @@ You need to identify the reference IDDB file, it will
 be returned by the eiMakeDb function. Then you
 can perform a query as follows: 
 
-\begin{Scode}
+\begin{Scode}{term=false,fig=true}
 #find compounds similar to each query
-eiQuery(r,d,refIddb,sdfsample[1:2],K=5)
+result=eiQuery(r,d,refIddb,sdfsample[45],K=4)
+print(result)
+
+cid(sdfsample)=sdfid(sdfsample)
+plot(sdfsample[cid(sdfsample) %in% result$target])
 \end{Scode}
 
 The result will be a data frame with four columns. The first is
@@ -159,6 +163,8 @@ a query id, the second is a target, or hit, id, the third is the id number of
 the target, and the fourth is
 the distance between the query and target. Lsh parameters can be passed in as well,
 see Section \ref{performance-tests} for more details.
+
+
 
 \section{Adding New Compounds}
 New Compounds can be added to an existing database, however, the 
