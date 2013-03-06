@@ -47,7 +47,7 @@
 	}
 	\item{distance}{
 		The distance function to be used to compute the distance between two descriptors. A default function is
-		provided for "ap" and "fp" descriptors.
+		provided for "ap" and "fp" descriptors. The Tanimoto function is used by default.
 	}
 
   \item{K}{

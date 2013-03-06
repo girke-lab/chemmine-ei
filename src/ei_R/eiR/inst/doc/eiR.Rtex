@@ -1,15 +1,30 @@
 \documentclass{article}
-
+\usepackage[margin=0.75in]{geometry}
+\usepackage[authoryear,round]{natbib}
 \usepackage{hyperref}
-\usepackage{a4wide}
+\hypersetup{
+       colorlinks,
+       citecolor=black,
+       filecolor=black,
+       linkcolor=red,
+       urlcolor=black
+}
+\usepackage[OT1]{fontenc}
+
+
+%\usepackage{a4wide}
 
 \title{eiR}
-\author{Kevin Horan}
+\author{Kevin Horan, Yiqun Cao, Thomas Girke}
+
+\bibliographystyle{plainnat}
 
 %\VignetteIndexEntry{eiR}
 
 \begin{document}
 \maketitle
+\tableofcontents
+\clearpage
 
 \section{Introduction}
 EiR provides an index for chemical compound databases allowing one to
@@ -19,7 +34,7 @@ selected to represent the database. Then each compound in the database
 is embedded into $d$-dimensional space based on their distance to each
 reference compound. This requires time linear in the size of the database, but
 only needs to be done once for a database.
-Within this space, Locality Sensitive Hashing (LSH)
+Within this space, Locality Sensitive Hashing (LSH) \citep{dong2008efficiently,dong2008modeling}
 is employed to allow sub-linear time nearest neighbor lookups.
 This means that nearest neighbors can be found without doing a linear
 scan through the entire compound database.
@@ -27,12 +42,10 @@ Additional compounds can be added to the database in time linear to
 the number of new compounds. No time is spend processing existing compounds,
 as long as the set of reference compounds remains the same.
 Given the ability to quickly find nearest neighbors, this method enables
-fast clustering with the Jarvis-Pattrick algorithm as well. 
-For details see ``Accelerated similarity searching and clustering of large compound sets by
-geometric embedding and locality sensitive hashing.'', Cao Y, Jiang T, Girke T
-Bioinformatics. 2010 Apr 1; 26(7): 953-9.
+fast clustering with the Jarvis-Pattrick algorithm as well \citep{jarvis1973clustering}. 
+For details on the whole process see \citet{cao2010accelerated}.
 
-This library uses an SQL backend (SQLite by default) to store chemical 
+This library uses an SQL back-end (SQLite by default) to store chemical 
 compound definitions, either in SDF or SMILE format, as well
 as descriptors. Several different kinds of descriptors can be stored for
 each compound, for example, one could compute and store atom-pair and fingerprint
@@ -44,12 +57,12 @@ various subsets of one large SQL database. The  eiInit function is
 used to create a new database, it can import data from SDF or SMILE formated
 files, or an SDFset object. 
 
-Once a database has been created, an embedding must also be created. In this
+Once a database has been created, an embedding must also be created \citep{agrafiotis2001multidimensional}. In this
 step the reference compounds are chosen and each compound is embedded into
 the new space. This step creates a new directory called "run-r-d", where "r"
 and "d" are the corresponding values. This is the most costly step of
 the process and is handled by the eiMakeDb function. This step can be
-parrallized by providing a SNOW cluster to the eiMakeDb function.
+parallelized by providing a SNOW cluster to the eiMakeDb function.
 
 Given an embedded database, queries can be run against it with the
 eiQuery function. Additional compounds can also be added to an existing
@@ -118,6 +131,7 @@ Since more than one type of descriptor can be stored for each compound, the desi
 descriptor type must be given to this function with the \texttt{descriptorType} parameter.
 The default value is "ap", for atompair.  You can also specify a custom distance function that must be able to
 take two descriptors in the format specified and return a distance value.
+The default distance method used is $1-\hbox{Tanimoto}(d1,d2)$.
 
 The return value is the path of the refIddb file, which is a file
 containing list of referenice id values. This file is needed by other
@@ -151,11 +165,17 @@ can perform a query as follows:
 
 \begin{Scode}{term=false,fig=true}
 #find compounds similar to each query
-result=eiQuery(r,d,refIddb,sdfsample[45],K=4)
-print(result)
+result=eiQuery(r,d,refIddb,sdfsample[45],K=10)
+print(result[1:4,])
+
+#Compare to traditional similarity search:
+data(apset)
+t=cmp.search(apset,apset[45],type=3,cutoff=4,quiet=TRUE)
+t$distance=1-t$scores
+print(t)
 
 cid(sdfsample)=sdfid(sdfsample)
-plot(sdfsample[cid(sdfsample) %in% result$target])
+plot(sdfsample[result$target[1:4]])
 \end{Scode}
 
 The result will be a data frame with four columns. The first is
@@ -316,6 +336,9 @@ addTransform("ap",
 )
 \end{Scode}  
 
+
+%\bibliographystyle{abbrvnat}
+\bibliography{bibtex}
 
 
 \begin{Scode}{echo=false,term=false}
