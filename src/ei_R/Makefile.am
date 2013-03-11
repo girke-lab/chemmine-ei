@@ -77,3 +77,4 @@ clean-generic :
 	for i in $(CCSOURCES); do \
 		rm -f `basename $$i`;\
 	done)
+	(cd $(SRCDIR)/f2c; make clean)

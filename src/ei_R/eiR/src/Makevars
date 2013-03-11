@@ -1,4 +1,9 @@
 
-PKG_CXXFLAGS=  -DNO_MAIN -Iinclude
-PKG_LIBS=-lm -lf2c -L. -lgsl -lgslcblas 
 
+PKG_CXXFLAGS=  -DNO_MAIN -Iinclude -I.
+PKG_LIBS=-lm -Lf2c -lf2c -L. -lgsl -lgslcblas 
+
+$(SHLIB): f2c/libf2c.a
+
+f2c/libf2c.a:
+	@(cd f2c && $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) $(CPICFLAGS)" AR="$(AR)" RANLIB="$(RANLIB)")
