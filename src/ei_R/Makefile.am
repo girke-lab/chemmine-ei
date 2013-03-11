@@ -2,38 +2,19 @@ PACKAGEFOLDER = eiR
 SRCDIR = $(PACKAGEFOLDER)/src
 MODULENAME = eiR
 CCSOURCES  = \
-	../atompair/molecule.cc \
-	../atompair/formats.cc \
-	../atompair/desc.cc \
-	../atompair/similarity.cc \
-	../atompair/simpledb.cc \
-	../atompair/search.cc \
-	../atompair/profiling.cc \
-	../atompair/db_build.h \
-	../atompair/debug.h \
-	../atompair/desc.h \
-	../atompair/molecule.h \
-	../atompair/profiling.h \
-	../atompair/script.h \
-	../atompair/search.h \
-	../atompair/simpledb.h \
-	../atompair/db_build.cc \
-	../atompair/db2db_distance.cc \
-	../atompair/db2db_distance_r.cc \
-	../atompair/helpers.h \
-	../atompair/helpers.cc \
-	../atompair/db_subset.cc \
-	../matrix/format.cc \
 	../embedder/embedCoords.cc \
 	../embedder/solver.cc \
 	../embedder/solver.h \
 	../embedder/routines.c \
 	../embedder/config.h \
-	../lshkit/tools/search_r.cpp \
-	../euclidean-search/scan.cc \
+	../matrix/format.cc \
+	../atompair/profiling.cc \
+	../atompair/profiling.h \
 	../euclidean-search/eucsearch.h \
 	../euclidean-search/eucsearch.cc \
+	../euclidean-search/scan.cc \
 	../euclidean-search/recordfile.cc \
+	../lshkit/tools/search_r.cpp \
 	../lshkit/include \
 	../lshkit/src/apost.cpp \
 	../lshkit/src/char_bit_cnt.cpp  \
@@ -43,6 +24,7 @@ CCSOURCES  = \
 EXTRA_DIST = $(MODULENAME)/DESCRIPTION \
 				 $(MODULENAME)/NAMESPACE \
 				 $(MODULENAME)/README  \
+				 $(MODULENAME)/NEWS\
 				 $(MODULENAME)/src/Makevars \
 				 $(MODULENAME)/man/eiInit.Rd \
 				 $(MODULENAME)/man/eiMakeDb.Rd \

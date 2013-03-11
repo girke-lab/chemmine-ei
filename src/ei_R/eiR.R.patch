@@ -1,4 +1,33 @@
-52,53c52,53
+34c34
+< if(length(getClassDef("ExternalReference")) == 0) 
+---
+> ##if(length(getClassDef("ExternalReference")) == 0) 
+37c37
+<   setClass("ExternalReference", representation( ref = "externalptr"))
+---
+> ##  setClass("ExternalReference", representation( ref = "externalptr"))
+41,46c41,49
+< if(length(getClassDef("NativeRoutinePointer")) == 0) 
+<   setClass("NativeRoutinePointer", 
+<               representation(parameterTypes = "character",
+<                              returnType = "character",
+<                              "VIRTUAL"), 
+<               contains = "ExternalReference")
+---
+> #if(length(getClassDef("NativeRoutinePointer")) == 0) 
+> #  setClass("NativeRoutinePointer", 
+> #              representation(parameterTypes = "character",
+> #                             returnType = "character",
+> #                             "VIRTUAL"), 
+> #              contains = "ExternalReference")
+> #
+> #if(length(getClassDef("CRoutinePointer")) == 0) 
+> #  setClass("CRoutinePointer", contains = "NativeRoutinePointer")
+48,49d50
+< if(length(getClassDef("CRoutinePointer")) == 0) 
+<   setClass("CRoutinePointer", contains = "NativeRoutinePointer")
+51,53c52,53
+< 
 < if(length(getClassDef("EnumerationValue")) == 0) 
 <   setClass("EnumerationValue", contains = "integer")
 ---
@@ -41,19 +70,25 @@
 119c119
 < setMethod("length", "SWIGArray", function(x) x@dims[1])
 ---
-> #etMethod("length", "SWIGArray", function(x) x@dims[1])
+> #setMethod("length", "SWIGArray", function(x) x@dims[1])
 122,123c122,123
 < defineEnumeration("SCopyReferences",
 <                    .values = c( "FALSE" = 0, "TRUE" = 1, "DEEP" = 2))
 ---
 > #defineEnumeration("SCopyReferences",
 >                    #.values = c( "FALSE" = 0, "TRUE" = 1, "DEEP" = 2))
-168,179c168,179
+163,165c163
+< setClass('C++Reference', contains = 'ExternalReference')
+< setClass('C++Reference', contains = 'ExternalReference')
+< 
+---
+> #setClass('C++Reference', contains = 'ExternalReference')
+168,171d165
 < setMethod('[', "ExternalReference",
 < function(x,i,j, ..., drop=TRUE) 
 < if (!is.null(x$"__getitem__")) 
 < sapply(i, function(n) x$"__getitem__"(i=as.integer(n-1))))
-< 
+173,179c167,178
 < setMethod('[<-' , "ExternalReference",
 < function(x,i,j, ..., value) 
 < if (!is.null(x$"__setitem__")) {
@@ -74,3 +109,15 @@
 > #x$"__setitem__"(i=as.integer(i[n]-1), x=value[n]))
 > #x
 > #})
+181,182c180,181
+< setAs('ExternalReference', 'character',
+< function(from) {if (!is.null(from$"__str__")) from$"__str__"()})
+---
+> #setAs('ExternalReference', 'character',
+> #function(from) {if (!is.null(from$"__str__")) from$"__str__"()})
+184,185c183,184
+< setMethod('print', 'ExternalReference',
+< function(x) {print(as(x, "character"))})
+---
+> #setMethod('print', 'ExternalReference',
+> #function(x) {print(as(x, "character"))})

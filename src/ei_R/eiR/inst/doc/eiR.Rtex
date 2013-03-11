@@ -156,23 +156,38 @@ be a list of compound names (as returned by sdfid on an SDFset), or a list
 of id numbers from the database, such as what is returned by the eiInit
 function.
 
+The \texttt{r} and \texttt{d} parameters are required, as well as the 
+\texttt{refIddb} file, which is returned by the \texttt{eiMakeDb} function. These
+three values determine which embedded database to use. 
 As with \texttt{eiMakeDb}, the \texttt{descriptorType} and \texttt{distance}
-parameters may be given if desired. They will default to atompair.
+parameters may be given if desired. They will default to atompair and the
+Tanimoto Coefficient, respectively. 
+Finally, the parameter \texttt{K} is the number of results that will be 
+returned. In some cases, particularly if \texttt{K} is small, you may need to set it
+to a larger value and then trim down the result set yourself. This is 
+because LSH is not an exact algorithm. Internally, it actually searches for
+$xK$ neighbors, where $x$ is referred to as the expansion ratio, generally set to 2. 
+This allows it to pick the best $K$ matches, according to the true distance function, out
+of a larger set of candidates. When $K$ is small though, sometimes that expansion
+ratio is not quite enough.
 
-You need to identify the reference IDDB file, it will
-be returned by the eiMakeDb function. Then you
+Note also that this function returns distance values and not similarities.
+Similarities can be computed as shown in the example below.
+
+Then you
 can perform a query as follows: 
 
 \begin{Scode}{term=false,fig=true}
 #find compounds similar to each query
 result=eiQuery(r,d,refIddb,sdfsample[45],K=10)
+
+#compute similarities from distance values
+result$similarities=1-result$distance
 print(result[1:4,])
 
 #Compare to traditional similarity search:
 data(apset)
-t=cmp.search(apset,apset[45],type=3,cutoff=4,quiet=TRUE)
-t$distance=1-t$scores
-print(t)
+print(cmp.search(apset,apset[45],type=3,cutoff=4,quiet=TRUE))
 
 cid(sdfsample)=sdfid(sdfsample)
 plot(sdfsample[result$target[1:4]])

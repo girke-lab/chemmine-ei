@@ -21,9 +21,6 @@ setDefaultDistance(descriptorType, distance)
 		see \code{\ ink{addTransform}} for details), and returning a distance value.
 	}
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
 \value{
 	No return value.
 }
