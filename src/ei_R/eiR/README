@@ -1,21 +1,12 @@
 
 
-On Windows and Mac the binary libraries for GSL and Boost will need to be
+On Windows and Mac the binary libraries for GSL  will need to be
 installed. On Linux you will also need the header files for these libraries.
-Boost has several components that are often distributed together, but some
-linux distributions split them into separate packages. In that case, the
-components needed are the base boost libs, 'program_options", and "thread". 
 
-It depends on two external libraries:
+You can find GSL for different platforms here:
 
-1. GNU Scientific Library (GSL)
     1. Linux:  http://www.gnu.org/software/gsl/
     2. Mac:
           https://trac.macports.org/browser/trunk/dports/math/gsl/Portfile
           https://trac.macports.org/browser/trunk/dports/math/gsl-devel/Portfile
     3. Windows: http://gnuwin32.sourceforge.net/packages/gsl.htm
-2. Boost ( >= 1.42.0)
-    1. Linux: http://www.boost.org/
-    2. Mac: http://www.macports.org/ports.php?by=library&substr=boost
-    3. Windows:
-       http://www.boost.org/doc/libs/1_37_0/more/getting_started/windows.html

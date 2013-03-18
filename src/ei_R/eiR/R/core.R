@@ -77,7 +77,8 @@ lshsearchAll <- function(matrixFile,
 eiInit <- function(compoundDb,dir=".",format="sdf",descriptorType="ap",append=FALSE)
 {
 	if(!file.exists(file.path(dir,DataDir)))
-		dir.create(file.path(dir,DataDir))
+		if(!dir.create(file.path(dir,DataDir)))
+			stop("failed to create data directory ",file.path(dir,DataDir))
 
 	descriptorFunction = function(set)
 		data.frame(descriptor=getTransform(descriptorType,format)$toString(set),
@@ -106,7 +107,8 @@ eiMakeDb <- function(refs,d,descriptorType="ap",distance=getDefaultDist(descript
 	createWorkDir <- function(r){
 		workDir<<-file.path(dir,paste("run",r,d,sep="-"))
 		if(!file.exists(workDir))
-			dir.create(workDir)
+			if(!dir.create(workDir))
+				stop("Could not create run directory ",workDir)
 	}
 
 	if(is.character(refs)){ #assume its a filename

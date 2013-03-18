@@ -26,10 +26,10 @@
 \tableofcontents
 \clearpage
 
-\begin{Scode}{echo=false,term=false}
+<<echo=false,term=false>>=
    unlink("data",recursive=TRUE)
    unlink(paste("run",60,40,sep="-"),recursive=TRUE)
-\end{Scode}
+@
 
 \section{Introduction}
 EiR provides an index for chemical compound databases allowing one to
@@ -83,11 +83,11 @@ Section \ref{customization} for details.
 \section{Initialization}
 An initial compound database must be created with the following command:
 
-\begin{Scode}
+<<>>=
 library(eiR)
 data(sdfsample)
 eiInit(sdfsample[1:99])
-\end{Scode}
+@
 
 EiInit can take either an SDFset, or a filename. If a filename is given
 it must be in either SDF  or SMILE format and the format must be specified 
@@ -143,11 +143,11 @@ containing list of referenice id values. This file is needed by other
 functions.
 
 
-\begin{Scode}
+<<>>=
 r<- 60
 d<- 40
 refIddb <- eiMakeDb(r,d)
-\end{Scode}
+@
 
 
 \section{Queries}
@@ -182,7 +182,7 @@ Similarities can be computed as shown in the example below.
 Then you
 can perform a query as follows: 
 
-\begin{Scode}{term=false,fig=true}
+<<term=false,fig=true>>=
 #find compounds similar to each query
 result=eiQuery(r,d,refIddb,sdfsample[45],K=10)
 
@@ -196,7 +196,7 @@ print(cmp.search(apset,apset[45],type=3,cutoff=4,quiet=TRUE))
 
 cid(sdfsample)=sdfid(sdfsample)
 plot(sdfsample[result$target[1:4]])
-\end{Scode}
+@
 
 The result will be a data frame with four columns. The first is
 a query id, the second is a target, or hit, id, the third is the id number of 
@@ -216,9 +216,9 @@ defining the compounds to be added. The format of the value of this
 parameter works the same as in the eiQuery function.
 For example, to add one compound from an SDFset you would do:
 
-\begin{Scode}{term=false}
+<<term=false>>=
 eiAdd(r,d,refIddb,sdfsample[100])
-\end{Scode}
+@
 
 
 \section{Performance Tests}
@@ -231,9 +231,9 @@ and descriptor type, to choose which set of descriptors to use. It also
 takes several LSH parameters, though the defaults are usually fine. 
 To evaluate the performance you can run:
 
-\begin{Scode}{term=false}
+<<term=false>>=
 eiPerformanceTest(r,d,K=22)
-\end{Scode}
+@
 
 This will perform two different tests.
 The first tests the embedding results in similarity search. The way this works is by
@@ -283,10 +283,10 @@ function, which takes the descriptor type and a distance function.
 Once this function has been called, the new distance function will be
 used for that descriptor type by all functions using a distance function.
 The built-in defaults are defined as follows:
-\begin{Scode}
+<<>>=
 setDefaultDistance("ap", function(d1,d2) 1-cmp.similarity(d1,d2) )
 setDefaultDistance("fp", function(d1,d2) 1-fpSim(d1,d2) )
-\end{Scode}
+@
 
 New descriptor types can also be added using the \texttt{addTransform}
 function. These transforms are basically just ways to read descriptors from 
@@ -321,7 +321,7 @@ the two match each other.
 For example, to allow atom pair descriptors to be extracted from and SDF source we
 would make the following call:
 
-\begin{Scode}
+<<>>=
 addTransform("ap","sdf",
 	# Any sdf source -> APset
 	toObject = function(input,dir="."){
@@ -354,15 +354,16 @@ addTransform("ap",
 			"list")  
 	}
 )
-\end{Scode}  
+@
 
 
 %\bibliographystyle{abbrvnat}
 \bibliography{bibtex}
 
 
-\begin{Scode}{echo=false,term=false}
+<<echo=false,term=false>>=
    unlink("data",recursive=TRUE)
    unlink(paste("run",r,d,sep="-"),recursive=TRUE)
-\end{Scode}
+@
+
 \end{document}
