@@ -55,7 +55,7 @@ check: all
 test: all local
 	export RCMDCHECK=FALSE; \
 	export R_LIBS_USER=$(LOCAL_INST); \
-	$(R_PATH) --vanilla --slave < eiR/tests/test.R
+	$(R_PATH) --vanilla --slave < eiR/tests/runTests.R
 
 local: all
 	 $(R_PATH) CMD INSTALL -l $(LOCAL_INST) $(PACKAGEFOLDER)

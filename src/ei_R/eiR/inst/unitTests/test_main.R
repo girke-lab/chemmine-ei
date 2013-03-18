@@ -5,7 +5,6 @@ library(snow)
 options(warn=2)
 r<- 50
 d<- 40
-#N<- 122
 N<- 100
 j=1
 runDir<-paste("run",r,d,sep="-")
@@ -13,7 +12,7 @@ fpDir="fp_test"
 descType="ap"
 
 
-test.aa.eiInit <- function() {
+test_aa.eiInit <- function() {
 #	DEACTIVATED("slow")
 	checkData <- function(cids,dir="."){
 		checkTrue(file.exists(file.path(dir,"data","chem.db")))
@@ -182,10 +181,6 @@ test.fn.cluster_comparison <- function(){
 		 }
 
 	cl2nnm = nearestNeighbors(aps,numNbrs=numNbrs,cutoff=cutoff)
-#	d=dim(cl2nnm)
-#	cl2nnm=as.numeric(cl2nnm)
-#	dim(cl2nnm)=d
-#	rownames(cl2nnm)=cid(aps)
 
 	#print(tail(cl2nnm))
 
@@ -297,7 +292,6 @@ trueNnm <- function(compoundIds,numNbrs,minNbrs,dir,cutoff=NA){
 	cid(aps)=as.character(1:length(compoundIds))
 
 
-
 	nnm = nearestNeighbors(aps,cutoff=cutoff,numNbrs=numNbrs)
 	d=dim(nnm)
 	nnm=as.numeric(nnm)
@@ -310,7 +304,6 @@ trueNnm <- function(compoundIds,numNbrs,minNbrs,dir,cutoff=NA){
 clusterSizes <- function(clustering) {
 	sizes=Reduce(rbind,lapply(unique(clustering),function(cid)
 							  cbind(cid=cid,size=sum(clustering==cid))))
-	#sizes[order(sizes[,1]),]
 	sizes[sizes[,2]>1,]
 }
 
@@ -335,31 +328,4 @@ checkMatrix <- function(pattern,x,y,dir=runDir){
    checkTrue(file.info(file)$size>0)
    checkEquals(dim(read.table(file)),c(x,y))
 }
-
-#test.snow = function() {
-#   options(warn=2)
-#   options(error=traceback)
-#   j=4
-#
-#   f=function(i) {
-#      library(eiR)
-#			#.Call("embedCoord",4,as.integer(3),as.double(1:5))
-#			embedCoord(5,2,1:5)
-#			t(sapply(1:d,function(x) x*x))
-#         3
-#		}
-#   serFile=file("fun","w")
-#   serialize(f,serFile)
-#   close(serFile)
-#   serFile=file("fun","r")
-#   f2=unserialize(serFile)
-#   checkEquals(f,f2)
-#
-#
-#   #cl=makeCluster(j,type="SOCK",outfile="")
-#   #clusterApply(cl,1:length(cl),function(x) x*2)
-#   #clusterApply(cl,1:length(cl),f)
-#   #cat(paste(result,collapse=" "))
-#}
-
 

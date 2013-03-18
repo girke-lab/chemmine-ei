@@ -1,7 +1,7 @@
 
 
-PKG_CXXFLAGS=  -DNO_MAIN -Iinclude -I.
-PKG_LIBS=-lm -Lf2c -lf2c -L. -lgsl -lgslcblas 
+PKG_CXXFLAGS +=  -DNO_MAIN -Iinclude -I. -I$(LIB_GSL)$(R_ARCH)/include
+PKG_LIBS +=-lm -Lf2c -lf2c  -L$(LIB_GSL)$(R_ARCH)/lib -lgsl -lgslcblas  
 
 $(SHLIB): f2c/libf2c.a
 

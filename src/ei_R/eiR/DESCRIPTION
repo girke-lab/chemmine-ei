@@ -13,4 +13,4 @@ License: Artistic-2.0
 System Requirements: GSL (>=1.14) http://www.gnu.org/software/gsl/, Boost (>= 1.42) http://www.boost.org/
 Depends: R (>= 2.10.0), ChemmineR (>= 2.11.18), methods
 biocViews: Infrastructure, DataImport, Clustering, Bioinformatics, Proteomics
-Imports: snow, tools, snowfall, RUnit, methods,ChemmineR,RCurl,digest
+Imports: snow, tools, snowfall, RUnit, methods,ChemmineR,RCurl,digest, BiocGenerics

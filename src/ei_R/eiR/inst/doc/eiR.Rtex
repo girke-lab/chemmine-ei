@@ -26,6 +26,11 @@
 \tableofcontents
 \clearpage
 
+\begin{Scode}{echo=false,term=false}
+   unlink("data",recursive=TRUE)
+   unlink(paste("run",60,40,sep="-"),recursive=TRUE)
+\end{Scode}
+
 \section{Introduction}
 EiR provides an index for chemical compound databases allowing one to
 quickly find similar compounds in a very large database.
@@ -357,7 +362,7 @@ addTransform("ap",
 
 
 \begin{Scode}{echo=false,term=false}
-#   unlink("data",recursive=TRUE)
-#   unlink(runDir,recursive=TRUE)
+   unlink("data",recursive=TRUE)
+   unlink(paste("run",r,d,sep="-"),recursive=TRUE)
 \end{Scode}
 \end{document}
