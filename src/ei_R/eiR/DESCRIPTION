@@ -1,8 +1,8 @@
 Package: eiR
 Type: Package
 Title: EI for R
-Version: 0.99.2
-Date: 2012-05-18
+Version: 0.99.3
+Date: 2012-05-19
 Author: Kevin Horan
 Maintainer: Kevin Horan <khoran@cs.ucr.edu>
 Suggests: RCurl,snow

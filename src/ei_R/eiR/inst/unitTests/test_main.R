@@ -3,6 +3,7 @@ library(eiR)
 library(snow)
 
 options(warn=2)
+test_dir="test_workspace"
 r<- 50
 d<- 40
 N<- 100
@@ -14,6 +15,9 @@ descType="ap"
 
 test_aa.eiInit <- function() {
 #	DEACTIVATED("slow")
+
+   cleanup()
+
 	checkData <- function(cids,dir="."){
 		checkTrue(file.exists(file.path(dir,"data","chem.db")))
 		checkTrue(file.exists(file.path(dir,"data","main.iddb")))
@@ -43,7 +47,7 @@ test_aa.eiInit <- function() {
 testRefs <- function(){
 	200+c(1,2,5,8,9,10,11,17,18,19,20,23,24,25,26,29,31,33,34,36,38,43,45,46,47,48,49,51,53,66,67,70,71,72,73,74,75,77,78,79,80,81,82,83,87,88,89,91,99,100)
 }
-test.ba.eiMakeDb <- function() {
+test_ba.eiMakeDb <- function() {
 
 	#DEACTIVATED("slow")
    runChecks = function(){
@@ -78,7 +82,7 @@ test.ba.eiMakeDb <- function() {
 
 	
 }
-test.ca.eiQuery <- function(){
+test_ca.eiQuery <- function(){
 
 	#DEACTIVATED("slow")
    data(sdfsample)
@@ -98,7 +102,7 @@ test.ca.eiQuery <- function(){
 
 }
 
-test.da.eiPerformanceTest <- function() {
+test_da.eiPerformanceTest <- function() {
 	#DEACTIVATED("slow")
    eiPerformanceTest(r,d,K=22,descriptorType=descType)
    checkMatrix("chemical-search.results$",20, N,"data")
@@ -106,7 +110,7 @@ test.da.eiPerformanceTest <- function() {
    checkMatrix("^indexed$",20,22)
    checkMatrix("indexed.performance",20,1)
 }
-test.ea.eiAdd<- function(){
+test_ea.eiAdd<- function(){
 
 	#DEACTIVATED("slow")
    data(example_compounds)
@@ -125,7 +129,7 @@ test.ea.eiAdd<- function(){
    checkEquals(results$distance[1],0)
    print(results)
 }
-test.fa.eiCluster <- function(){
+test_fa.eiCluster <- function(){
 #	DEACTIVATED("off")
 	numNbrs=5
 	minNbrs=2
@@ -146,7 +150,7 @@ test.fa.eiCluster <- function(){
 
 	#print(sort(clustering))
 }
-test.fn.cluster_comparison <- function(){
+test_fn.cluster_comparison <- function(){
 
 	#DEACTIVATED("off")
 	numNbrs=10
@@ -210,7 +214,7 @@ test.fn.cluster_comparison <- function(){
 
 }
 
-test.fo.nnm_test  <- function(){
+test_fo.nnm_test  <- function(){
 	DEACTIVATED("off")
 	numNbrs=10
 	minNbrs=2
@@ -309,10 +313,13 @@ clusterSizes <- function(clustering) {
 
 
 
-test.aaaaa.cleanup<- function(){
-   junk <- c("data","example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"),fpDir)
+cleanup<- function(){
+   unlink(test_dir,recursive=T)
+   dir.create(test_dir)
+   setwd(test_dir)
+   #junk <- c("data","example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"),fpDir)
    #junk <- c("example_compounds.sdf","example_queries.sdf",paste("run",r,d,sep="-"))
-   unlink(junk,recursive=T)
+   #unlink(junk,recursive=T)
 }
 findRefIddb <- function(runDir){
    matches<-dir(runDir,pattern=".cdb$",full.names=T)

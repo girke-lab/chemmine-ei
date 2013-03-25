@@ -140,6 +140,10 @@ eiMakeDb <- function(refs,d,descriptorType="ap",distance=getDefaultDist(descript
 
 	if(file.exists(matrixFile))
 		stop(paste("found existing",matrixFile),"stopping")
+	if(!file.exists(file.path(dir,Main)))
+		stop(file.path(dir,Main)," not found. Did you run eiInit first?")
+	if(!file.exists(file.path(dir,ChemDb)))
+		stop(file.path(dir,ChemDb)," not found. Did you run eiInit first?")
 
 
 	queryIds=genTestQueryIds(numSamples,dir,refIds)
